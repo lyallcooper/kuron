@@ -26,7 +26,7 @@
                     <td class="cron">{{.CronExpression}}</td>
                     <td>{{.Action}}</td>
                     <td class="timestamp">{{if .LastRunAt}}{{.LastRunAt}}{{else}}-{{end}}</td>
-                    <td class="timestamp">{{if .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                     <td>
                         {{if .Enabled}}
                         <span class="badge badge-completed">Active</span>
