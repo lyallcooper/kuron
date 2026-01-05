@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"log"
 	"time"
 )
 
@@ -158,7 +160,21 @@ func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
 
 // CreateDuplicateGroup creates a new duplicate group
 func (db *DB) CreateDuplicateGroup(g *DuplicateGroup) (*DuplicateGroup, error) {
-	filesJSON, _ := json.Marshal(g.Files)
+	// Validate required fields
+	if g.ScanRunID == 0 {
+		return nil, errors.New("db: scan_run_id is required")
+	}
+	if g.FileHash == "" {
+		return nil, errors.New("db: file_hash is required")
+	}
+	if len(g.Files) == 0 {
+		return nil, errors.New("db: files list is required")
+	}
+
+	filesJSON, err := json.Marshal(g.Files)
+	if err != nil {
+		return nil, err
+	}
 
 	result, err := db.Exec(`
 		INSERT INTO duplicate_groups (scan_run_id, file_hash, file_size, file_count, wasted_bytes, status, files)
@@ -340,7 +356,9 @@ func scanDuplicateGroup(row *sql.Row) (*DuplicateGroup, error) {
 		return nil, err
 	}
 
-	json.Unmarshal([]byte(filesJSON), &g.Files)
+	if err := json.Unmarshal([]byte(filesJSON), &g.Files); err != nil {
+		log.Printf("db: failed to unmarshal files JSON for group %d: %v", g.ID, err)
+	}
 	return &g, nil
 }
 
@@ -354,7 +372,9 @@ func scanDuplicateGroupRow(rows *sql.Rows) (*DuplicateGroup, error) {
 		return nil, err
 	}
 
-	json.Unmarshal([]byte(filesJSON), &g.Files)
+	if err := json.Unmarshal([]byte(filesJSON), &g.Files); err != nil {
+		log.Printf("db: failed to unmarshal files JSON for group %d: %v", g.ID, err)
+	}
 	return &g, nil
 }
 
@@ -487,9 +507,15 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 		return nil, err
 	}
 
-	json.Unmarshal([]byte(pathsJSON), &j.Paths)
-	json.Unmarshal([]byte(includeJSON), &j.IncludePatterns)
-	json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns)
+	if err := json.Unmarshal([]byte(pathsJSON), &j.Paths); err != nil {
+		log.Printf("db: failed to unmarshal paths JSON for job %d: %v", j.ID, err)
+	}
+	if err := json.Unmarshal([]byte(includeJSON), &j.IncludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal include patterns JSON for job %d: %v", j.ID, err)
+	}
+	if err := json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal exclude patterns JSON for job %d: %v", j.ID, err)
+	}
 	if maxSize.Valid {
 		j.MaxSize = &maxSize.Int64
 	}
@@ -515,9 +541,15 @@ func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 		return nil, err
 	}
 
-	json.Unmarshal([]byte(pathsJSON), &j.Paths)
-	json.Unmarshal([]byte(includeJSON), &j.IncludePatterns)
-	json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns)
+	if err := json.Unmarshal([]byte(pathsJSON), &j.Paths); err != nil {
+		log.Printf("db: failed to unmarshal paths JSON for job %d: %v", j.ID, err)
+	}
+	if err := json.Unmarshal([]byte(includeJSON), &j.IncludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal include patterns JSON for job %d: %v", j.ID, err)
+	}
+	if err := json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal exclude patterns JSON for job %d: %v", j.ID, err)
+	}
 	if maxSize.Valid {
 		j.MaxSize = &maxSize.Int64
 	}
@@ -642,13 +674,13 @@ func scanActionRow(rows *sql.Rows) (*Action, error) {
 // GetDashboardStats returns aggregate statistics
 func (db *DB) GetDashboardStats() (totalSaved int64, pendingGroups int, recentScans int, err error) {
 	// Total bytes saved
-	row := db.QueryRow("SELECT COALESCE(SUM(bytes_saved), 0) FROM actions WHERE status = 'completed'")
+	row := db.QueryRow("SELECT COALESCE(SUM(bytes_saved), 0) FROM actions WHERE status = ?", ActionStatusCompleted)
 	if err = row.Scan(&totalSaved); err != nil {
 		return
 	}
 
 	// Pending duplicate groups
-	row = db.QueryRow("SELECT COUNT(*) FROM duplicate_groups WHERE status = 'pending'")
+	row = db.QueryRow("SELECT COUNT(*) FROM duplicate_groups WHERE status = ?", DuplicateGroupStatusPending)
 	if err = row.Scan(&pendingGroups); err != nil {
 		return
 	}
@@ -681,7 +713,7 @@ func (db *DB) CleanupOldData(retentionDays int) error {
 	cutoff := time.Now().AddDate(0, 0, -retentionDays)
 
 	// Delete old scan runs (cascades to duplicate_groups)
-	_, err := db.Exec("DELETE FROM scan_runs WHERE completed_at < ? AND status != 'running'", cutoff)
+	_, err := db.Exec("DELETE FROM scan_runs WHERE completed_at < ? AND status != ?", cutoff, ScanRunStatusRunning)
 	if err != nil {
 		return err
 	}
