@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -109,7 +110,7 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.FormValue("name")
+	name := strings.TrimSpace(r.FormValue("name"))
 	pathIDs := r.Form["paths"]
 	minSizeStr := r.FormValue("min_size")
 	maxSizeStr := r.FormValue("max_size")
@@ -130,31 +131,59 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 	includePatterns := splitPatterns(includeStr)
 	excludePatterns := splitPatterns(excludeStr)
 
-	if len(paths) == 0 {
+	// Helper to render form with error
+	renderError := func(errMsg string) {
 		allPaths, _ := h.db.ListScanPaths()
 		data := ScanFormData{
 			Title:     "New Scan Config",
 			ActiveNav: "scans",
 			Paths:     allPaths,
-			Error:     "At least one path must be selected",
+			Error:     errMsg,
 			Config: &db.ScanConfig{
 				Name:            name,
+				Paths:           paths,
 				IncludePatterns: includePatterns,
 				ExcludePatterns: excludePatterns,
 			},
 		}
 		h.render(w, "scan_form.html", data)
+	}
+
+	// Validate name
+	if name == "" {
+		renderError("Name is required")
 		return
 	}
 
-	// Parse size
-	minSize := parseSize(minSizeStr)
+	// Validate paths
+	if len(paths) == 0 {
+		renderError("At least one path must be selected")
+		return
+	}
+
+	// Parse and validate sizes
+	minSize, err := parseSizeWithError(minSizeStr)
+	if err != nil {
+		renderError(fmt.Sprintf("Invalid min size: %s", minSizeStr))
+		return
+	}
+
 	var maxSize *int64
 	if maxSizeStr != "" {
-		ms := parseSize(maxSizeStr)
+		ms, err := parseSizeWithError(maxSizeStr)
+		if err != nil {
+			renderError(fmt.Sprintf("Invalid max size: %s", maxSizeStr))
+			return
+		}
 		if ms > 0 {
 			maxSize = &ms
 		}
+	}
+
+	// Validate max >= min
+	if maxSize != nil && minSize > 0 && *maxSize < minSize {
+		renderError("Max size must be greater than or equal to min size")
+		return
 	}
 
 	cfg := &db.ScanConfig{
@@ -166,7 +195,7 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		ExcludePatterns: excludePatterns,
 	}
 
-	_, err := h.db.CreateScanConfig(cfg)
+	_, err = h.db.CreateScanConfig(cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -476,11 +505,11 @@ func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr st
 	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
 }
 
-// parseSize parses a human-readable size string to bytes
-func parseSize(s string) int64 {
+// parseSizeWithError parses a human-readable size string to bytes, returning an error if invalid
+func parseSizeWithError(s string) (int64, error) {
 	s = strings.ToUpper(strings.TrimSpace(s))
 	if s == "" {
-		return 0
+		return 0, nil
 	}
 
 	multiplier := int64(1)
@@ -510,10 +539,16 @@ func parseSize(s string) int64 {
 	s = strings.TrimSpace(s)
 	n, err := strconv.ParseFloat(s, 64)
 	if err != nil {
-		return 0
+		return 0, fmt.Errorf("invalid size format")
 	}
 
-	return int64(n * float64(multiplier))
+	return int64(n * float64(multiplier)), nil
+}
+
+// parseSize parses a human-readable size string to bytes (returns 0 on error)
+func parseSize(s string) int64 {
+	size, _ := parseSizeWithError(s)
+	return size
 }
 
 // splitPatterns splits a comma-separated pattern string into a slice
@@ -626,7 +661,7 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 		return
 	}
 
-	name := r.FormValue("name")
+	name := strings.TrimSpace(r.FormValue("name"))
 	pathIDs := r.Form["paths"]
 	minSizeStr := r.FormValue("min_size")
 	maxSizeStr := r.FormValue("max_size")
@@ -647,32 +682,60 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 	includePatterns := splitPatterns(includeStr)
 	excludePatterns := splitPatterns(excludeStr)
 
-	if len(paths) == 0 {
+	// Helper to render form with error
+	renderError := func(errMsg string) {
 		allPaths, _ := h.db.ListScanPaths()
 		data := ScanFormData{
 			Title:     "Edit Scan Config",
 			ActiveNav: "scans",
 			Paths:     allPaths,
-			Error:     "At least one path must be selected",
+			Error:     errMsg,
 			Config: &db.ScanConfig{
 				ID:              id,
 				Name:            name,
+				Paths:           paths,
 				IncludePatterns: includePatterns,
 				ExcludePatterns: excludePatterns,
 			},
 		}
 		h.render(w, "scan_form.html", data)
+	}
+
+	// Validate name
+	if name == "" {
+		renderError("Name is required")
 		return
 	}
 
-	// Parse size
-	minSize := parseSize(minSizeStr)
+	// Validate paths
+	if len(paths) == 0 {
+		renderError("At least one path must be selected")
+		return
+	}
+
+	// Parse and validate sizes
+	minSize, err := parseSizeWithError(minSizeStr)
+	if err != nil {
+		renderError(fmt.Sprintf("Invalid min size: %s", minSizeStr))
+		return
+	}
+
 	var maxSize *int64
 	if maxSizeStr != "" {
-		ms := parseSize(maxSizeStr)
+		ms, err := parseSizeWithError(maxSizeStr)
+		if err != nil {
+			renderError(fmt.Sprintf("Invalid max size: %s", maxSizeStr))
+			return
+		}
 		if ms > 0 {
 			maxSize = &ms
 		}
+	}
+
+	// Validate max >= min
+	if maxSize != nil && minSize > 0 && *maxSize < minSize {
+		renderError("Max size must be greater than or equal to min size")
+		return
 	}
 
 	cfg := &db.ScanConfig{
@@ -685,7 +748,7 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 		ExcludePatterns: excludePatterns,
 	}
 
-	err := h.db.UpdateScanConfig(cfg)
+	err = h.db.UpdateScanConfig(cfg)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
