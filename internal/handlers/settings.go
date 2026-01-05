@@ -6,24 +6,32 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
 // SettingsData holds data for the settings template
 type SettingsData struct {
-	Title          string
-	ActiveNav      string
-	RetentionDays  int
-	Version        string
-	FclonesVersion string
-	DBPath         string
-	Error          string
-	Success        string
+	Title             string
+	ActiveNav         string
+	RetentionDays     int
+	RetentionEditable bool
+	Version           string
+	FclonesVersion    string
+	DBPath            string
+	Port              int
+	Error             string
+	Success           string
 }
 
-// Settings handles GET /settings
+// Settings handles GET/POST /settings
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		h.UpdateSettings(w, r)
+		return
+	}
+
 	// Get fclones version
 	fclonesVersion := "not found"
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -33,17 +41,51 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := SettingsData{
-		Title:          "Settings",
-		ActiveNav:      "settings",
-		RetentionDays:  h.cfg.RetentionDays,
-		Version:        "0.1.0",
-		FclonesVersion: fclonesVersion,
-		DBPath:         h.cfg.DBPath,
-		Error:          r.URL.Query().Get("error"),
-		Success:        r.URL.Query().Get("success"),
+		Title:             "Settings",
+		ActiveNav:         "settings",
+		RetentionDays:     h.cfg.RetentionDays,
+		RetentionEditable: !h.cfg.RetentionDaysFromEnv,
+		Version:           "0.1.0",
+		FclonesVersion:    fclonesVersion,
+		DBPath:            h.cfg.DBPath,
+		Port:              h.cfg.Port,
+		Error:             r.URL.Query().Get("error"),
+		Success:           r.URL.Query().Get("success"),
 	}
 
 	h.render(w, "settings.html", data)
+}
+
+// UpdateSettings handles POST /settings
+func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+		http.Redirect(w, r, "/settings?error=Invalid+form+data", http.StatusSeeOther)
+		return
+	}
+
+	// Only allow updating if not set via env var
+	if h.cfg.RetentionDaysFromEnv {
+		http.Redirect(w, r, "/settings?error=Retention+is+set+via+environment+variable", http.StatusSeeOther)
+		return
+	}
+
+	retentionStr := r.FormValue("retention_days")
+	retention, err := strconv.Atoi(retentionStr)
+	if err != nil || retention < 1 || retention > 365 {
+		http.Redirect(w, r, "/settings?error=Retention+must+be+between+1+and+365+days", http.StatusSeeOther)
+		return
+	}
+
+	// Save to database
+	if err := h.db.SetSetting("retention_days", retentionStr); err != nil {
+		http.Redirect(w, r, "/settings?error=Failed+to+save+setting", http.StatusSeeOther)
+		return
+	}
+
+	// Update in-memory config
+	h.cfg.RetentionDays = retention
+
+	http.Redirect(w, r, "/settings?success=Settings+saved", http.StatusSeeOther)
 }
 
 // SuggestPaths handles GET /api/paths/suggest?prefix=...

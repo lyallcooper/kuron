@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -29,7 +30,6 @@ func main() {
 	log.Printf("kuron starting...")
 	log.Printf("  Database: %s", cfg.DBPath)
 	log.Printf("  Port: %d", cfg.Port)
-	log.Printf("  Retention: %d days", cfg.RetentionDays)
 
 	// Initialize database
 	database, err := db.Open(cfg.DBPath)
@@ -37,6 +37,16 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer database.Close()
+
+	// Load retention from DB if not set via env var
+	if !cfg.RetentionDaysFromEnv {
+		if val, err := database.GetSetting("retention_days"); err == nil && val != "" {
+			if days, err := strconv.Atoi(val); err == nil && days >= 1 && days <= 365 {
+				cfg.RetentionDays = days
+			}
+		}
+	}
+	log.Printf("  Retention: %d days", cfg.RetentionDays)
 
 	// Initialize fclones executor
 	executor := fclones.NewExecutor()

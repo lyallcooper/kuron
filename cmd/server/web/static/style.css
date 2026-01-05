@@ -215,6 +215,16 @@ button.btn {
     border-color: var(--accent);
 }
 
+.form-input[type="number"] {
+    -moz-appearance: textfield;
+}
+
+.form-input[type="number"]::-webkit-inner-spin-button,
+.form-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 .form-select {
     width: 100%;
     padding: 0.5rem;

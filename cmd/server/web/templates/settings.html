@@ -14,28 +14,58 @@
 <div class="card">
     <div class="card-header">Data Retention</div>
     <div class="card-body">
+        {{if .RetentionEditable}}
+        <form method="POST" action="/settings">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" for="retention_days">Retention Period</label>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="number" class="form-input" id="retention_days" name="retention_days" value="{{.RetentionDays}}" min="1" max="365" style="width: 6rem;">
+                    <span>days</span>
+                    <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;">Save</button>
+                </div>
+                <p class="form-help">Scan history and logs older than this will be automatically deleted.</p>
+            </div>
+        </form>
+        {{else}}
         <p>Scan history and logs older than <strong>{{.RetentionDays}} days</strong> will be automatically deleted.</p>
         <p class="form-help">Set via <code>KURON_RETENTION_DAYS</code> environment variable.</p>
+        {{end}}
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header">About</div>
-    <div class="card-body">
-        <table>
-            <tr>
-                <td>kuron</td>
-                <td>{{.Version}}</td>
-            </tr>
-            <tr>
-                <td>fclones</td>
-                <td>{{.FclonesVersion}}</td>
-            </tr>
-            <tr>
-                <td>Database</td>
-                <td>{{.DBPath}}</td>
-            </tr>
-        </table>
+<div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+    <div class="card" style="flex: 1;">
+        <div class="card-header">Server</div>
+        <div class="card-body">
+            <table style="min-width: 0; width: 100%;">
+                <col style="width: 40%;">
+                <tr>
+                    <td>Database</td>
+                    <td>{{.DBPath}}</td>
+                </tr>
+                <tr>
+                    <td>Port</td>
+                    <td>{{.Port}}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card" style="flex: 1;">
+        <div class="card-header">About</div>
+        <div class="card-body">
+            <table style="min-width: 0; width: 100%;">
+                <col style="width: 40%;">
+                <tr>
+                    <td>kuron</td>
+                    <td>{{.Version}}</td>
+                </tr>
+                <tr>
+                    <td>fclones</td>
+                    <td>{{.FclonesVersion}}</td>
+                </tr>
+            </table>
+        </div>
     </div>
 </div>
 {{end}}

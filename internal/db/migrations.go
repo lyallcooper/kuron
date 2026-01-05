@@ -190,4 +190,13 @@ CREATE TABLE scheduled_jobs (
     next_run_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- App settings (key-value store)
+CREATE TABLE settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+
+-- Default retention days
+INSERT INTO settings (key, value) VALUES ('retention_days', '30');
 `
