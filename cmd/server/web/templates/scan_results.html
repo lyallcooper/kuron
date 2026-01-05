@@ -122,11 +122,11 @@
                 <div class="selection-info">
                     <label class="form-checkbox">
                         <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
-                        <span id="select-all-label">Select all {{.TotalCount}} groups across all pages</span>
+                        <span id="select-all-label">Select all {{.TotalCount}}</span>
                     </label>
-                    <span id="selection-count" class="muted"></span>
                 </div>
                 <div class="action-buttons">
+                    <span id="selection-count" class="muted">0 selected</span>
                     <label class="form-checkbox" style="margin-right: 1rem;">
                         <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
                         Dry run
@@ -288,18 +288,14 @@ function updateSelectionDisplay() {
     var hasSelection = false;
 
     if (selectAllMode) {
-        countEl.textContent = '(' + totalCount + ' groups selected)';
+        countEl.textContent = totalCount + ' selected';
         groupIdsEl.value = '';
         selectAllFlagEl.value = '1';
         hasSelection = totalCount > 0;
     } else {
         var count = manualSelections.size;
-        if (count > 0) {
-            countEl.textContent = '(' + count + ' group' + (count !== 1 ? 's' : '') + ' selected)';
-            hasSelection = true;
-        } else {
-            countEl.textContent = '';
-        }
+        countEl.textContent = count + ' selected';
+        hasSelection = count > 0;
         groupIdsEl.value = Array.from(manualSelections).join(',');
         selectAllFlagEl.value = '';
     }
