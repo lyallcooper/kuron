@@ -68,7 +68,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .nav-brand {
@@ -80,6 +81,7 @@ body {
 
 .nav-links {
     display: flex;
+    flex-wrap: wrap;
     gap: 1.5rem;
 }
 
@@ -287,10 +289,12 @@ button.btn {
 /* Tables */
 .table-container {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 table {
     width: 100%;
+    min-width: 500px;
     border-collapse: collapse;
     font-size: 0.875rem;
 }
@@ -774,5 +778,70 @@ body.modal-open {
     .selection-info,
     .action-buttons {
         width: 100%;
+    }
+
+    /* Navigation */
+    .nav-links {
+        gap: 1rem;
+    }
+
+    /* Page header */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .page-header .actions-bar {
+        margin-bottom: 0;
+    }
+
+    /* Card header with actions */
+    .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .header-left {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .card-header .action-buttons {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Tighter nav on very small screens */
+    .nav-links {
+        gap: 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .nav-brand {
+        font-size: 1rem;
+    }
+
+    /* Stack action buttons */
+    .card-header .action-buttons {
+        gap: 0.5rem;
+    }
+
+    .card-header .action-buttons .separator {
+        display: none;
+    }
+
+    /* Smaller buttons */
+    .btn-sm {
+        padding: 0.2rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    /* Stats grid single column */
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
     }
 }
