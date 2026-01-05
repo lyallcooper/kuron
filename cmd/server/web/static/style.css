@@ -474,6 +474,20 @@ tr:hover td {
     height: 1rem;
 }
 
+/* Sortable column headers */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.sortable:hover {
+    background: var(--border);
+}
+
+th.sorted {
+    color: var(--accent);
+}
+
 /* Size formatting */
 .size {
     white-space: nowrap;

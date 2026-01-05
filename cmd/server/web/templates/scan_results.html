@@ -97,24 +97,11 @@
         <span>Duplicate Groups ({{.TotalCount}} total{{if gt .TotalPages 1}}, page {{.Page}} of {{.TotalPages}}{{end}})</span>
     </div>
     <div class="card-body">
-        <!-- Sort and Filter Controls -->
+        <!-- Filter Controls -->
         <div class="controls-bar">
-            <div class="sort-controls">
-                <label class="form-label" style="display: inline; margin-right: 0.5rem;">Sort by:</label>
-                <select id="sort-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
-                    <option value="wasted"{{if eq .SortBy "wasted"}} selected{{end}}>Wasted Space</option>
-                    <option value="size"{{if eq .SortBy "size"}} selected{{end}}>File Size</option>
-                    <option value="count"{{if eq .SortBy "count"}} selected{{end}}>File Count</option>
-                    <option value="status"{{if eq .SortBy "status"}} selected{{end}}>Status</option>
-                </select>
-                <select id="order-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
-                    <option value="desc"{{if eq .SortOrder "desc"}} selected{{end}}>Descending</option>
-                    <option value="asc"{{if eq .SortOrder "asc"}} selected{{end}}>Ascending</option>
-                </select>
-            </div>
             <div class="filter-controls">
                 <label class="form-label" style="display: inline; margin-right: 0.5rem;">Status:</label>
-                <select id="status-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
+                <select id="status-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateFilter()">
                     <option value=""{{if eq .Status ""}} selected{{end}}>All</option>
                     <option value="pending"{{if eq .Status "pending"}} selected{{end}}>Pending</option>
                     <option value="processed"{{if eq .Status "processed"}} selected{{end}}>Processed</option>
@@ -163,10 +150,18 @@
                             <input type="checkbox" id="select-page" onclick="togglePage(this)" title="Select all on this page">
                         </th>
                         <th>Hash</th>
-                        <th>Size</th>
-                        <th>Count</th>
-                        <th>Wasted</th>
-                        <th>Status</th>
+                        <th class="sortable{{if eq .SortBy "size"}} sorted{{end}}" onclick="sortBy('size')">
+                            Size {{if eq .SortBy "size"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                        </th>
+                        <th class="sortable{{if eq .SortBy "count"}} sorted{{end}}" onclick="sortBy('count')">
+                            Count {{if eq .SortBy "count"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                        </th>
+                        <th class="sortable{{if eq .SortBy "wasted"}} sorted{{end}}" onclick="sortBy('wasted')">
+                            Wasted {{if eq .SortBy "wasted"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                        </th>
+                        <th class="sortable{{if eq .SortBy "status"}} sorted{{end}}" onclick="sortBy('status')">
+                            Status {{if eq .SortBy "status"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -304,11 +299,25 @@ function updateSelectionDisplay() {
     }
 }
 
-function updateSort() {
-    const sort = document.getElementById('sort-select').value;
-    const order = document.getElementById('order-select').value;
-    const status = document.getElementById('status-select').value;
-    window.location.href = '?sort=' + sort + '&order=' + order + '&status=' + status;
+function sortBy(field) {
+    var currentSort = '{{.SortBy}}';
+    var currentOrder = '{{.SortOrder}}';
+    var status = document.getElementById('status-select').value;
+
+    var newOrder = 'desc';
+    if (field === currentSort) {
+        // Toggle order if clicking same column
+        newOrder = currentOrder === 'desc' ? 'asc' : 'desc';
+    }
+
+    window.location.href = '?sort=' + field + '&order=' + newOrder + '&status=' + status;
+}
+
+function updateFilter() {
+    var status = document.getElementById('status-select').value;
+    var currentSort = '{{.SortBy}}';
+    var currentOrder = '{{.SortOrder}}';
+    window.location.href = '?sort=' + currentSort + '&order=' + currentOrder + '&status=' + status;
 }
 
 // Initialize on page load
