@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	_ "github.com/mattn/go-sqlite3"
 )
 
 // DB wraps the SQLite database connection
