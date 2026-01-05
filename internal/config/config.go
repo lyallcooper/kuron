@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -42,6 +43,7 @@ func getEnvInt(key string, defaultVal int) int {
 		if i, err := strconv.Atoi(val); err == nil {
 			return i
 		}
+		log.Printf("config: invalid value for %s=%q, using default %d", key, val, defaultVal)
 	}
 	return defaultVal
 }
@@ -51,6 +53,7 @@ func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
 		if d, err := time.ParseDuration(val); err == nil {
 			return d
 		}
+		log.Printf("config: invalid value for %s=%q, using default %v", key, val, defaultVal)
 	}
 	return defaultVal
 }

@@ -85,15 +85,23 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// Start cleanup goroutine
+	// Start cleanup goroutine with shutdown coordination
+	cleanupDone := make(chan struct{})
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	go func() {
+		defer close(cleanupDone)
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			log.Printf("Running cleanup (retention: %d days)", cfg.RetentionDays)
-			if err := database.CleanupOldData(cfg.RetentionDays); err != nil {
-				log.Printf("Cleanup error: %v", err)
+		for {
+			select {
+			case <-cleanupCtx.Done():
+				return
+			case <-ticker.C:
+				log.Printf("Running cleanup (retention: %d days)", cfg.RetentionDays)
+				if err := database.CleanupOldData(cfg.RetentionDays); err != nil {
+					log.Printf("Cleanup error: %v", err)
+				}
 			}
 		}
 	}()
@@ -105,6 +113,11 @@ func main() {
 		<-sigChan
 
 		log.Println("Shutting down...")
+
+		// Cancel cleanup goroutine
+		cleanupCancel()
+		<-cleanupDone
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
