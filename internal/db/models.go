@@ -37,6 +37,7 @@ type ScanRun struct {
 	ID              int64
 	ScanConfigID    *int64
 	ScheduledJobID  *int64
+	Paths           []string // Paths that were scanned
 	Status          ScanRunStatus
 	StartedAt       time.Time
 	CompletedAt     *time.Time

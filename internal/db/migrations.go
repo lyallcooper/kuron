@@ -32,6 +32,7 @@ func (db *DB) Migrate() error {
 		{1, migration001},
 		{2, migration002},
 		{3, migration003},
+		{4, migration004},
 	}
 
 	for _, m := range migrations {
@@ -199,4 +200,9 @@ CREATE TABLE settings (
 
 -- Default retention days
 INSERT INTO settings (key, value) VALUES ('retention_days', '30');
+`
+
+const migration004 = `
+-- Add paths column to scan_runs to store scanned paths for all scans (including quick scans)
+ALTER TABLE scan_runs ADD COLUMN paths TEXT NOT NULL DEFAULT '[]';
 `

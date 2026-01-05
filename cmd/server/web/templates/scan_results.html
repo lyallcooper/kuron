@@ -93,6 +93,21 @@
     </div>
 </div>
 
+{{if .Run.Paths}}
+<div class="card">
+    <div class="card-header">
+        <span>Paths Scanned</span>
+    </div>
+    <div class="card-body">
+        <ul class="file-list">
+            {{range .Run.Paths}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+</div>
+{{end}}
+
 {{if .Run.ErrorMessage}}
 <div class="alert alert-error">
     <strong>Error:</strong> {{.Run.ErrorMessage}}

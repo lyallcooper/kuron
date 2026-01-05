@@ -13,11 +13,16 @@ import (
 // ScanRun queries
 
 // CreateScanRun creates a new scan run
-func (db *DB) CreateScanRun(configID *int64, jobID *int64) (*ScanRun, error) {
+func (db *DB) CreateScanRun(configID *int64, jobID *int64, paths []string) (*ScanRun, error) {
+	pathsJSON, err := json.Marshal(paths)
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := db.Exec(`
-		INSERT INTO scan_runs (scan_config_id, scheduled_job_id, status, started_at)
-		VALUES (?, ?, ?, ?)`,
-		configID, jobID, ScanRunStatusRunning, time.Now(),
+		INSERT INTO scan_runs (scan_config_id, scheduled_job_id, paths, status, started_at)
+		VALUES (?, ?, ?, ?, ?)`,
+		configID, jobID, string(pathsJSON), ScanRunStatusRunning, time.Now(),
 	)
 	if err != nil {
 		return nil, err
@@ -34,7 +39,7 @@ func (db *DB) CreateScanRun(configID *int64, jobID *int64) (*ScanRun, error) {
 // GetScanRun retrieves a scan run by ID
 func (db *DB) GetScanRun(id int64) (*ScanRun, error) {
 	row := db.QueryRow(`
-		SELECT id, scan_config_id, scheduled_job_id, status, started_at, completed_at,
+		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
 			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
 		FROM scan_runs WHERE id = ?`, id)
 	return scanScanRun(row)
@@ -43,7 +48,7 @@ func (db *DB) GetScanRun(id int64) (*ScanRun, error) {
 // ListScanRuns returns scan runs with pagination
 func (db *DB) ListScanRuns(limit, offset int) ([]*ScanRun, error) {
 	rows, err := db.Query(`
-		SELECT id, scan_config_id, scheduled_job_id, status, started_at, completed_at,
+		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
 			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
 		FROM scan_runs ORDER BY started_at DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
@@ -70,7 +75,7 @@ func (db *DB) GetRecentScanRuns(limit int) ([]*ScanRun, error) {
 // GetLastRunForJob returns the most recent scan run for a scheduled job
 func (db *DB) GetLastRunForJob(jobID int64) (*ScanRun, error) {
 	row := db.QueryRow(`
-		SELECT id, scan_config_id, scheduled_job_id, status, started_at, completed_at,
+		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
 			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
 		FROM scan_runs WHERE scheduled_job_id = ? ORDER BY started_at DESC LIMIT 1`, jobID)
 	return scanScanRun(row)
@@ -101,10 +106,11 @@ func (db *DB) CompleteScanRun(id int64, status ScanRunStatus, errorMsg *string) 
 func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	var r ScanRun
 	var configID, jobID sql.NullInt64
+	var pathsJSON string
 	var completedAt sql.NullTime
 	var errorMsg sql.NullString
 
-	err := row.Scan(&r.ID, &configID, &jobID, &r.Status, &r.StartedAt, &completedAt,
+	err := row.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
 		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
 		&r.WastedBytes, &errorMsg)
 	if err != nil {
@@ -116,6 +122,9 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	}
 	if jobID.Valid {
 		r.ScheduledJobID = &jobID.Int64
+	}
+	if err := json.Unmarshal([]byte(pathsJSON), &r.Paths); err != nil {
+		log.Printf("db: failed to unmarshal paths JSON for scan run %d: %v", r.ID, err)
 	}
 	if completedAt.Valid {
 		r.CompletedAt = &completedAt.Time
@@ -130,10 +139,11 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
 	var r ScanRun
 	var configID, jobID sql.NullInt64
+	var pathsJSON string
 	var completedAt sql.NullTime
 	var errorMsg sql.NullString
 
-	err := rows.Scan(&r.ID, &configID, &jobID, &r.Status, &r.StartedAt, &completedAt,
+	err := rows.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
 		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
 		&r.WastedBytes, &errorMsg)
 	if err != nil {
@@ -145,6 +155,9 @@ func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
 	}
 	if jobID.Valid {
 		r.ScheduledJobID = &jobID.Int64
+	}
+	if err := json.Unmarshal([]byte(pathsJSON), &r.Paths); err != nil {
+		log.Printf("db: failed to unmarshal paths JSON for scan run %d: %v", r.ID, err)
 	}
 	if completedAt.Valid {
 		r.CompletedAt = &completedAt.Time
