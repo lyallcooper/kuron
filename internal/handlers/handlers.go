@@ -35,6 +35,8 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 		"joinPatterns":  joinPatterns,
 		"containsPath":  containsPath,
 		"derefInt64":    derefInt64,
+		"add":           func(a, b int) int { return a + b },
+		"subtract":      func(a, b int) int { return a - b },
 	}
 
 	// Get static files

@@ -35,6 +35,16 @@ type ScanResultsData struct {
 	ActiveNav string
 	Run       *db.ScanRun
 	Groups    []*db.DuplicateGroup
+	// Pagination
+	Page       int
+	PageSize   int
+	TotalCount int
+	TotalPages int
+	// Sorting
+	SortBy    string
+	SortOrder string
+	// Filter
+	Status string
 }
 
 // QuickScanData holds data for the quick scan template
@@ -226,6 +236,8 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
 }
 
+const defaultPageSize = 50
+
 // ScanResults handles GET /scans/runs/{id}
 func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 	// Parse ID from path
@@ -259,17 +271,74 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	groups, err := h.db.ListDuplicateGroups(id, "")
+	// Parse query parameters
+	query := r.URL.Query()
+
+	// Pagination
+	page := 1
+	if p, err := strconv.Atoi(query.Get("page")); err == nil && p > 0 {
+		page = p
+	}
+	pageSize := defaultPageSize
+	if ps, err := strconv.Atoi(query.Get("page_size")); err == nil && ps > 0 && ps <= 200 {
+		pageSize = ps
+	}
+
+	// Sorting
+	sortBy := query.Get("sort")
+	if sortBy == "" {
+		sortBy = "wasted"
+	}
+	sortOrder := query.Get("order")
+	if sortOrder == "" {
+		sortOrder = "desc"
+	}
+
+	// Filter
+	status := query.Get("status")
+
+	// Get total count
+	totalCount, err := h.db.CountDuplicateGroups(id, status)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Calculate total pages
+	totalPages := (totalCount + pageSize - 1) / pageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+
+	// Get groups with pagination
+	groups, err := h.db.ListDuplicateGroupsPaginated(db.DuplicateGroupQuery{
+		ScanRunID: id,
+		Status:    status,
+		SortBy:    sortBy,
+		SortOrder: sortOrder,
+		Limit:     pageSize,
+		Offset:    (page - 1) * pageSize,
+	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	data := ScanResultsData{
-		Title:     "Scan Results",
-		ActiveNav: "scans",
-		Run:       run,
-		Groups:    groups,
+		Title:      "Scan Results",
+		ActiveNav:  "scans",
+		Run:        run,
+		Groups:     groups,
+		Page:       page,
+		PageSize:   pageSize,
+		TotalCount: totalCount,
+		TotalPages: totalPages,
+		SortBy:     sortBy,
+		SortOrder:  sortOrder,
+		Status:     status,
 	}
 
 	h.render(w, "scan_results.html", data)
@@ -290,21 +359,33 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 
 	action := r.FormValue("action")
 	dryRun := r.FormValue("dry_run") == "1"
+	selectAll := r.FormValue("select_all") == "1"
+	statusFilter := r.FormValue("status_filter")
 	groupIDsStr := r.FormValue("group_ids")
 
-	if groupIDsStr == "" {
-		http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
-		return
-	}
-
-	// Parse group IDs
 	var groupIDs []int64
-	for _, idStr := range strings.Split(groupIDsStr, ",") {
-		id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+
+	if selectAll {
+		// Fetch all group IDs matching the current filter
+		groupIDs, err = h.db.GetDuplicateGroupIDs(runID, statusFilter)
 		if err != nil {
-			continue
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		groupIDs = append(groupIDs, id)
+	} else {
+		// Parse individual group IDs
+		if groupIDsStr == "" {
+			http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+			return
+		}
+
+		for _, idStr := range strings.Split(groupIDsStr, ",") {
+			id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64)
+			if err != nil {
+				continue
+			}
+			groupIDs = append(groupIDs, id)
+		}
 	}
 
 	if len(groupIDs) == 0 {

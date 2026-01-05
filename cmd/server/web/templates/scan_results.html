@@ -94,93 +94,235 @@
 {{if .Groups}}
 <div class="card">
     <div class="card-header">
-        <span>Duplicate Groups ({{len .Groups}})</span>
-        <div class="actions-bar" style="margin: 0;">
+        <span>Duplicate Groups ({{.TotalCount}} total{{if gt .TotalPages 1}}, page {{.Page}} of {{.TotalPages}}{{end}})</span>
+    </div>
+    <div class="card-body">
+        <!-- Sort and Filter Controls -->
+        <div class="controls-bar">
+            <div class="sort-controls">
+                <label class="form-label" style="display: inline; margin-right: 0.5rem;">Sort by:</label>
+                <select id="sort-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
+                    <option value="wasted"{{if eq .SortBy "wasted"}} selected{{end}}>Wasted Space</option>
+                    <option value="size"{{if eq .SortBy "size"}} selected{{end}}>File Size</option>
+                    <option value="count"{{if eq .SortBy "count"}} selected{{end}}>File Count</option>
+                    <option value="status"{{if eq .SortBy "status"}} selected{{end}}>Status</option>
+                </select>
+                <select id="order-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
+                    <option value="desc"{{if eq .SortOrder "desc"}} selected{{end}}>Descending</option>
+                    <option value="asc"{{if eq .SortOrder "asc"}} selected{{end}}>Ascending</option>
+                </select>
+            </div>
+            <div class="filter-controls">
+                <label class="form-label" style="display: inline; margin-right: 0.5rem;">Status:</label>
+                <select id="status-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateSort()">
+                    <option value=""{{if eq .Status ""}} selected{{end}}>All</option>
+                    <option value="pending"{{if eq .Status "pending"}} selected{{end}}>Pending</option>
+                    <option value="processed"{{if eq .Status "processed"}} selected{{end}}>Processed</option>
+                    <option value="ignored"{{if eq .Status "ignored"}} selected{{end}}>Ignored</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Action Form -->
+        <div class="action-controls">
             <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
                   hx-post="/scans/runs/{{.Run.ID}}/action"
                   hx-target="body"
                   hx-swap="beforeend">
                 <input type="hidden" name="group_ids" id="selected-groups" value="">
-                <label class="form-checkbox" style="margin-right: 1rem;">
-                    <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
-                    Dry run
-                </label>
-                <button type="submit" name="action" value="hardlink" class="btn btn-sm">
-                    Hardlink Selected
-                </button>
-                <button type="submit" name="action" value="reflink" class="btn btn-sm">
-                    Reflink Selected
-                </button>
+                <input type="hidden" name="select_all" id="select-all-flag" value="">
+                <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
+                <div class="selection-info">
+                    <label class="form-checkbox">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                        <span id="select-all-label">Select all {{.TotalCount}} groups across all pages</span>
+                    </label>
+                    <span id="selection-count" class="muted"></span>
+                </div>
+                <div class="action-buttons">
+                    <label class="form-checkbox" style="margin-right: 1rem;">
+                        <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
+                        Dry run
+                    </label>
+                    <button type="submit" name="action" value="hardlink" class="btn btn-sm">
+                        Hardlink Selected
+                    </button>
+                    <button type="submit" name="action" value="reflink" class="btn btn-sm">
+                        Reflink Selected
+                    </button>
+                </div>
             </form>
         </div>
-    </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th class="col-checkbox">
-                        <input type="checkbox" id="select-all" onclick="toggleAll(this)">
-                    </th>
-                    <th>Hash</th>
-                    <th>Size</th>
-                    <th>Count</th>
-                    <th>Wasted</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Groups}}
-                <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})">
-                    <td class="col-checkbox" onclick="event.stopPropagation()">
-                        <input type="checkbox" class="group-checkbox" value="{{.ID}}"
-                               onchange="updateSelection()">
-                    </td>
-                    <td class="hash" title="{{.FileHash}}">{{.FileHash | truncateHash}}</td>
-                    <td class="size">{{.FileSize | formatBytes}}</td>
-                    <td>{{.FileCount}}</td>
-                    <td class="size">{{.WastedBytes | formatBytes}}</td>
-                    <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
-                </tr>
-                <tr id="expanded-{{.ID}}" class="expanded-content">
-                    <td colspan="6">
-                        <strong>Files:</strong>
-                        <ul class="file-list">
-                            {{range .Files}}
-                            <li>{{.}}</li>
-                            {{end}}
-                        </ul>
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+
+        <!-- Groups Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-checkbox">
+                            <input type="checkbox" id="select-page" onclick="togglePage(this)" title="Select all on this page">
+                        </th>
+                        <th>Hash</th>
+                        <th>Size</th>
+                        <th>Count</th>
+                        <th>Wasted</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Groups}}
+                    <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})">
+                        <td class="col-checkbox" onclick="event.stopPropagation()">
+                            <input type="checkbox" class="group-checkbox" value="{{.ID}}"
+                                   onchange="updateSelection()">
+                        </td>
+                        <td class="hash" title="{{.FileHash}}">{{.FileHash | truncateHash}}</td>
+                        <td class="size">{{.FileSize | formatBytes}}</td>
+                        <td>{{.FileCount}}</td>
+                        <td class="size">{{.WastedBytes | formatBytes}}</td>
+                        <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                    </tr>
+                    <tr id="expanded-{{.ID}}" class="expanded-content">
+                        <td colspan="6">
+                            <strong>Files:</strong>
+                            <ul class="file-list">
+                                {{range .Files}}
+                                <li>{{.}}</li>
+                                {{end}}
+                            </ul>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {{if gt .TotalPages 1}}
+        <div class="pagination">
+            {{if gt .Page 1}}
+            <a href="?page={{subtract .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}&status={{.Status}}" class="btn btn-sm">Previous</a>
+            {{else}}
+            <span class="btn btn-sm" style="opacity: 0.5;">Previous</span>
+            {{end}}
+
+            <span class="pagination-info">
+                Page {{.Page}} of {{.TotalPages}}
+            </span>
+
+            {{if lt .Page .TotalPages}}
+            <a href="?page={{add .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}&status={{.Status}}" class="btn btn-sm">Next</a>
+            {{else}}
+            <span class="btn btn-sm" style="opacity: 0.5;">Next</span>
+            {{end}}
+        </div>
+        {{end}}
     </div>
 </div>
 
 <script>
+var selectAllMode = false;
+var manualSelections = new Set();
+var totalCount = {{.TotalCount}};
+
 function toggleRow(event, id) {
     if (event.target.type === 'checkbox') return;
     const row = document.getElementById('expanded-' + id);
     row.classList.toggle('show');
 }
 
-function toggleAll(checkbox) {
+function toggleSelectAll(checkbox) {
+    selectAllMode = checkbox.checked;
+    manualSelections.clear();
+
+    // Update page checkboxes visually
+    document.querySelectorAll('.group-checkbox').forEach(cb => {
+        cb.checked = selectAllMode;
+    });
+    document.getElementById('select-page').checked = selectAllMode;
+
+    updateSelectionDisplay();
+}
+
+function togglePage(checkbox) {
+    if (selectAllMode) {
+        // If in select-all mode, clicking page checkbox exits it
+        selectAllMode = false;
+        document.getElementById('select-all').checked = false;
+    }
+
     document.querySelectorAll('.group-checkbox').forEach(cb => {
         cb.checked = checkbox.checked;
+        if (checkbox.checked) {
+            manualSelections.add(cb.value);
+        } else {
+            manualSelections.delete(cb.value);
+        }
     });
-    updateSelection();
+
+    updateSelectionDisplay();
 }
 
 function updateSelection() {
-    const selected = Array.from(document.querySelectorAll('.group-checkbox:checked'))
-        .map(cb => cb.value);
-    document.getElementById('selected-groups').value = selected.join(',');
+    if (selectAllMode) {
+        // Exit select-all mode when manually changing selections
+        selectAllMode = false;
+        document.getElementById('select-all').checked = false;
+    }
+
+    manualSelections.clear();
+    document.querySelectorAll('.group-checkbox:checked').forEach(cb => {
+        manualSelections.add(cb.value);
+    });
+
+    // Update page checkbox
+    const allOnPage = document.querySelectorAll('.group-checkbox');
+    const checkedOnPage = document.querySelectorAll('.group-checkbox:checked');
+    document.getElementById('select-page').checked = allOnPage.length > 0 && allOnPage.length === checkedOnPage.length;
+
+    updateSelectionDisplay();
 }
+
+function updateSelectionDisplay() {
+    const countEl = document.getElementById('selection-count');
+    const groupIdsEl = document.getElementById('selected-groups');
+    const selectAllFlagEl = document.getElementById('select-all-flag');
+
+    if (selectAllMode) {
+        countEl.textContent = '(' + totalCount + ' groups selected)';
+        groupIdsEl.value = '';
+        selectAllFlagEl.value = '1';
+    } else {
+        const count = manualSelections.size;
+        if (count > 0) {
+            countEl.textContent = '(' + count + ' group' + (count !== 1 ? 's' : '') + ' selected)';
+        } else {
+            countEl.textContent = '';
+        }
+        groupIdsEl.value = Array.from(manualSelections).join(',');
+        selectAllFlagEl.value = '';
+    }
+}
+
+function updateSort() {
+    const sort = document.getElementById('sort-select').value;
+    const order = document.getElementById('order-select').value;
+    const status = document.getElementById('status-select').value;
+    window.location.href = '?sort=' + sort + '&order=' + order + '&status=' + status;
+}
+
+// Initialize on page load
+updateSelectionDisplay();
 </script>
-{{else}}
+{{else if eq .TotalCount 0}}
 <div class="empty-state">
     <h3>No duplicates found</h3>
     <p>The scan completed without finding any duplicate files.</p>
+</div>
+{{else}}
+<div class="empty-state">
+    <h3>No matching groups</h3>
+    <p>No groups match the current filter. <a href="?">Clear filters</a></p>
 </div>
 {{end}}
 {{end}}

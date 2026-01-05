@@ -389,18 +389,65 @@ func (db *DB) GetDuplicateGroup(id int64) (*DuplicateGroup, error) {
 	return scanDuplicateGroup(row)
 }
 
-// ListDuplicateGroups returns duplicate groups for a scan run
+// DuplicateGroupQuery holds query parameters for listing duplicate groups
+type DuplicateGroupQuery struct {
+	ScanRunID int64
+	Status    string // filter by status (empty = all)
+	SortBy    string // "wasted", "size", "count", "hash"
+	SortOrder string // "asc" or "desc"
+	Limit     int
+	Offset    int
+}
+
+// ListDuplicateGroups returns duplicate groups for a scan run (unpaginated, for backwards compat)
 func (db *DB) ListDuplicateGroups(scanRunID int64, status string) ([]*DuplicateGroup, error) {
+	return db.ListDuplicateGroupsPaginated(DuplicateGroupQuery{
+		ScanRunID: scanRunID,
+		Status:    status,
+		SortBy:    "wasted",
+		SortOrder: "desc",
+		Limit:     0, // no limit
+	})
+}
+
+// ListDuplicateGroupsPaginated returns duplicate groups with sorting and pagination
+func (db *DB) ListDuplicateGroupsPaginated(q DuplicateGroupQuery) ([]*DuplicateGroup, error) {
 	query := `
 		SELECT id, scan_run_id, file_hash, file_size, file_count, wasted_bytes, status, files
 		FROM duplicate_groups WHERE scan_run_id = ?`
-	args := []any{scanRunID}
+	args := []any{q.ScanRunID}
 
-	if status != "" {
+	if q.Status != "" {
 		query += " AND status = ?"
-		args = append(args, status)
+		args = append(args, q.Status)
 	}
-	query += " ORDER BY wasted_bytes DESC"
+
+	// Determine sort column
+	sortCol := "wasted_bytes"
+	switch q.SortBy {
+	case "size":
+		sortCol = "file_size"
+	case "count":
+		sortCol = "file_count"
+	case "hash":
+		sortCol = "file_hash"
+	case "status":
+		sortCol = "status"
+	}
+
+	// Determine sort order
+	sortOrder := "DESC"
+	if q.SortOrder == "asc" {
+		sortOrder = "ASC"
+	}
+
+	query += " ORDER BY " + sortCol + " " + sortOrder
+
+	// Add pagination
+	if q.Limit > 0 {
+		query += " LIMIT ? OFFSET ?"
+		args = append(args, q.Limit, q.Offset)
+	}
 
 	rows, err := db.Query(query, args...)
 	if err != nil {
@@ -417,6 +464,48 @@ func (db *DB) ListDuplicateGroups(scanRunID int64, status string) ([]*DuplicateG
 		groups = append(groups, g)
 	}
 	return groups, rows.Err()
+}
+
+// CountDuplicateGroups returns the total count of duplicate groups for a scan run
+func (db *DB) CountDuplicateGroups(scanRunID int64, status string) (int, error) {
+	query := "SELECT COUNT(*) FROM duplicate_groups WHERE scan_run_id = ?"
+	args := []any{scanRunID}
+
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+
+	var count int
+	err := db.QueryRow(query, args...).Scan(&count)
+	return count, err
+}
+
+// GetDuplicateGroupIDs returns all group IDs for a scan run (for bulk operations)
+func (db *DB) GetDuplicateGroupIDs(scanRunID int64, status string) ([]int64, error) {
+	query := "SELECT id FROM duplicate_groups WHERE scan_run_id = ?"
+	args := []any{scanRunID}
+
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
 }
 
 // UpdateDuplicateGroupStatus updates the status of duplicate groups
