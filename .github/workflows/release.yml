@@ -75,7 +75,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25'
 
       - name: Install cross-compiler (for Linux arm64)
         if: matrix.goarch == 'arm64' && matrix.goos == 'linux'
