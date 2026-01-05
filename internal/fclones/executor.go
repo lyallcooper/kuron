@@ -49,8 +49,11 @@ func (e *Executor) Version(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("fclones not found: %w", err)
 	}
-	// Output is typically "fclones 0.35.0"
+	// Output is typically "fclones 0.35.0" - extract just the version number
 	version := strings.TrimSpace(string(output))
+	if parts := strings.Fields(version); len(parts) >= 2 {
+		version = parts[1]
+	}
 	return version, nil
 }
 
