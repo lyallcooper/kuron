@@ -59,9 +59,9 @@
         <form method="POST" action="/settings/paths" style="margin-top: 1rem;">
             <div class="form-group">
                 <label class="form-label" for="path">Add New Path</label>
-                <div style="display: flex; gap: 0.5rem;">
+                <div class="add-path-form">
                     <input type="text" id="path" name="path" class="form-input"
-                           placeholder="/path/to/scan" required>
+                           placeholder="/path/to/scan" required data-path-autocomplete>
                     <button type="submit" class="btn btn-primary">Add Path</button>
                 </div>
                 <p class="form-help">The path must exist and be accessible.</p>

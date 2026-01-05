@@ -743,6 +743,52 @@ body.modal-open {
     }
 }
 
+/* Autocomplete */
+.autocomplete-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.autocomplete-wrapper .form-input {
+    width: 100%;
+}
+
+.autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.autocomplete-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: var(--bg-secondary);
+}
+
+.autocomplete-item.selected {
+    background: var(--accent);
+    color: white;
+}
+
 /* HTMX indicators */
 .htmx-indicator {
     display: none;

@@ -119,6 +119,128 @@
             }
         });
     }
+
+    // Path autocomplete system
+    (function() {
+        var debounceTimer = null;
+        var activeDropdown = null;
+        var selectedIndex = -1;
+
+        function initPathAutocomplete(input) {
+            if (input.dataset.autocompleteInit) return;
+            input.dataset.autocompleteInit = 'true';
+
+            // Create dropdown container
+            var wrapper = document.createElement('div');
+            wrapper.className = 'autocomplete-wrapper';
+            input.parentNode.insertBefore(wrapper, input);
+            wrapper.appendChild(input);
+
+            var dropdown = document.createElement('div');
+            dropdown.className = 'autocomplete-dropdown';
+            wrapper.appendChild(dropdown);
+
+            input.addEventListener('input', function() {
+                var value = input.value;
+                selectedIndex = -1;
+
+                clearTimeout(debounceTimer);
+                if (!value || !value.startsWith('/')) {
+                    dropdown.innerHTML = '';
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                debounceTimer = setTimeout(function() {
+                    fetch('/api/paths/suggest?prefix=' + encodeURIComponent(value))
+                        .then(function(r) { return r.json(); })
+                        .then(function(suggestions) {
+                            if (suggestions.length === 0) {
+                                dropdown.innerHTML = '';
+                                dropdown.style.display = 'none';
+                                return;
+                            }
+
+                            dropdown.innerHTML = '';
+                            suggestions.forEach(function(path, idx) {
+                                var item = document.createElement('div');
+                                item.className = 'autocomplete-item';
+                                item.textContent = path;
+                                item.onclick = function() {
+                                    input.value = path + '/';
+                                    dropdown.style.display = 'none';
+                                    input.focus();
+                                    // Trigger another search for subdirectories
+                                    input.dispatchEvent(new Event('input'));
+                                };
+                                dropdown.appendChild(item);
+                            });
+                            dropdown.style.display = 'block';
+                            activeDropdown = dropdown;
+                        })
+                        .catch(function() {
+                            dropdown.style.display = 'none';
+                        });
+                }, 150);
+            });
+
+            input.addEventListener('keydown', function(e) {
+                var items = dropdown.querySelectorAll('.autocomplete-item');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, 0);
+                    updateSelection(items);
+                } else if (e.key === 'Enter' && selectedIndex >= 0) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                } else if (e.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                    selectedIndex = -1;
+                } else if (e.key === 'Tab' && selectedIndex >= 0) {
+                    e.preventDefault();
+                    items[selectedIndex].click();
+                }
+            });
+
+            function updateSelection(items) {
+                items.forEach(function(item, idx) {
+                    item.classList.toggle('selected', idx === selectedIndex);
+                });
+                if (selectedIndex >= 0) {
+                    items[selectedIndex].scrollIntoView({ block: 'nearest' });
+                }
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!wrapper.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                    selectedIndex = -1;
+                }
+            });
+        }
+
+        // Initialize on existing inputs
+        function initAll() {
+            document.querySelectorAll('input[data-path-autocomplete]').forEach(initPathAutocomplete);
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initAll);
+        } else {
+            initAll();
+        }
+
+        // Re-initialize after HTMX swaps
+        document.body.addEventListener('htmx:afterSwap', initAll);
+    })();
     </script>
 </body>
 </html>
