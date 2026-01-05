@@ -27,6 +27,7 @@ type ScanFormData struct {
 	ActiveNav string
 	Config    *db.ScanConfig
 	Paths     []*db.ScanPath
+	Error     string
 }
 
 // ScanResultsData holds data for the scan results template
@@ -125,8 +126,24 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, id)
 	}
 
+	// Parse patterns
+	includePatterns := splitPatterns(includeStr)
+	excludePatterns := splitPatterns(excludeStr)
+
 	if len(paths) == 0 {
-		http.Error(w, "At least one path must be selected", http.StatusBadRequest)
+		allPaths, _ := h.db.ListScanPaths()
+		data := ScanFormData{
+			Title:     "New Scan Config",
+			ActiveNav: "scans",
+			Paths:     allPaths,
+			Error:     "At least one path must be selected",
+			Config: &db.ScanConfig{
+				Name:            name,
+				IncludePatterns: includePatterns,
+				ExcludePatterns: excludePatterns,
+			},
+		}
+		h.render(w, "scan_form.html", data)
 		return
 	}
 
@@ -137,23 +154,6 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		ms := parseSize(maxSizeStr)
 		if ms > 0 {
 			maxSize = &ms
-		}
-	}
-
-	// Parse patterns
-	var includePatterns, excludePatterns []string
-	if includeStr != "" {
-		for _, p := range strings.Split(includeStr, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				includePatterns = append(includePatterns, p)
-			}
-		}
-	}
-	if excludeStr != "" {
-		for _, p := range strings.Split(excludeStr, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				excludePatterns = append(excludePatterns, p)
-			}
 		}
 	}
 
@@ -516,6 +516,19 @@ func parseSize(s string) int64 {
 	return int64(n * float64(multiplier))
 }
 
+// splitPatterns splits a comma-separated pattern string into a slice
+func splitPatterns(s string) []string {
+	var patterns []string
+	if s != "" {
+		for _, p := range strings.Split(s, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				patterns = append(patterns, p)
+			}
+		}
+	}
+	return patterns
+}
+
 // ScanConfigRoutes handles routes under /scans/{id}
 func (h *Handler) ScanConfigRoutes(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
@@ -630,8 +643,25 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 		paths = append(paths, pathID)
 	}
 
+	// Parse patterns
+	includePatterns := splitPatterns(includeStr)
+	excludePatterns := splitPatterns(excludeStr)
+
 	if len(paths) == 0 {
-		http.Error(w, "At least one path must be selected", http.StatusBadRequest)
+		allPaths, _ := h.db.ListScanPaths()
+		data := ScanFormData{
+			Title:     "Edit Scan Config",
+			ActiveNav: "scans",
+			Paths:     allPaths,
+			Error:     "At least one path must be selected",
+			Config: &db.ScanConfig{
+				ID:              id,
+				Name:            name,
+				IncludePatterns: includePatterns,
+				ExcludePatterns: excludePatterns,
+			},
+		}
+		h.render(w, "scan_form.html", data)
 		return
 	}
 
@@ -642,23 +672,6 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 		ms := parseSize(maxSizeStr)
 		if ms > 0 {
 			maxSize = &ms
-		}
-	}
-
-	// Parse patterns
-	var includePatterns, excludePatterns []string
-	if includeStr != "" {
-		for _, p := range strings.Split(includeStr, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				includePatterns = append(includePatterns, p)
-			}
-		}
-	}
-	if excludeStr != "" {
-		for _, p := range strings.Split(excludeStr, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				excludePatterns = append(excludePatterns, p)
-			}
 		}
 	}
 

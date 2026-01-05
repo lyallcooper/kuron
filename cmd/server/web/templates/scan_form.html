@@ -3,6 +3,10 @@
     <h1>{{if .Config}}Edit{{else}}New{{end}} Scan Configuration</h1>
 </div>
 
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
 <div class="card">
     <div class="card-body">
         <form method="POST" action="{{if .Config}}/scans/{{.Config.ID}}{{else}}/scans{{end}}">
