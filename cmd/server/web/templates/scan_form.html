@@ -92,28 +92,4 @@
         </form>
     </div>
 </div>
-
-{{if not .Config}}
-<div class="card">
-    <div class="card-header">Quick Scan</div>
-    <div class="card-body">
-        <p>Want to run a one-time scan without saving a configuration?</p>
-        <form method="POST" action="/scans/quick">
-            <div class="form-group">
-                <label class="form-label">Select paths</label>
-                {{range .Paths}}
-                <div class="form-checkbox">
-                    <input type="checkbox" name="paths" value="{{.ID}}" id="quick-path-{{.ID}}">
-                    <label for="quick-path-{{.ID}}">
-                        {{.Path}}
-                        {{if .FromEnv}}<span class="locked">(from env)</span>{{end}}
-                    </label>
-                </div>
-                {{end}}
-            </div>
-            <button type="submit" class="btn">Run Quick Scan</button>
-        </form>
-    </div>
-</div>
-{{end}}
 {{end}}

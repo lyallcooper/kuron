@@ -37,6 +37,13 @@ type ScanResultsData struct {
 	Groups    []*db.DuplicateGroup
 }
 
+// QuickScanData holds data for the quick scan template
+type QuickScanData struct {
+	Title     string
+	ActiveNav string
+	Paths     []*db.ScanPath
+}
+
 // Scans handles GET /scans
 func (h *Handler) Scans(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -153,8 +160,27 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/scans", http.StatusSeeOther)
 }
 
-// QuickScan handles POST /scans/quick
+// QuickScan handles GET/POST /scans/quick
 func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
+	// GET - show form
+	if r.Method == http.MethodGet {
+		paths, err := h.db.ListScanPaths()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		data := QuickScanData{
+			Title:     "Quick Scan",
+			ActiveNav: "scans",
+			Paths:     paths,
+		}
+
+		h.render(w, "quick_scan.html", data)
+		return
+	}
+
+	// POST - run scan
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
