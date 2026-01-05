@@ -76,7 +76,7 @@ func (h *Handler) ScanForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := ScanFormData{
-		Title:     "New Scan",
+		Title:     "New Scan Configuration",
 		ActiveNav: "scans",
 		Paths:     paths,
 	}
@@ -497,7 +497,7 @@ func (h *Handler) EditScanConfigForm(w http.ResponseWriter, r *http.Request, id 
 	}
 
 	data := ScanFormData{
-		Title:     "Edit Scan",
+		Title:     "Edit Scan Configuration",
 		ActiveNav: "scans",
 		Config:    config,
 		Paths:     paths,
