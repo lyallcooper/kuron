@@ -137,8 +137,31 @@ func formatFloat(f float64) string {
 	return formatInt(int64(f*100)/100) + "." + string('0'+byte(int64(f*100)/10%10)) + string('0'+byte(int64(f*100)%10))
 }
 
-func formatTime(t time.Time) string {
-	return t.Format("2006-01-02 15:04")
+func formatTime(t any) string {
+	switch v := t.(type) {
+	case time.Time:
+		return v.Format("2006-01-02 15:04")
+	case *time.Time:
+		if v == nil {
+			return "-"
+		}
+		return v.Format("2006-01-02 15:04")
+	case string:
+		// Parse string timestamp from SQLite
+		parsed, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", v)
+		if err != nil {
+			parsed, err = time.Parse("2006-01-02 15:04:05-07:00", v)
+		}
+		if err != nil {
+			parsed, err = time.Parse("2006-01-02T15:04:05Z07:00", v)
+		}
+		if err != nil {
+			return v // Return raw string if parsing fails
+		}
+		return parsed.Format("2006-01-02 15:04")
+	default:
+		return "-"
+	}
 }
 
 func truncateHash(hash string) string {
