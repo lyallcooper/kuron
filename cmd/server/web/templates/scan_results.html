@@ -1,6 +1,15 @@
 {{define "content"}}
 <div class="page-header">
-    <h1>Scan Results</h1>
+    <div>
+        <h1>Scan Results</h1>
+        <p class="muted">
+            {{if .Job}}
+            From job: <a href="/jobs/{{.Job.ID}}/edit">{{.Job.Name}}</a>
+            {{else}}
+            Quick Scan
+            {{end}}
+        </p>
+    </div>
     <div class="actions-bar">
         {{if eq .Run.Status "running"}}
         <form action="/scans/runs/{{.Run.ID}}/cancel" method="POST">

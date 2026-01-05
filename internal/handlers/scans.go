@@ -16,6 +16,7 @@ type ScanResultsData struct {
 	Title     string
 	ActiveNav string
 	Run       *db.ScanRun
+	Job       *db.ScheduledJob // The job this scan was from, if any
 	Groups    []*db.DuplicateGroup
 	// Pagination
 	Page       int
@@ -259,10 +260,17 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the job if this scan was from a scheduled job
+	var job *db.ScheduledJob
+	if run.ScheduledJobID != nil {
+		job, _ = h.db.GetScheduledJob(*run.ScheduledJobID)
+	}
+
 	data := ScanResultsData{
 		Title:      "Scan Results",
 		ActiveNav:  "history",
 		Run:        run,
+		Job:        job,
 		Groups:     groups,
 		Page:       page,
 		PageSize:   pageSize,
