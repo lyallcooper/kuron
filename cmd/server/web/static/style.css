@@ -745,6 +745,13 @@ body.modal-open {
     gap: 0.5rem;
 }
 
+.separator {
+    width: 1px;
+    height: 1rem;
+    background: var(--border);
+    margin: 0 0.25rem;
+}
+
 @media (max-width: 768px) {
     .controls-bar {
         flex-direction: column;
