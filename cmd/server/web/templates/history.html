@@ -7,7 +7,9 @@
     <div class="card-header">
         <span>Scan Runs</span>
         <div class="actions-bar" style="margin: 0;">
-            <select class="form-select" style="width: auto;"
+            <label for="status-filter" class="visually-hidden">Filter by status</label>
+            <select id="status-filter" class="form-select" style="width: auto;"
+                    aria-label="Filter scan runs by status"
                     onchange="window.location.href='?status=' + this.value">
                 <option value="" {{if not .StatusFilter}}selected{{end}}>All statuses</option>
                 <option value="completed" {{if eq .StatusFilter "completed"}}selected{{end}}>Completed</option>

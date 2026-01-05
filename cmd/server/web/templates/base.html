@@ -78,12 +78,16 @@
 
         var modal = document.createElement('div');
         modal.className = 'modal modal-sm';
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-labelledby', 'modal-title');
         modal.onclick = function(e) { e.stopPropagation(); };
 
         var header = document.createElement('div');
         header.className = 'modal-header';
 
         var h3 = document.createElement('h3');
+        h3.id = 'modal-title';
         h3.textContent = title;
 
         var closeBtn = document.createElement('button');

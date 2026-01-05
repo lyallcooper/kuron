@@ -96,7 +96,7 @@
     <div class="card-header">
         <div class="header-left">
             <span>Duplicate File Groups</span>
-            <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
+            <button type="button" class="btn btn-sm" onclick="toggleAllRows()" aria-label="Expand all duplicate groups" id="expand-all-btn">Expand All</button>
         </div>
         <div class="action-buttons">
             <span id="selection-count" class="muted">0 selected</span>
@@ -149,7 +149,9 @@
                 </thead>
                 <tbody>
                     {{range .Groups}}
-                    <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})">
+                    <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})"
+                        tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-{{.ID}}"
+                        onkeydown="handleRowKeydown(event, {{.ID}})">
                         <td class="col-checkbox" onclick="event.stopPropagation()">
                             <input type="checkbox" class="group-checkbox" value="{{.ID}}"
                                    onchange="updateSelection()">
@@ -206,8 +208,20 @@ var totalCount = {{.TotalCount}};
 function toggleRow(event, id) {
     if (event.target.type === 'checkbox') return;
     var row = document.getElementById('expanded-' + id);
-    row.classList.toggle('show');
+    var isExpanded = row.classList.toggle('show');
+    // Update aria-expanded on the parent row
+    var parentRow = row.previousElementSibling;
+    if (parentRow) {
+        parentRow.setAttribute('aria-expanded', isExpanded);
+    }
     updateExpandButtonText();
+}
+
+function handleRowKeydown(event, id) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleRow(event, id);
+    }
 }
 
 var allExpanded = false;
@@ -220,6 +234,11 @@ function toggleAllRows() {
             row.classList.add('show');
         } else {
             row.classList.remove('show');
+        }
+        // Update aria-expanded on the parent row
+        var parentRow = row.previousElementSibling;
+        if (parentRow) {
+            parentRow.setAttribute('aria-expanded', allExpanded);
         }
     });
     updateExpandButtonText();
