@@ -1,15 +1,6 @@
 {{define "content"}}
 <div class="page-header">
-    <div>
-        <h1>Scan Results</h1>
-        <p class="muted">
-            {{if .Job}}
-            From job: <a href="/jobs/{{.Job.ID}}/edit">{{.Job.Name}}</a>
-            {{else}}
-            Quick Scan
-            {{end}}
-        </p>
-    </div>
+    <h1>Scan Results</h1>
     <div class="actions-bar">
         {{if eq .Run.Status "running"}}
         <form action="/scans/runs/{{.Run.ID}}/cancel" method="POST">
@@ -77,6 +68,14 @@
 {{else}}
 <div class="stats-grid">
     <div class="stat-card">
+        <div class="stat-value">{{if .Job}}<a href="/jobs/{{.Job.ID}}/edit">{{.Job.Name}}</a>{{else}}Quick Scan{{end}}</div>
+        <div class="stat-label">Job</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.CompletedAt | timeAgo}}</div>
+        <div class="stat-label">Scanned</div>
+    </div>
+    <div class="stat-card">
         <div class="stat-value">{{.Run.FilesScanned}}</div>
         <div class="stat-label">Files Scanned</div>
     </div>
@@ -91,10 +90,6 @@
     <div class="stat-card">
         <div class="stat-value">{{.Run.WastedBytes | formatBytes}}</div>
         <div class="stat-label">Wasted Space</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-value">{{.Run.CompletedAt | timeAgo}}</div>
-        <div class="stat-label">Scan Age</div>
     </div>
 </div>
 
