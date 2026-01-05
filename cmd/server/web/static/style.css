@@ -255,6 +255,7 @@ button.btn {
     border-radius: 4px;
     background: var(--bg);
     margin-bottom: 1rem;
+    overflow: hidden;
 }
 
 .card-header {
@@ -564,6 +565,10 @@ th.sorted {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
+}
+
+.grid-2 > * {
+    min-width: 0;
 }
 
 @media (max-width: 1100px) {
