@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/lyall/kuron/internal/types"
 )
@@ -38,7 +39,7 @@ func (h *Handler) ScanProgressSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	w.Header().Set("X-Accel-Buffering", "no") // Disable nginx buffering
+	w.Header().Set("X-Accel-Buffering", "no")
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
@@ -50,7 +51,7 @@ func (h *Handler) ScanProgressSSE(w http.ResponseWriter, r *http.Request) {
 	updates := h.scanner.Subscribe(runID)
 	defer h.scanner.Unsubscribe(runID, updates)
 
-	// Send initial state
+	// Send initial state and check if already complete
 	run, err := h.db.GetScanRun(runID)
 	if err == nil {
 		h.sendScanProgress(w, flusher, &types.ScanProgress{
@@ -60,6 +61,13 @@ func (h *Handler) ScanProgressSSE(w http.ResponseWriter, r *http.Request) {
 			WastedBytes:  run.WastedBytes,
 			Status:       string(run.Status),
 		})
+
+		// If scan already completed, send complete event and wait briefly for client
+		if run.Status != "running" {
+			h.sendEvent(w, flusher, "complete", fmt.Sprintf(`{"status":"%s"}`, run.Status))
+			h.waitForClientOrTimeout(r, 2*time.Second)
+			return
+		}
 	}
 
 	// Listen for updates
@@ -69,16 +77,26 @@ func (h *Handler) ScanProgressSSE(w http.ResponseWriter, r *http.Request) {
 			return
 		case update, ok := <-updates:
 			if !ok {
-				// Channel closed, send complete event
+				// Channel closed (scan finished), send complete event
 				h.sendEvent(w, flusher, "complete", `{"status":"completed"}`)
+				h.waitForClientOrTimeout(r, 2*time.Second)
 				return
 			}
 			h.sendScanProgress(w, flusher, update)
 			if update.Status != "running" {
 				h.sendEvent(w, flusher, "complete", fmt.Sprintf(`{"status":"%s"}`, update.Status))
+				h.waitForClientOrTimeout(r, 2*time.Second)
 				return
 			}
 		}
+	}
+}
+
+// waitForClientOrTimeout waits for the client to disconnect or times out
+func (h *Handler) waitForClientOrTimeout(r *http.Request, timeout time.Duration) {
+	select {
+	case <-r.Context().Done():
+	case <-time.After(timeout):
 	}
 }
 
@@ -90,7 +108,6 @@ func (h *Handler) sendScanProgress(w http.ResponseWriter, flusher http.Flusher, 
 		WastedBytes:  formatBytes(progress.WastedBytes),
 		Status:       progress.Status,
 	}
-
 	jsonData, _ := json.Marshal(data)
 	h.sendEvent(w, flusher, "progress", string(jsonData))
 }

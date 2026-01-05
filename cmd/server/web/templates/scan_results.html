@@ -12,12 +12,12 @@
 </div>
 
 {{if eq .Run.Status "running"}}
-<div class="card" hx-ext="sse" sse-connect="/sse/scan/{{.Run.ID}}" sse-swap="progress">
+<div class="card" id="scan-progress">
     <div class="card-header">
         <span>Scan in Progress</span>
         <span class="loading"></span>
     </div>
-    <div class="card-body" id="progress-content">
+    <div class="card-body">
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value" id="files-scanned">{{.Run.FilesScanned}}</div>
@@ -38,6 +38,33 @@
         </div>
     </div>
 </div>
+<script>
+(function() {
+    var source = new EventSource('/sse/scan/{{.Run.ID}}');
+
+    source.addEventListener('progress', function(e) {
+        try {
+            var data = JSON.parse(e.data);
+            document.getElementById('files-scanned').textContent = data.files_scanned;
+            document.getElementById('bytes-scanned').textContent = data.bytes_scanned;
+            document.getElementById('groups-found').textContent = data.groups_found;
+            document.getElementById('wasted-bytes').textContent = data.wasted_bytes;
+        } catch(err) {
+            console.error('Failed to parse progress:', err);
+        }
+    });
+
+    source.addEventListener('complete', function(e) {
+        source.close();
+        window.location.reload();
+    });
+
+    source.onerror = function(e) {
+        console.log('SSE error, closing connection');
+        source.close();
+    };
+})();
+</script>
 {{else}}
 <div class="stats-grid">
     <div class="stat-card">
