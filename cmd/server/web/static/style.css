@@ -514,6 +514,11 @@ tr:hover td {
     color: #ffffff;
 }
 
+.badge-processed {
+    background: var(--success);
+    color: #ffffff;
+}
+
 /* Progress bar */
 .progress {
     height: 0.5rem;
