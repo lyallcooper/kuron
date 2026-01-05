@@ -558,6 +558,12 @@ func (h *Handler) ScanConfigRoutes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DELETE /scans/{id} = delete config
+	if r.Method == http.MethodDelete {
+		h.DeleteScanConfig(w, r, id)
+		return
+	}
+
 	// GET /scans/{id} = view config (redirect to edit for now)
 	http.Redirect(w, r, "/scans/"+idStr+"/edit", http.StatusSeeOther)
 }
@@ -694,6 +700,13 @@ func (h *Handler) DeleteScanConfig(w http.ResponseWriter, r *http.Request, id in
 	err := h.db.DeleteScanConfig(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// For HTMX requests, use HX-Redirect header
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/scans")
+		w.WriteHeader(http.StatusOK)
 		return
 	}
 

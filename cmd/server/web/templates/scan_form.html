@@ -79,8 +79,7 @@
                 <a href="/scans" class="btn">Cancel</a>
                 {{if .Config}}
                 <button type="button" class="btn btn-danger"
-                        hx-delete="/scans/{{.Config.ID}}"
-                        hx-confirm="Are you sure you want to delete this configuration?">
+                        onclick="confirmDelete('/scans/{{.Config.ID}}', 'Configuration')">
                     Delete
                 </button>
                 {{end}}
