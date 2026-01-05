@@ -23,6 +23,7 @@ type JobFormData struct {
 	ActiveNav string
 	Job       *db.ScheduledJob
 	Configs   []*db.ScanConfig
+	Error     string
 }
 
 // Jobs handles GET /jobs
@@ -157,13 +158,33 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	configIDStr := r.FormValue("scan_config_id")
-	cronExpr := r.FormValue("cron_expression")
+	cronExpr := strings.TrimSpace(r.FormValue("cron_expression"))
 	action := r.FormValue("action")
 	enabled := r.FormValue("enabled") == "1"
 
-	configID, err := strconv.ParseInt(configIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid scan config", http.StatusBadRequest)
+	configID, _ := strconv.ParseInt(configIDStr, 10, 64)
+
+	// Helper to render form with error
+	renderError := func(errMsg string) {
+		configs, _ := h.db.ListScanConfigs()
+		data := JobFormData{
+			Title:     "New Job",
+			ActiveNav: "jobs",
+			Configs:   configs,
+			Error:     errMsg,
+			Job: &db.ScheduledJob{
+				ScanConfigID:   configID,
+				CronExpression: cronExpr,
+				Action:         action,
+				Enabled:        enabled,
+			},
+		}
+		h.render(w, "job_form.html", data)
+	}
+
+	// Validate config selection
+	if configID == 0 {
+		renderError("Please select a scan configuration")
 		return
 	}
 
@@ -171,7 +192,7 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(cronExpr)
 	if err != nil {
-		http.Error(w, "Invalid cron expression: "+err.Error(), http.StatusBadRequest)
+		renderError("Invalid cron expression: " + err.Error())
 		return
 	}
 
@@ -187,7 +208,7 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 
 	_, err = h.db.CreateScheduledJob(job)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to create job: " + err.Error())
 		return
 	}
 
@@ -225,37 +246,59 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	job, err := h.db.GetScheduledJob(id)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
 	configIDStr := r.FormValue("scan_config_id")
-	job.CronExpression = r.FormValue("cron_expression")
-	job.Action = r.FormValue("action")
-	job.Enabled = r.FormValue("enabled") == "1"
+	cronExpr := strings.TrimSpace(r.FormValue("cron_expression"))
+	action := r.FormValue("action")
+	enabled := r.FormValue("enabled") == "1"
 
-	configID, err := strconv.ParseInt(configIDStr, 10, 64)
-	if err != nil {
-		http.Error(w, "Invalid scan config", http.StatusBadRequest)
+	configID, _ := strconv.ParseInt(configIDStr, 10, 64)
+
+	// Helper to render form with error
+	renderError := func(errMsg string) {
+		configs, _ := h.db.ListScanConfigs()
+		data := JobFormData{
+			Title:     "Edit Job",
+			ActiveNav: "jobs",
+			Configs:   configs,
+			Error:     errMsg,
+			Job: &db.ScheduledJob{
+				ID:             id,
+				ScanConfigID:   configID,
+				CronExpression: cronExpr,
+				Action:         action,
+				Enabled:        enabled,
+			},
+		}
+		h.render(w, "job_form.html", data)
+	}
+
+	// Validate config selection
+	if configID == 0 {
+		renderError("Please select a scan configuration")
 		return
 	}
-	job.ScanConfigID = configID
 
 	// Validate and calculate next run
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(job.CronExpression)
+	schedule, err := parser.Parse(cronExpr)
 	if err != nil {
-		http.Error(w, "Invalid cron expression: "+err.Error(), http.StatusBadRequest)
+		renderError("Invalid cron expression: " + err.Error())
 		return
 	}
 
 	nextRun := schedule.Next(time.Now())
-	job.NextRunAt = &nextRun
+
+	job := &db.ScheduledJob{
+		ID:             id,
+		ScanConfigID:   configID,
+		CronExpression: cronExpr,
+		Action:         action,
+		Enabled:        enabled,
+		NextRunAt:      &nextRun,
+	}
 
 	if err := h.db.UpdateScheduledJob(job); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to update job: " + err.Error())
 		return
 	}
 
