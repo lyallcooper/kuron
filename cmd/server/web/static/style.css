@@ -122,20 +122,29 @@ a:hover {
 }
 
 /* Buttons */
+button.btn {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     font-family: var(--mono);
     font-size: 0.875rem;
+    line-height: 1;
     border: 1px solid var(--border);
     border-radius: 4px;
     background: var(--bg);
     color: var(--fg);
     cursor: pointer;
     text-decoration: none;
+    vertical-align: middle;
     transition: background 0.15s, border-color 0.15s;
+    box-sizing: border-box;
 }
 
 .btn:hover {
