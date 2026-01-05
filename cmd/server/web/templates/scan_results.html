@@ -94,7 +94,10 @@
 {{if .Groups}}
 <div class="card">
     <div class="card-header">
-        <span>Duplicate File Groups</span>
+        <div class="header-left">
+            <span>Duplicate File Groups</span>
+            <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
+        </div>
         <div class="action-buttons">
             <span id="selection-count" class="muted">0 selected</span>
             <span class="separator"></span>
@@ -120,12 +123,6 @@
             <input type="hidden" name="select_all" id="select-all-flag" value="">
             <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
         </form>
-
-        <!-- Selection Controls -->
-        <div class="selection-controls">
-            <span class="muted">{{.TotalCount}} groups</span>
-            <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
-        </div>
 
         <!-- Groups Table -->
         <div class="table-container">
@@ -232,7 +229,7 @@ function updateExpandButtonText() {
     var rows = document.querySelectorAll('.expanded-content');
     var expandedCount = document.querySelectorAll('.expanded-content.show').length;
     allExpanded = expandedCount === rows.length && rows.length > 0;
-    var btn = document.querySelector('.selection-info .btn');
+    var btn = document.querySelector('.header-left .btn');
     if (btn) {
         btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
     }
