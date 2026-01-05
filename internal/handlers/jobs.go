@@ -14,7 +14,7 @@ import (
 type JobsData struct {
 	Title     string
 	ActiveNav string
-	Jobs      []*db.ScheduledJob
+	Jobs      []*JobView
 }
 
 // JobFormData holds data for the job form template
@@ -38,10 +38,31 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build view models with config names
+	var views []*JobView
+	for _, job := range jobs {
+		view := &JobView{
+			ID:             job.ID,
+			CronExpression: job.CronExpression,
+			Action:         job.Action,
+			Enabled:        job.Enabled,
+		}
+		if cfg, err := h.db.GetScanConfig(job.ScanConfigID); err == nil {
+			view.ConfigName = cfg.Name
+		}
+		if job.NextRunAt != nil {
+			view.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")
+		}
+		if job.LastRunAt != nil {
+			view.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
+		}
+		views = append(views, view)
+	}
+
 	data := JobsData{
 		Title:     "Jobs",
 		ActiveNav: "jobs",
-		Jobs:      jobs,
+		Jobs:      views,
 	}
 
 	h.render(w, "jobs.html", data)
@@ -131,7 +152,6 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := r.FormValue("name")
 	configIDStr := r.FormValue("scan_config_id")
 	cronExpr := r.FormValue("cron_expression")
 	action := r.FormValue("action")
@@ -154,7 +174,6 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	nextRun := schedule.Next(time.Now())
 
 	job := &db.ScheduledJob{
-		Name:           name,
 		ScanConfigID:   configID,
 		CronExpression: cronExpr,
 		Action:         action,
@@ -208,7 +227,6 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	job.Name = r.FormValue("name")
 	configIDStr := r.FormValue("scan_config_id")
 	job.CronExpression = r.FormValue("cron_expression")
 	job.Action = r.FormValue("action")

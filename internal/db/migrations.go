@@ -30,6 +30,7 @@ func (db *DB) Migrate() error {
 		sql     string
 	}{
 		{1, migration001},
+		{2, migration002},
 	}
 
 	for _, m := range migrations {
@@ -156,4 +157,9 @@ CREATE TABLE daily_stats (
     bytes_wasted INTEGER DEFAULT 0,
     bytes_saved INTEGER DEFAULT 0
 );
+`
+
+const migration002 = `
+-- Remove name column from scheduled_jobs (redundant with scan_config name)
+ALTER TABLE scheduled_jobs DROP COLUMN name;
 `

@@ -98,14 +98,14 @@ func (s *Scheduler) checkJobs() {
 
 // runJob executes a scheduled job
 func (s *Scheduler) runJob(job *db.ScheduledJob) {
-	log.Printf("scheduler: running job %s (ID: %d)", job.Name, job.ID)
-
 	// Get scan config
 	cfg, err := s.db.GetScanConfig(job.ScanConfigID)
 	if err != nil {
 		log.Printf("scheduler: failed to get scan config for job %d: %v", job.ID, err)
 		return
 	}
+
+	log.Printf("scheduler: running job %d (%s)", job.ID, cfg.Name)
 
 	// Get paths
 	var paths []string
@@ -143,7 +143,7 @@ func (s *Scheduler) runJob(job *db.ScheduledJob) {
 		log.Printf("scheduler: failed to update job last run: %v", err)
 	}
 
-	log.Printf("scheduler: started scan run %d for job %s, next run at %v", run.ID, job.Name, nextRun)
+	log.Printf("scheduler: started scan run %d for job %d, next run at %v", run.ID, job.ID, nextRun)
 
 	// If action is specified, wait for scan to complete and execute action
 	if job.Action != "scan" {
@@ -208,7 +208,7 @@ func (s *Scheduler) waitAndExecuteAction(ctx context.Context, runID int64, job *
 			if err != nil {
 				log.Printf("scheduler: failed to execute action: %v", err)
 			} else {
-				log.Printf("scheduler: executed %s on %d groups for job %s", actionType, len(groupIDs), job.Name)
+				log.Printf("scheduler: executed %s on %d groups for job %d", actionType, len(groupIDs), job.ID)
 			}
 
 			return

@@ -10,7 +10,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Name</th>
+                    <th>Scan Config</th>
                     <th>Schedule</th>
                     <th>Action</th>
                     <th>Last Run</th>
@@ -22,11 +22,11 @@
             <tbody>
                 {{range .Jobs}}
                 <tr>
-                    <td><a href="/jobs/{{.ID}}">{{.Name}}</a></td>
+                    <td><a href="/jobs/{{.ID}}">{{.ConfigName}}</a></td>
                     <td class="cron">{{.CronExpression}}</td>
                     <td>{{.Action}}</td>
-                    <td class="timestamp">{{if .LastRunAt}}{{.LastRunAt | formatTime}}{{else}}-{{end}}</td>
-                    <td class="timestamp">{{if .NextRunAt}}{{.NextRunAt | formatTime}}{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if .LastRunAt}}{{.LastRunAt}}{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                     <td>
                         {{if .Enabled}}
                         <span class="badge badge-completed">Active</span>

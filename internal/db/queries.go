@@ -468,9 +468,9 @@ func scanDuplicateGroupRow(rows *sql.Rows) (*DuplicateGroup, error) {
 // CreateScheduledJob creates a new scheduled job
 func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
 	result, err := db.Exec(`
-		INSERT INTO scheduled_jobs (name, scan_config_id, cron_expression, action, enabled, next_run_at)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		job.Name, job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
+		INSERT INTO scheduled_jobs (scan_config_id, cron_expression, action, enabled, next_run_at)
+		VALUES (?, ?, ?, ?, ?)`,
+		job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
 	)
 	if err != nil {
 		return nil, err
@@ -487,7 +487,7 @@ func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
 // GetScheduledJob retrieves a scheduled job by ID
 func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 	row := db.QueryRow(`
-		SELECT id, name, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
 		FROM scheduled_jobs WHERE id = ?`, id)
 	return scanScheduledJob(row)
 }
@@ -495,8 +495,8 @@ func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 // ListScheduledJobs returns all scheduled jobs
 func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
-		SELECT id, name, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
-		FROM scheduled_jobs ORDER BY name`)
+		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		FROM scheduled_jobs ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +516,7 @@ func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 // GetEnabledJobs returns all enabled scheduled jobs
 func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
-		SELECT id, name, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
 		FROM scheduled_jobs WHERE enabled = 1 ORDER BY next_run_at`)
 	if err != nil {
 		return nil, err
@@ -538,9 +538,9 @@ func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 func (db *DB) UpdateScheduledJob(job *ScheduledJob) error {
 	_, err := db.Exec(`
 		UPDATE scheduled_jobs SET
-			name = ?, scan_config_id = ?, cron_expression = ?, action = ?, enabled = ?, next_run_at = ?
+			scan_config_id = ?, cron_expression = ?, action = ?, enabled = ?, next_run_at = ?
 		WHERE id = ?`,
-		job.Name, job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt, job.ID,
+		job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt, job.ID,
 	)
 	return err
 }
@@ -571,7 +571,7 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 	var j ScheduledJob
 	var lastRun, nextRun sql.NullTime
 
-	err := row.Scan(&j.ID, &j.Name, &j.ScanConfigID, &j.CronExpression, &j.Action,
+	err := row.Scan(&j.ID, &j.ScanConfigID, &j.CronExpression, &j.Action,
 		&j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
 	if err != nil {
 		return nil, err
@@ -591,7 +591,7 @@ func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 	var j ScheduledJob
 	var lastRun, nextRun sql.NullTime
 
-	err := rows.Scan(&j.ID, &j.Name, &j.ScanConfigID, &j.CronExpression, &j.Action,
+	err := rows.Scan(&j.ID, &j.ScanConfigID, &j.CronExpression, &j.Action,
 		&j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
 	if err != nil {
 		return nil, err

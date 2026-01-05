@@ -31,10 +31,13 @@ type ScanRunView struct {
 
 // JobView is a view model for scheduled jobs
 type JobView struct {
-	ID        int64
-	Name      string
-	NextRunAt string
-	Enabled   bool
+	ID             int64
+	ConfigName     string
+	CronExpression string
+	Action         string
+	NextRunAt      string
+	LastRunAt      string
+	Enabled        bool
 }
 
 // Dashboard handles GET /
@@ -88,12 +91,19 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 
 	for _, job := range jobs {
 		jv := &JobView{
-			ID:      job.ID,
-			Name:    job.Name,
-			Enabled: job.Enabled,
+			ID:             job.ID,
+			CronExpression: job.CronExpression,
+			Action:         job.Action,
+			Enabled:        job.Enabled,
+		}
+		if cfg, err := h.db.GetScanConfig(job.ScanConfigID); err == nil {
+			jv.ConfigName = cfg.Name
 		}
 		if job.NextRunAt != nil {
 			jv.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")
+		}
+		if job.LastRunAt != nil {
+			jv.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
 		}
 		data.Jobs = append(data.Jobs, jv)
 	}

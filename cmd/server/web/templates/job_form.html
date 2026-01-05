@@ -7,13 +7,6 @@
     <div class="card-body">
         <form method="POST" action="{{if .Job}}/jobs/{{.Job.ID}}{{else}}/jobs{{end}}">
             <div class="form-group">
-                <label class="form-label" for="name">Job Name</label>
-                <input type="text" id="name" name="name" class="form-input"
-                       value="{{if .Job}}{{.Job.Name}}{{end}}" required
-                       placeholder="e.g., Nightly Media Dedupe">
-            </div>
-
-            <div class="form-group">
                 <label class="form-label" for="scan_config_id">Scan Configuration</label>
                 <select id="scan_config_id" name="scan_config_id" class="form-select" required>
                     <option value="">Select a configuration...</option>

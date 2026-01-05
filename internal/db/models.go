@@ -29,7 +29,6 @@ type ScanConfig struct {
 // ScheduledJob represents a cron job for automatic scans
 type ScheduledJob struct {
 	ID             int64
-	Name           string
 	ScanConfigID   int64
 	CronExpression string
 	Action         string // 'scan', 'scan_hardlink', 'scan_reflink'
