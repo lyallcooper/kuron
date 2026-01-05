@@ -235,6 +235,12 @@ button.btn {
     height: 1rem;
 }
 
+.add-path-form {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
 .form-help {
     font-size: 0.75rem;
     color: var(--muted);

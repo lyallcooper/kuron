@@ -80,6 +80,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Settings
 	mux.HandleFunc("/settings", h.Settings)
 	mux.HandleFunc("/settings/paths", h.AddPath)
+	mux.HandleFunc("/settings/paths/add-inline", h.AddPathInline)
 	mux.HandleFunc("/settings/paths/", h.DeletePath)
 
 	// SSE

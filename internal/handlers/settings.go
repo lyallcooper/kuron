@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -109,6 +110,80 @@ func (h *Handler) AddPath(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/settings?success=Path added successfully", http.StatusSeeOther)
+}
+
+// AddPathInline handles POST /settings/paths/add-inline (HTMX)
+func (h *Handler) AddPathInline(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	path := strings.TrimSpace(r.FormValue("new_path"))
+	if path == "" {
+		// Return current paths list without error
+		h.renderPathsList(w, nil)
+		return
+	}
+
+	// Validate path exists
+	info, err := os.Stat(path)
+	if err != nil {
+		h.renderPathsList(w, fmt.Errorf("Path does not exist: %s", path))
+		return
+	}
+	if !info.IsDir() {
+		h.renderPathsList(w, fmt.Errorf("Path is not a directory: %s", path))
+		return
+	}
+
+	// Add path
+	newPath, err := h.db.CreateScanPath(path, false)
+	if err != nil {
+		h.renderPathsList(w, err)
+		return
+	}
+
+	// Return updated paths list with new path checked
+	h.renderPathsListWithChecked(w, newPath.ID)
+}
+
+// renderPathsList renders just the paths checkboxes for HTMX
+func (h *Handler) renderPathsList(w http.ResponseWriter, err error) {
+	h.renderPathsListWithChecked(w, 0)
+}
+
+// renderPathsListWithChecked renders paths list with specified path checked
+func (h *Handler) renderPathsListWithChecked(w http.ResponseWriter, checkedID int64) {
+	paths, _ := h.db.ListScanPaths()
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if len(paths) == 0 {
+		w.Write([]byte(`<p class="form-help" id="no-paths-msg">No paths configured yet.</p>`))
+		return
+	}
+
+	for _, p := range paths {
+		checked := ""
+		if p.ID == checkedID {
+			checked = " checked"
+		}
+		locked := ""
+		if p.FromEnv {
+			locked = ` <span class="locked">(from env)</span>`
+		}
+		fmt.Fprintf(w, `<div class="form-checkbox">
+    <input type="checkbox" name="paths" value="%d" id="path-%d"%s>
+    <label for="path-%d">%s%s</label>
+</div>
+`, p.ID, p.ID, checked, p.ID, p.Path, locked)
+	}
 }
 
 // DeletePath handles POST /settings/paths/{id}/delete

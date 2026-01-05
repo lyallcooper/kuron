@@ -15,6 +15,7 @@
 
             <div class="form-group">
                 <label class="form-label">Paths to Scan</label>
+                <div id="paths-list">
                 {{range .Paths}}
                 <div class="form-checkbox">
                     <input type="checkbox" name="paths" value="{{.ID}}"
@@ -27,8 +28,18 @@
                 </div>
                 {{end}}
                 {{if not .Paths}}
-                <p class="form-help">No paths configured. Add paths in <a href="/settings">Settings</a>.</p>
+                <p class="form-help" id="no-paths-msg">No paths configured yet.</p>
                 {{end}}
+                </div>
+                <div class="add-path-form">
+                    <input type="text" id="new-path" name="new_path" class="form-input"
+                           placeholder="/path/to/directory" style="flex: 1;">
+                    <button type="button" class="btn"
+                            hx-post="/settings/paths/add-inline"
+                            hx-include="#new-path"
+                            hx-target="#paths-list"
+                            hx-swap="innerHTML">Add Path</button>
+                </div>
             </div>
 
             <div class="grid-2">
