@@ -12,36 +12,40 @@ A web interface for finding and removing duplicate files using [fclones](https:/
 - **Real-time Progress** - Watch scan progress via server-sent events
 - **Dark Mode** - Automatic light/dark theme based on system preference
 
-## Requirements
-
-- [fclones](https://github.com/pkolaczk/fclones) - Must be installed and available in PATH
-- Go 1.22+ (for building from source)
-
 ## Quick Start
 
 ### Docker (Recommended)
 
-```bash
-# Clone and start
-git clone https://github.com/lyall/kuron.git
-cd kuron
-docker compose up -d
+```yaml
+# docker-compose.yml
+services:
+  kuron:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - kuron-data:/data
+      - /path/to/media:/mnt/media:ro       # Read-only for scanning only
+      - /path/to/downloads:/mnt/downloads  # Read-write for deduplication
+    environment:
+      - KURON_SCAN_PATHS=/mnt/media,/mnt/downloads
+    restart: unless-stopped
 
-# Access at http://localhost:8080
+volumes:
+  kuron-data:
 ```
 
-Mount your directories in `docker-compose.yml`:
-
-```yaml
-volumes:
-  - /path/to/media:/mnt/media:ro       # Read-only for scanning only
-  - /path/to/downloads:/mnt/downloads  # Read-write for deduplication
+```bash
+docker compose up -d
+# Access at http://localhost:8080
 ```
 
 ### From Source
 
+Requires Go 1.22+ and [fclones](https://github.com/pkolaczk/fclones).
+
 ```bash
-# Install fclones first
+# Install fclones
 # macOS: brew install fclones
 # Linux: See https://github.com/pkolaczk/fclones#installation
 
@@ -72,7 +76,7 @@ Environment variables:
 ### Hardlink vs Reflink
 
 - **Hardlink** - Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
-- **Reflink** - Copy-on-write clone. Files share data until modified, then diverge. Requires APFS, Btrfs, or XFS.
+- **Reflink** - Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.).
 
 ## Tech Stack
 
