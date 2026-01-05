@@ -21,7 +21,7 @@
 
 <div class="grid-2">
     <div class="card">
-        <div class="card-header">Recent Scans</div>
+        <div class="card-header"><a href="/history">Recent Scans</a></div>
         <div class="card-body">
             {{if .RecentScans}}
             <table>
@@ -54,7 +54,7 @@
     </div>
 
     <div class="card">
-        <div class="card-header">Scheduled Jobs</div>
+        <div class="card-header"><a href="/jobs">Scheduled Jobs</a></div>
         <div class="card-body">
             {{if .Jobs}}
             <table>
@@ -63,12 +63,13 @@
                         <th>Scan Config</th>
                         <th>Next Run</th>
                         <th>Status</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Jobs}}
                     <tr>
-                        <td><a href="/jobs/{{.ID}}/edit">{{.ConfigName}}</a></td>
+                        <td>{{.ConfigName}}</td>
                         <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                         <td>
                             {{if .Enabled}}
@@ -77,6 +78,7 @@
                             <span class="badge badge-cancelled">Disabled</span>
                             {{end}}
                         </td>
+                        <td><a href="/jobs/{{.ID}}/edit" class="btn btn-sm">Edit</a></td>
                     </tr>
                     {{end}}
                 </tbody>
