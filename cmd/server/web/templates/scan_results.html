@@ -94,40 +94,40 @@
 {{if .Groups}}
 <div class="card">
     <div class="card-header">
-        <span>Duplicate Groups ({{.TotalCount}} total{{if gt .TotalPages 1}}, page {{.Page}} of {{.TotalPages}}{{end}})</span>
+        <span>Duplicate File Groups</span>
+        <div class="action-buttons">
+            <span id="selection-count" class="muted">0 selected</span>
+            <span class="separator"></span>
+            <label class="form-checkbox">
+                <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox" form="action-form">
+                Dry run
+            </label>
+            <button type="submit" name="action" value="hardlink" class="btn btn-sm" id="btn-hardlink" disabled form="action-form">
+                Hardlink
+            </button>
+            <button type="submit" name="action" value="reflink" class="btn btn-sm" id="btn-reflink" disabled form="action-form">
+                Reflink
+            </button>
+        </div>
     </div>
     <div class="card-body">
-        <!-- Action Form -->
-        <div class="action-controls">
-            <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
-                  hx-post="/scans/runs/{{.Run.ID}}/action"
-                  hx-target="body"
-                  hx-swap="beforeend">
-                <input type="hidden" name="group_ids" id="selected-groups" value="">
-                <input type="hidden" name="select_all" id="select-all-flag" value="">
-                <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
-                <div class="selection-info">
-                    <label class="form-checkbox">
-                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
-                        <span id="select-all-label">Select all {{.TotalCount}}</span>
-                    </label>
-                    <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
-                </div>
-                <div class="action-buttons">
-                    <span id="selection-count" class="muted">0 selected</span>
-                    <span class="separator"></span>
-                    <label class="form-checkbox" style="margin-right: 1rem;">
-                        <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
-                        Dry run
-                    </label>
-                    <button type="submit" name="action" value="hardlink" class="btn btn-sm" id="btn-hardlink" disabled>
-                        Hardlink Selected
-                    </button>
-                    <button type="submit" name="action" value="reflink" class="btn btn-sm" id="btn-reflink" disabled>
-                        Reflink Selected
-                    </button>
-                </div>
-            </form>
+        <!-- Action Form (hidden inputs) -->
+        <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
+              hx-post="/scans/runs/{{.Run.ID}}/action"
+              hx-target="body"
+              hx-swap="beforeend">
+            <input type="hidden" name="group_ids" id="selected-groups" value="">
+            <input type="hidden" name="select_all" id="select-all-flag" value="">
+            <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
+        </form>
+
+        <!-- Selection Controls -->
+        <div class="selection-controls">
+            <label class="form-checkbox">
+                <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                <span id="select-all-label">Select all {{.TotalCount}}</span>
+            </label>
+            <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
         </div>
 
         <!-- Groups Table -->

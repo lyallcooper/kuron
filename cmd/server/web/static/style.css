@@ -742,6 +742,14 @@ body.modal-open {
     gap: 1rem;
 }
 
+.selection-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+}
+
 .action-buttons {
     display: flex;
     align-items: center;
