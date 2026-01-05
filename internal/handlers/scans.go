@@ -552,6 +552,12 @@ func (h *Handler) ScanConfigRoutes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// POST /scans/{id} = update config
+	if r.Method == http.MethodPost {
+		h.UpdateScanConfig(w, r, id)
+		return
+	}
+
 	// GET /scans/{id} = view config (redirect to edit for now)
 	http.Redirect(w, r, "/scans/"+idStr+"/edit", http.StatusSeeOther)
 }
@@ -587,6 +593,76 @@ func (h *Handler) RunScanConfig(w http.ResponseWriter, r *http.Request, id int64
 	}
 
 	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
+}
+
+// UpdateScanConfig handles POST /scans/{id}
+func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	name := r.FormValue("name")
+	pathIDs := r.Form["paths"]
+	minSizeStr := r.FormValue("min_size")
+	maxSizeStr := r.FormValue("max_size")
+	includeStr := r.FormValue("include_patterns")
+	excludeStr := r.FormValue("exclude_patterns")
+
+	// Parse path IDs
+	var paths []int64
+	for _, idStr := range pathIDs {
+		pathID, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			continue
+		}
+		paths = append(paths, pathID)
+	}
+
+	// Parse size
+	minSize := parseSize(minSizeStr)
+	var maxSize *int64
+	if maxSizeStr != "" {
+		ms := parseSize(maxSizeStr)
+		if ms > 0 {
+			maxSize = &ms
+		}
+	}
+
+	// Parse patterns
+	var includePatterns, excludePatterns []string
+	if includeStr != "" {
+		for _, p := range strings.Split(includeStr, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				includePatterns = append(includePatterns, p)
+			}
+		}
+	}
+	if excludeStr != "" {
+		for _, p := range strings.Split(excludeStr, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				excludePatterns = append(excludePatterns, p)
+			}
+		}
+	}
+
+	cfg := &db.ScanConfig{
+		ID:              id,
+		Name:            name,
+		Paths:           paths,
+		MinSize:         minSize,
+		MaxSize:         maxSize,
+		IncludePatterns: includePatterns,
+		ExcludePatterns: excludePatterns,
+	}
+
+	err := h.db.UpdateScanConfig(cfg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/scans", http.StatusSeeOther)
 }
 
 // EditScanConfigForm handles GET /scans/{id}/edit
