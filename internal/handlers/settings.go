@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -91,6 +92,9 @@ func (h *Handler) AddPath(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Normalize path
+	path = filepath.Clean(path)
+
 	// Validate path exists
 	info, err := os.Stat(path)
 	if err != nil {
@@ -99,6 +103,13 @@ func (h *Handler) AddPath(w http.ResponseWriter, r *http.Request) {
 	}
 	if !info.IsDir() {
 		http.Redirect(w, r, "/settings?error=Path is not a directory: "+path, http.StatusSeeOther)
+		return
+	}
+
+	// Check if path already exists
+	existing, _ := h.db.GetScanPathByPath(path)
+	if existing != nil {
+		http.Redirect(w, r, "/settings?error=Path already exists: "+path, http.StatusSeeOther)
 		return
 	}
 
@@ -135,25 +146,35 @@ func (h *Handler) AddPathInline(w http.ResponseWriter, r *http.Request) {
 	path := strings.TrimSpace(r.FormValue("new_path"))
 	if path == "" {
 		// Return current paths list preserving checked state
-		h.renderPathsListWithCheckedMap(w, checkedPaths)
+		h.renderPathsListWithError(w, checkedPaths, "")
 		return
 	}
+
+	// Normalize path
+	path = filepath.Clean(path)
 
 	// Validate path exists
 	info, err := os.Stat(path)
 	if err != nil {
-		h.renderPathsListWithCheckedMap(w, checkedPaths)
+		h.renderPathsListWithError(w, checkedPaths, "Path does not exist: "+path)
 		return
 	}
 	if !info.IsDir() {
-		h.renderPathsListWithCheckedMap(w, checkedPaths)
+		h.renderPathsListWithError(w, checkedPaths, "Path is not a directory: "+path)
+		return
+	}
+
+	// Check if path already exists
+	existing, _ := h.db.GetScanPathByPath(path)
+	if existing != nil {
+		h.renderPathsListWithError(w, checkedPaths, "Path already exists: "+path)
 		return
 	}
 
 	// Add path
 	newPath, err := h.db.CreateScanPath(path, false)
 	if err != nil {
-		h.renderPathsListWithCheckedMap(w, checkedPaths)
+		h.renderPathsListWithError(w, checkedPaths, "Failed to add path: "+err.Error())
 		return
 	}
 
@@ -161,14 +182,19 @@ func (h *Handler) AddPathInline(w http.ResponseWriter, r *http.Request) {
 	checkedPaths[newPath.ID] = true
 
 	// Return updated paths list with preserved + new path checked
-	h.renderPathsListWithCheckedMap(w, checkedPaths)
+	h.renderPathsListWithError(w, checkedPaths, "")
 }
 
-// renderPathsListWithCheckedMap renders paths list with specified paths checked
-func (h *Handler) renderPathsListWithCheckedMap(w http.ResponseWriter, checkedPaths map[int64]bool) {
+// renderPathsListWithError renders paths list with specified paths checked and optional error
+func (h *Handler) renderPathsListWithError(w http.ResponseWriter, checkedPaths map[int64]bool, errorMsg string) {
 	paths, _ := h.db.ListScanPaths()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	// Show error message if present
+	if errorMsg != "" {
+		fmt.Fprintf(w, `<div class="alert alert-error" style="margin-bottom: 0.5rem; padding: 0.5rem;">%s</div>`, errorMsg)
+	}
 
 	if len(paths) == 0 {
 		w.Write([]byte(`<p class="form-help" id="no-paths-msg">No paths configured yet.</p>`))
@@ -190,6 +216,11 @@ func (h *Handler) renderPathsListWithCheckedMap(w http.ResponseWriter, checkedPa
 </div>
 `, p.ID, p.ID, checked, p.ID, p.Path, locked)
 	}
+}
+
+// renderPathsListWithCheckedMap renders paths list with specified paths checked
+func (h *Handler) renderPathsListWithCheckedMap(w http.ResponseWriter, checkedPaths map[int64]bool) {
+	h.renderPathsListWithError(w, checkedPaths, "")
 }
 
 // DeletePath handles POST /settings/paths/{id}/delete

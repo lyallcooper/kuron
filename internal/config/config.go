@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -27,7 +28,7 @@ func Load() *Config {
 		for _, p := range strings.Split(paths, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
-				cfg.ScanPaths = append(cfg.ScanPaths, p)
+				cfg.ScanPaths = append(cfg.ScanPaths, filepath.Clean(p))
 			}
 		}
 	}

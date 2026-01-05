@@ -3,6 +3,14 @@
     <h1>Settings</h1>
 </div>
 
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Success}}
+<div class="alert alert-success">{{.Success}}</div>
+{{end}}
+
 <div class="card">
     <div class="card-header">Scan Paths</div>
     <div class="card-body">
@@ -30,12 +38,10 @@
                     </td>
                     <td>
                         {{if not .FromEnv}}
-                        <form action="/settings/paths/{{.ID}}/delete" method="POST" style="display: inline;">
-                            <button type="submit" class="btn btn-sm btn-danger"
-                                    onclick="return confirm('Remove this path?')">
-                                Remove
-                            </button>
-                        </form>
+                        <button type="button" class="btn btn-sm btn-danger"
+                                onclick="showDeleteModal('/settings/paths/{{.ID}}/delete', '{{.Path}}')">
+                            Remove
+                        </button>
                         {{else}}
                         <span class="muted">-</span>
                         {{end}}
@@ -92,11 +98,51 @@
     </div>
 </div>
 
-{{if .Error}}
-<div class="alert alert-error">{{.Error}}</div>
-{{end}}
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal-backdrop" style="display: none;">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Confirm Removal</h3>
+            <button type="button" class="modal-close" onclick="hideDeleteModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to remove this path?</p>
+            <p><strong id="delete-path-name"></strong></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn" onclick="hideDeleteModal()">Cancel</button>
+            <form id="delete-form" method="POST" style="display: inline;">
+                <button type="submit" class="btn btn-danger">Remove</button>
+            </form>
+        </div>
+    </div>
+</div>
 
-{{if .Success}}
-<div class="alert alert-success">{{.Success}}</div>
-{{end}}
+<script>
+function showDeleteModal(action, path) {
+    document.getElementById('delete-form').action = action;
+    document.getElementById('delete-path-name').textContent = path;
+    document.getElementById('delete-modal').style.display = 'flex';
+    document.body.classList.add('modal-open');
+}
+
+function hideDeleteModal() {
+    document.getElementById('delete-modal').style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+// Close modal on backdrop click
+document.getElementById('delete-modal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideDeleteModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideDeleteModal();
+    }
+});
+</script>
 {{end}}
