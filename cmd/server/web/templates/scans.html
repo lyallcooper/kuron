@@ -21,7 +21,7 @@
                 {{range .Configs}}
                 <tr>
                     <td><a href="/scans/{{.ID}}">{{.Name}}</a></td>
-                    <td>{{len .Paths}} path(s)</td>
+                    <td>{{len .Paths}} {{plural (len .Paths) "path" "paths"}}</td>
                     <td class="size">{{.MinSize | formatBytes}}</td>
                     <td class="timestamp">{{if .LastRun}}{{.LastRun.StartedAt | formatTime}}{{else}}-{{end}}</td>
                     <td>

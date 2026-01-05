@@ -125,6 +125,11 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, id)
 	}
 
+	if len(paths) == 0 {
+		http.Error(w, "At least one path must be selected", http.StatusBadRequest)
+		return
+	}
+
 	// Parse size
 	minSize := parseSize(minSizeStr)
 	var maxSize *int64
@@ -623,6 +628,11 @@ func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id in
 			continue
 		}
 		paths = append(paths, pathID)
+	}
+
+	if len(paths) == 0 {
+		http.Error(w, "At least one path must be selected", http.StatusBadRequest)
+		return
 	}
 
 	// Parse size

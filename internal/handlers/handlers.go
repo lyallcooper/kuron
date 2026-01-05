@@ -38,6 +38,7 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 		"derefInt64":    derefInt64,
 		"add":           func(a, b int) int { return a + b },
 		"subtract":      func(a, b int) int { return a - b },
+		"plural":        func(n int, singular, plural string) string { if n == 1 { return singular }; return plural },
 	}
 
 	// Get static files
