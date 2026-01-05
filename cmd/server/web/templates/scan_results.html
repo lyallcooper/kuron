@@ -96,10 +96,13 @@
     <div class="card-header">
         <span>Duplicate Groups ({{len .Groups}})</span>
         <div class="actions-bar" style="margin: 0;">
-            <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action">
+            <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
+                  hx-post="/scans/runs/{{.Run.ID}}/action"
+                  hx-target="body"
+                  hx-swap="beforeend">
                 <input type="hidden" name="group_ids" id="selected-groups" value="">
                 <label class="form-checkbox" style="margin-right: 1rem;">
-                    <input type="checkbox" name="dry_run" value="1" checked>
+                    <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
                     Dry run
                 </label>
                 <button type="submit" name="action" value="hardlink" class="btn btn-sm">

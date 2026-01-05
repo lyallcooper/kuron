@@ -221,8 +221,14 @@ func (s *Scanner) CancelScan(runID int64) {
 	}
 }
 
+// ActionResult contains the result of an action execution
+type ActionResult struct {
+	Action *db.Action
+	Output string // fclones command output
+}
+
 // ExecuteAction executes a dedupe action on selected groups
-func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int64, actionType db.ActionType, dryRun bool) (*db.Action, error) {
+func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int64, actionType db.ActionType, dryRun bool) (*ActionResult, error) {
 	// Create action record
 	action := &db.Action{
 		ScanRunID:  runID,
@@ -262,7 +268,7 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 	if err != nil {
 		errMsg := err.Error() + "\n" + output
 		s.db.CompleteAction(action.ID, len(groupIDs), 0, 0, db.ActionStatusFailed, &errMsg)
-		return action, err
+		return &ActionResult{Action: action, Output: output}, err
 	}
 
 	// Calculate bytes saved
@@ -284,7 +290,7 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 
 	s.db.CompleteAction(action.ID, len(groupIDs), filesProcessed, bytesSaved, db.ActionStatusCompleted, nil)
 
-	return action, nil
+	return &ActionResult{Action: action, Output: output}, nil
 }
 
 // ScanConfig holds configuration for a scan

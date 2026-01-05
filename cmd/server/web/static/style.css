@@ -535,8 +535,7 @@ tr:hover td {
 }
 
 /* Modal */
-.modal {
-    display: none;
+.modal-backdrop {
     position: fixed;
     top: 0;
     left: 0;
@@ -544,19 +543,16 @@ tr:hover td {
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.modal.show {
-    display: flex;
-}
-
-.modal-content {
+.modal {
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 4px;
-    max-width: 500px;
+    max-width: 700px;
     width: 90%;
     max-height: 80vh;
     overflow-y: auto;
@@ -571,8 +567,39 @@ tr:hover td {
     justify-content: space-between;
 }
 
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--fg);
+}
+
 .modal-body {
     padding: 1rem;
+}
+
+.modal-body .output {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem;
+    font-size: 0.8rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 .modal-footer {
@@ -581,6 +608,10 @@ tr:hover td {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
+}
+
+body.modal-open {
+    overflow: hidden;
 }
 
 /* HTMX indicators */

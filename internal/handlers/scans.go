@@ -294,13 +294,62 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		actionType = db.ActionTypeReflink
 	}
 
-	_, err = h.scanner.ExecuteAction(r.Context(), runID, groupIDs, actionType, dryRun)
+	result, err := h.scanner.ExecuteAction(r.Context(), runID, groupIDs, actionType, dryRun)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// For HTMX requests
+	if r.Header.Get("HX-Request") == "true" {
+		if dryRun {
+			// Return modal content for dry runs
+			h.renderDryRunModal(w, action, result.Output)
+			return
+		}
+		// For actual runs, tell HTMX to redirect
+		w.Header().Set("HX-Redirect", "/scans/runs/"+runIDStr)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+}
+
+// renderDryRunModal renders the dry run results modal
+func (h *Handler) renderDryRunModal(w http.ResponseWriter, action, output string) {
+	actionName := "Hardlink"
+	if action == "reflink" {
+		actionName = "Reflink"
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	html := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+	<div class="modal" onclick="event.stopPropagation()">
+		<div class="modal-header">
+			<h3>` + actionName + ` Preview (Dry Run)</h3>
+			<button class="modal-close" onclick="closeModal()">&times;</button>
+		</div>
+		<div class="modal-body">
+			<p>The following operations would be performed:</p>
+			<pre class="output">` + output + `</pre>
+		</div>
+		<div class="modal-footer">
+			<button class="btn" onclick="closeModal()">Close</button>
+		</div>
+	</div>
+</div>
+<script>
+document.body.classList.add('modal-open');
+function closeModal() {
+	document.getElementById('modal-backdrop').remove();
+	document.body.classList.remove('modal-open');
+}
+document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') closeModal();
+});
+</script>`
+	w.Write([]byte(html))
 }
 
 // CancelScan handles POST /scans/runs/{id}/cancel
