@@ -1,0 +1,15 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -o ./tmp/main ./cmd/server"
+bin = "./tmp/main"
+include_ext = ["go", "html", "css", "js"]
+exclude_dir = ["tmp", "vendor", ".git", "scripts"]
+delay = 500
+
+[log]
+time = false
+
+[misc]
+clean_on_exit = true
