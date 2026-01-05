@@ -349,35 +349,79 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 
 	// For HTMX requests, show modal with results
 	if r.Header.Get("HX-Request") == "true" {
-		h.renderActionResultModal(w, action, result.Output, dryRun, "/scans/runs/"+runIDStr)
+		h.renderActionResultModal(w, renderActionModalParams{
+			Action:       action,
+			Output:       result.Output,
+			DryRun:       dryRun,
+			RedirectURL:  "/scans/runs/" + runIDStr,
+			RunID:        runIDStr,
+			GroupIDs:     groupIDsStr,
+			SelectAll:    selectAll,
+			StatusFilter: statusFilter,
+		})
 		return
 	}
 
 	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
 }
 
+// renderActionModalParams holds parameters for rendering the action result modal
+type renderActionModalParams struct {
+	Action       string
+	Output       string
+	DryRun       bool
+	RedirectURL  string
+	RunID        string
+	GroupIDs     string
+	SelectAll    bool
+	StatusFilter string
+}
+
 // renderActionResultModal renders the action results modal
-func (h *Handler) renderActionResultModal(w http.ResponseWriter, action, output string, dryRun bool, redirectURL string) {
+func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionModalParams) {
 	actionName := "Hardlink"
-	if action == "reflink" {
+	if p.Action == "reflink" {
 		actionName = "Reflink"
 	}
 
-	var title, description, buttonText, buttonAction string
-	if dryRun {
+	var title, description string
+	if p.DryRun {
 		title = actionName + " Preview (Dry Run)"
 		description = "The following operations would be performed:"
-		buttonText = "Close"
-		buttonAction = "closeModal()"
 	} else {
 		title = actionName + " Complete"
 		description = "The following operations were performed:"
-		buttonText = "Done"
-		buttonAction = "window.location.href='" + redirectURL + "'"
 	}
 
 	// Escape output to prevent XSS
-	escapedOutput := html.EscapeString(output)
+	escapedOutput := html.EscapeString(p.Output)
+
+	// Build the "Run for Real" form for dry runs
+	var runForRealForm string
+	if p.DryRun {
+		selectAllValue := ""
+		if p.SelectAll {
+			selectAllValue = "1"
+		}
+		runForRealForm = `<form method="POST" action="/scans/runs/` + p.RunID + `/action" style="display:inline;"
+			hx-post="/scans/runs/` + p.RunID + `/action"
+			hx-target="#modal-backdrop"
+			hx-swap="outerHTML">
+			<input type="hidden" name="action" value="` + p.Action + `">
+			<input type="hidden" name="group_ids" value="` + html.EscapeString(p.GroupIDs) + `">
+			<input type="hidden" name="select_all" value="` + selectAllValue + `">
+			<input type="hidden" name="status_filter" value="` + html.EscapeString(p.StatusFilter) + `">
+			<button type="submit" class="btn btn-primary">Run for Real</button>
+		</form>`
+	}
+
+	// Build footer buttons
+	var footerButtons string
+	if p.DryRun {
+		footerButtons = `<button class="btn" onclick="closeModal()">Cancel</button>` + runForRealForm
+	} else {
+		footerButtons = `<button class="btn" onclick="window.location.href='` + p.RedirectURL + `'">Done</button>`
+	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
@@ -391,7 +435,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, action, output 
 			<pre class="output">` + escapedOutput + `</pre>
 		</div>
 		<div class="modal-footer">
-			<button class="btn" onclick="` + buttonAction + `">` + buttonText + `</button>
+			` + footerButtons + `
 		</div>
 	</div>
 </div>
