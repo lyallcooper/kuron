@@ -454,13 +454,16 @@ tr:hover td {
 
 .expanded-content {
     display: none;
-    padding: 1rem;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
 }
 
 .expanded-content.show {
-    display: block;
+    display: table-row;
+}
+
+.expanded-content td {
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
 }
 
 /* Checkbox column */
