@@ -123,10 +123,7 @@
 
         <!-- Selection Controls -->
         <div class="selection-controls">
-            <label class="form-checkbox">
-                <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
-                <span id="select-all-label">Select all {{.TotalCount}}</span>
-            </label>
+            <span class="muted">{{.TotalCount}} groups</span>
             <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
         </div>
 
@@ -241,47 +238,27 @@ function updateExpandButtonText() {
     }
 }
 
-function toggleSelectAll(checkbox) {
+function togglePage(checkbox) {
     selectAllMode = checkbox.checked;
     manualSelections.clear();
 
-    // Update page checkboxes visually
-    document.querySelectorAll('.group-checkbox').forEach(cb => {
+    // Update all row checkboxes visually
+    document.querySelectorAll('.group-checkbox').forEach(function(cb) {
         cb.checked = selectAllMode;
-    });
-    document.getElementById('select-page').checked = selectAllMode;
-
-    updateSelectionDisplay();
-}
-
-function togglePage(checkbox) {
-    if (selectAllMode) {
-        // If in select-all mode, clicking page checkbox exits it
-        selectAllMode = false;
-        document.getElementById('select-all').checked = false;
-    }
-
-    document.querySelectorAll('.group-checkbox').forEach(cb => {
-        cb.checked = checkbox.checked;
-        if (checkbox.checked) {
-            manualSelections.add(cb.value);
-        } else {
-            manualSelections.delete(cb.value);
-        }
     });
 
     updateSelectionDisplay();
 }
 
 function updateSelection() {
+    // Exit select-all mode when manually changing selections
     if (selectAllMode) {
-        // Exit select-all mode when manually changing selections
         selectAllMode = false;
-        document.getElementById('select-all').checked = false;
+        document.getElementById('select-page').checked = false;
     }
 
     manualSelections.clear();
-    document.querySelectorAll('.group-checkbox:checked').forEach(cb => {
+    document.querySelectorAll('.group-checkbox:checked').forEach(function(cb) {
         manualSelections.add(cb.value);
     });
 
