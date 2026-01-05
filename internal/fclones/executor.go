@@ -42,6 +42,18 @@ func (e *Executor) CheckInstalled(ctx context.Context) error {
 	return nil
 }
 
+// Version returns the fclones version string
+func (e *Executor) Version(ctx context.Context) (string, error) {
+	cmd := exec.CommandContext(ctx, e.binaryPath, "--version")
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("fclones not found: %w", err)
+	}
+	// Output is typically "fclones 0.35.0"
+	version := strings.TrimSpace(string(output))
+	return version, nil
+}
+
 // Group runs fclones group and returns duplicate groups
 func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan chan<- Progress) (*GroupOutput, error) {
 	args := []string{"group", "--format", "json"}

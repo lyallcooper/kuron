@@ -50,13 +50,11 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get fclones version
-	fclonesVersion := "unknown"
+	fclonesVersion := "not found"
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	if err := h.executor.CheckInstalled(ctx); err == nil {
-		fclonesVersion = "installed"
-	} else {
-		fclonesVersion = "not found"
+	if version, err := h.executor.Version(ctx); err == nil {
+		fclonesVersion = version
 	}
 
 	data := SettingsData{
