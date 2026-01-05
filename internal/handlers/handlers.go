@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"math"
@@ -32,6 +33,7 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 	funcMap := template.FuncMap{
 		"formatBytes":   formatBytes,
 		"formatTime":    formatTime,
+		"timeAgo":       timeAgo,
 		"truncateHash":  truncateHash,
 		"joinPatterns":  joinPatterns,
 		"joinLines":     joinLines,
@@ -179,6 +181,48 @@ func formatTime(t any) string {
 	default:
 		return "-"
 	}
+}
+
+// timeAgo returns a human-readable string describing how long ago a time was
+func timeAgo(t any) string {
+	var target time.Time
+
+	switch v := t.(type) {
+	case time.Time:
+		target = v
+	case *time.Time:
+		if v == nil {
+			return "-"
+		}
+		target = *v
+	default:
+		return "-"
+	}
+
+	duration := time.Since(target)
+
+	if duration < time.Minute {
+		return "just now"
+	}
+	if duration < time.Hour {
+		mins := int(duration.Minutes())
+		if mins == 1 {
+			return "1 minute ago"
+		}
+		return fmt.Sprintf("%d minutes ago", mins)
+	}
+	if duration < 24*time.Hour {
+		hours := int(duration.Hours())
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	}
+	days := int(duration.Hours() / 24)
+	if days == 1 {
+		return "1 day ago"
+	}
+	return fmt.Sprintf("%d days ago", days)
 }
 
 func truncateHash(hash string) string {

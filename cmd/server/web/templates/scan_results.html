@@ -7,7 +7,7 @@
             <button type="submit" class="btn btn-danger">Cancel Scan</button>
         </form>
         {{end}}
-        <a href="/scans" class="btn">Back to Scan Configs</a>
+        <a href="/history" class="btn">Back to History</a>
     </div>
 </div>
 
@@ -82,6 +82,10 @@
     <div class="stat-card">
         <div class="stat-value">{{.Run.WastedBytes | formatBytes}}</div>
         <div class="stat-label">Wasted Space</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.CompletedAt | timeAgo}}</div>
+        <div class="stat-label">Scan Age</div>
     </div>
 </div>
 
