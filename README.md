@@ -17,7 +17,7 @@ A web interface for finding and removing duplicate files using [fclones](https:/
 ```yaml
 services:
   kuron:
-    build: .
+    image: ghcr.io/lyallcooper/kuron:latest
     ports:
       - 8080:8080
     user: 1000:1000 # Must have permission for linked volumes
@@ -34,7 +34,7 @@ Access at http://localhost:8080.
 
 ### From Source
 
-Requires Go 1.22+ and [fclones](https://github.com/pkolaczk/fclones).
+Requires Go 1.24+ and [fclones](https://github.com/pkolaczk/fclones).
 
 ```bash
 # Install fclones

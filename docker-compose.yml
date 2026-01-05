@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   kuron:
-    build: .
+    image: ghcr.io/lyallcooper/kuron:latest
     container_name: kuron
     ports:
       - "8080:8080"
