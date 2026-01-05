@@ -32,6 +32,7 @@ type ScanRunView struct {
 // JobView is a view model for scheduled jobs
 type JobView struct {
 	ID             int64
+	ConfigID       int64
 	ConfigName     string
 	CronExpression string
 	Action         string
@@ -93,6 +94,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		jv := &JobView{
 			ID:             job.ID,
+			ConfigID:       job.ScanConfigID,
 			CronExpression: job.CronExpression,
 			Action:         job.Action,
 			Enabled:        job.Enabled,

@@ -43,6 +43,7 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		view := &JobView{
 			ID:             job.ID,
+			ConfigID:       job.ScanConfigID,
 			CronExpression: job.CronExpression,
 			Action:         job.Action,
 			Enabled:        job.Enabled,
