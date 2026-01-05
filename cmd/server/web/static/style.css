@@ -566,7 +566,7 @@ th.sorted {
     gap: 1rem;
 }
 
-@media (max-width: 1000px) {
+@media (max-width: 1100px) {
     .grid-2 {
         grid-template-columns: 1fr;
     }

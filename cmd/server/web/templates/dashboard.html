@@ -24,6 +24,7 @@
         <div class="card-header"><a href="/history">Recent Scans</a></div>
         <div class="card-body">
             {{if .RecentScans}}
+            <div class="table-container">
             <table>
                 <thead>
                     <tr>
@@ -44,6 +45,7 @@
                     {{end}}
                 </tbody>
             </table>
+            </div>
             {{else}}
             <div class="empty-state">
                 <p>No scans yet</p>
@@ -57,6 +59,7 @@
         <div class="card-header"><a href="/jobs">Scheduled Jobs</a></div>
         <div class="card-body">
             {{if .Jobs}}
+            <div class="table-container">
             <table>
                 <thead>
                     <tr>
@@ -83,6 +86,7 @@
                     {{end}}
                 </tbody>
             </table>
+            </div>
             {{else}}
             <div class="empty-state">
                 <p>No scheduled jobs</p>
