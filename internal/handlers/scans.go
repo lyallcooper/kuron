@@ -7,29 +7,8 @@ import (
 	"strings"
 
 	"github.com/lyall/kuron/internal/db"
+	"github.com/lyall/kuron/internal/services"
 )
-
-// ScansData holds data for the scans list template
-type ScansData struct {
-	Title     string
-	ActiveNav string
-	Configs   []*ScanConfigView
-}
-
-// ScanConfigView is a view model for scan configs
-type ScanConfigView struct {
-	*db.ScanConfig
-	LastRun *db.ScanRun
-}
-
-// ScanFormData holds data for the scan form template
-type ScanFormData struct {
-	Title     string
-	ActiveNav string
-	Config    *db.ScanConfig
-	Paths     []*db.ScanPath
-	Error     string
-}
 
 // ScanResultsData holds data for the scan results template
 type ScanResultsData struct {
@@ -51,117 +30,90 @@ type ScanResultsData struct {
 
 // QuickScanData holds data for the quick scan template
 type QuickScanData struct {
-	Title     string
-	ActiveNav string
-	Paths     []*db.ScanPath
+	Title           string
+	ActiveNav       string
+	Paths           []string
+	MinSize         string
+	MaxSize         string
+	IncludePatterns []string
+	ExcludePatterns []string
+	Error           string
 }
 
-// Scans handles GET /scans
-func (h *Handler) Scans(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		h.CreateScanConfig(w, r)
+// QuickScan handles GET/POST /scans/quick
+func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
+	// GET - show form
+	if r.Method == http.MethodGet {
+		data := QuickScanData{
+			Title:     "Quick Scan",
+			ActiveNav: "history",
+		}
+
+		h.render(w, "quick_scan.html", data)
 		return
 	}
 
-	configs, err := h.db.ListScanConfigs()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	// POST - run scan
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get last run for each config
-	var views []*ScanConfigView
-	for _, cfg := range configs {
-		view := &ScanConfigView{ScanConfig: cfg}
-		// TODO: Get last run for this config
-		views = append(views, view)
-	}
-
-	data := ScansData{
-		Title:     "Scans",
-		ActiveNav: "scans",
-		Configs:   views,
-	}
-
-	h.render(w, "scans.html", data)
-}
-
-// ScanForm handles GET/POST /scans/new and /scans/{id}/edit
-func (h *Handler) ScanForm(w http.ResponseWriter, r *http.Request) {
-	paths, err := h.db.ListScanPaths()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := ScanFormData{
-		Title:     "New Scan Config",
-		ActiveNav: "scans",
-		Paths:     paths,
-	}
-
-	h.render(w, "scan_form.html", data)
-}
-
-// CreateScanConfig handles POST /scans
-func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	name := strings.TrimSpace(r.FormValue("name"))
-	pathIDs := r.Form["paths"]
 	minSizeStr := r.FormValue("min_size")
 	maxSizeStr := r.FormValue("max_size")
-	includeStr := r.FormValue("include_patterns")
-	excludeStr := r.FormValue("exclude_patterns")
 
-	// Parse path IDs
-	var paths []int64
-	for _, idStr := range pathIDs {
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			continue
+	// Get paths from form array
+	var paths []string
+	for _, p := range r.Form["paths"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			paths = append(paths, p)
 		}
-		paths = append(paths, id)
 	}
 
-	// Parse patterns
-	includePatterns := splitPatterns(includeStr)
-	excludePatterns := splitPatterns(excludeStr)
+	// Get patterns from form arrays
+	var includePatterns []string
+	for _, p := range r.Form["include_patterns"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			includePatterns = append(includePatterns, p)
+		}
+	}
+
+	var excludePatterns []string
+	for _, p := range r.Form["exclude_patterns"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			excludePatterns = append(excludePatterns, p)
+		}
+	}
 
 	// Helper to render form with error
 	renderError := func(errMsg string) {
-		allPaths, _ := h.db.ListScanPaths()
-		data := ScanFormData{
-			Title:     "New Scan Config",
-			ActiveNav: "scans",
-			Paths:     allPaths,
-			Error:     errMsg,
-			Config: &db.ScanConfig{
-				Name:            name,
-				Paths:           paths,
-				IncludePatterns: includePatterns,
-				ExcludePatterns: excludePatterns,
-			},
+		data := QuickScanData{
+			Title:           "Quick Scan",
+			ActiveNav:       "history",
+			Paths:           paths,
+			MinSize:         minSizeStr,
+			MaxSize:         maxSizeStr,
+			IncludePatterns: includePatterns,
+			ExcludePatterns: excludePatterns,
+			Error:           errMsg,
 		}
-		h.render(w, "scan_form.html", data)
+		h.render(w, "quick_scan.html", data)
 	}
 
-	// Validate name
-	if name == "" {
-		renderError("Name is required")
-		return
-	}
-
-	// Validate paths
 	if len(paths) == 0 {
-		renderError("At least one path must be selected")
+		renderError("At least one path is required")
 		return
 	}
 
-	// Parse and validate sizes
+	// Parse sizes
 	minSize, err := parseSizeWithError(minSizeStr)
 	if err != nil {
 		renderError(fmt.Sprintf("Invalid min size: %s", minSizeStr))
@@ -186,8 +138,8 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg := &db.ScanConfig{
-		Name:            name,
+	// Build scan config
+	cfg := &services.ScanConfig{
 		Paths:           paths,
 		MinSize:         minSize,
 		MaxSize:         maxSize,
@@ -195,75 +147,10 @@ func (h *Handler) CreateScanConfig(w http.ResponseWriter, r *http.Request) {
 		ExcludePatterns: excludePatterns,
 	}
 
-	_, err = h.db.CreateScanConfig(cfg)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/scans", http.StatusSeeOther)
-}
-
-// QuickScan handles GET/POST /scans/quick
-func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
-	// GET - show form
-	if r.Method == http.MethodGet {
-		paths, err := h.db.ListScanPaths()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		data := QuickScanData{
-			Title:     "Quick Scan",
-			ActiveNav: "scans",
-			Paths:     paths,
-		}
-
-		h.render(w, "quick_scan.html", data)
-		return
-	}
-
-	// POST - run scan
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	pathIDs := r.Form["paths"]
-	if len(pathIDs) == 0 {
-		http.Error(w, "No paths selected", http.StatusBadRequest)
-		return
-	}
-
-	// Get actual paths
-	var paths []string
-	for _, idStr := range pathIDs {
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			continue
-		}
-		path, err := h.db.GetScanPath(id)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, path.Path)
-	}
-
-	if len(paths) == 0 {
-		http.Error(w, "No valid paths", http.StatusBadRequest)
-		return
-	}
-
 	// Start scan
-	run, err := h.scanner.StartScan(r.Context(), paths, nil)
+	run, err := h.scanner.StartScan(r.Context(), cfg, nil)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to start scan: " + err.Error())
 		return
 	}
 
@@ -363,7 +250,7 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 
 	data := ScanResultsData{
 		Title:      "Scan Results",
-		ActiveNav:  "scans",
+		ActiveNav:  "history",
 		Run:        run,
 		Groups:     groups,
 		Page:       page,
@@ -543,258 +430,4 @@ func parseSizeWithError(s string) (int64, error) {
 	}
 
 	return int64(n * float64(multiplier)), nil
-}
-
-// parseSize parses a human-readable size string to bytes (returns 0 on error)
-func parseSize(s string) int64 {
-	size, _ := parseSizeWithError(s)
-	return size
-}
-
-// splitPatterns splits a comma-separated pattern string into a slice
-func splitPatterns(s string) []string {
-	var patterns []string
-	if s != "" {
-		for _, p := range strings.Split(s, ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				patterns = append(patterns, p)
-			}
-		}
-	}
-	return patterns
-}
-
-// ScanConfigRoutes handles routes under /scans/{id}
-func (h *Handler) ScanConfigRoutes(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(r.URL.Path, "/")
-	if len(parts) < 3 {
-		http.NotFound(w, r)
-		return
-	}
-
-	idStr := parts[2]
-
-	// Skip routes handled elsewhere
-	if idStr == "new" || idStr == "quick" || idStr == "runs" {
-		http.NotFound(w, r)
-		return
-	}
-
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	// Handle sub-routes
-	if len(parts) >= 4 {
-		switch parts[3] {
-		case "run":
-			if r.Method == http.MethodPost {
-				h.RunScanConfig(w, r, id)
-				return
-			}
-		case "edit":
-			h.EditScanConfigForm(w, r, id)
-			return
-		case "delete":
-			if r.Method == http.MethodPost || r.Method == http.MethodDelete {
-				h.DeleteScanConfig(w, r, id)
-				return
-			}
-		}
-	}
-
-	// POST /scans/{id} = update config
-	if r.Method == http.MethodPost {
-		h.UpdateScanConfig(w, r, id)
-		return
-	}
-
-	// DELETE /scans/{id} = delete config
-	if r.Method == http.MethodDelete {
-		h.DeleteScanConfig(w, r, id)
-		return
-	}
-
-	// GET /scans/{id} = view config (redirect to edit for now)
-	http.Redirect(w, r, "/scans/"+idStr+"/edit", http.StatusSeeOther)
-}
-
-// RunScanConfig handles POST /scans/{id}/run
-func (h *Handler) RunScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
-	config, err := h.db.GetScanConfig(id)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	// Get actual paths from path IDs
-	var paths []string
-	for _, pathID := range config.Paths {
-		path, err := h.db.GetScanPath(pathID)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, path.Path)
-	}
-
-	if len(paths) == 0 {
-		http.Error(w, "No valid paths in scan configuration", http.StatusBadRequest)
-		return
-	}
-
-	// Start scan
-	run, err := h.scanner.StartScan(r.Context(), paths, nil)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
-}
-
-// UpdateScanConfig handles POST /scans/{id}
-func (h *Handler) UpdateScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	name := strings.TrimSpace(r.FormValue("name"))
-	pathIDs := r.Form["paths"]
-	minSizeStr := r.FormValue("min_size")
-	maxSizeStr := r.FormValue("max_size")
-	includeStr := r.FormValue("include_patterns")
-	excludeStr := r.FormValue("exclude_patterns")
-
-	// Parse path IDs
-	var paths []int64
-	for _, idStr := range pathIDs {
-		pathID, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, pathID)
-	}
-
-	// Parse patterns
-	includePatterns := splitPatterns(includeStr)
-	excludePatterns := splitPatterns(excludeStr)
-
-	// Helper to render form with error
-	renderError := func(errMsg string) {
-		allPaths, _ := h.db.ListScanPaths()
-		data := ScanFormData{
-			Title:     "Edit Scan Config",
-			ActiveNav: "scans",
-			Paths:     allPaths,
-			Error:     errMsg,
-			Config: &db.ScanConfig{
-				ID:              id,
-				Name:            name,
-				Paths:           paths,
-				IncludePatterns: includePatterns,
-				ExcludePatterns: excludePatterns,
-			},
-		}
-		h.render(w, "scan_form.html", data)
-	}
-
-	// Validate name
-	if name == "" {
-		renderError("Name is required")
-		return
-	}
-
-	// Validate paths
-	if len(paths) == 0 {
-		renderError("At least one path must be selected")
-		return
-	}
-
-	// Parse and validate sizes
-	minSize, err := parseSizeWithError(minSizeStr)
-	if err != nil {
-		renderError(fmt.Sprintf("Invalid min size: %s", minSizeStr))
-		return
-	}
-
-	var maxSize *int64
-	if maxSizeStr != "" {
-		ms, err := parseSizeWithError(maxSizeStr)
-		if err != nil {
-			renderError(fmt.Sprintf("Invalid max size: %s", maxSizeStr))
-			return
-		}
-		if ms > 0 {
-			maxSize = &ms
-		}
-	}
-
-	// Validate max >= min
-	if maxSize != nil && minSize > 0 && *maxSize < minSize {
-		renderError("Max size must be greater than or equal to min size")
-		return
-	}
-
-	cfg := &db.ScanConfig{
-		ID:              id,
-		Name:            name,
-		Paths:           paths,
-		MinSize:         minSize,
-		MaxSize:         maxSize,
-		IncludePatterns: includePatterns,
-		ExcludePatterns: excludePatterns,
-	}
-
-	err = h.db.UpdateScanConfig(cfg)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, r, "/scans", http.StatusSeeOther)
-}
-
-// EditScanConfigForm handles GET /scans/{id}/edit
-func (h *Handler) EditScanConfigForm(w http.ResponseWriter, r *http.Request, id int64) {
-	config, err := h.db.GetScanConfig(id)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	paths, err := h.db.ListScanPaths()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	data := ScanFormData{
-		Title:     "Edit Scan Config",
-		ActiveNav: "scans",
-		Config:    config,
-		Paths:     paths,
-	}
-
-	h.render(w, "scan_form.html", data)
-}
-
-// DeleteScanConfig handles DELETE /scans/{id}
-func (h *Handler) DeleteScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
-	err := h.db.DeleteScanConfig(id)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// For HTMX requests, use HX-Redirect header
-	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Redirect", "/scans")
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	http.Redirect(w, r, "/scans", http.StatusSeeOther)
 }

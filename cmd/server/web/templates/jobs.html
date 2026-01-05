@@ -10,7 +10,8 @@
         <table>
             <thead>
                 <tr>
-                    <th>Scan Config</th>
+                    <th>Name</th>
+                    <th>Paths</th>
                     <th>Schedule</th>
                     <th>Action</th>
                     <th>Last Run</th>
@@ -22,7 +23,8 @@
             <tbody>
                 {{range .Jobs}}
                 <tr>
-                    <td><a href="/scans/{{.ConfigID}}/edit">{{.ConfigName}}</a></td>
+                    <td><a href="/jobs/{{.ID}}/edit">{{.Name}}</a></td>
+                    <td>{{.PathCount}} {{plural .PathCount "path" "paths"}}</td>
                     <td class="cron">{{.CronExpression}}</td>
                     <td>{{.Action}}</td>
                     <td class="timestamp">{{if .LastRunID}}<a href="/scans/runs/{{.LastRunID}}">{{.LastRunAt}}</a>{{else}}-{{end}}</td>

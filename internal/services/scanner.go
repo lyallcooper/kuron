@@ -90,8 +90,8 @@ func (s *Scanner) closeSubscribers(runID int64) {
 	delete(s.subscribers, runID)
 }
 
-// StartScan starts a new scan
-func (s *Scanner) StartScan(ctx context.Context, paths []string, jobID *int64) (*db.ScanRun, error) {
+// StartScan starts a new scan with full configuration
+func (s *Scanner) StartScan(ctx context.Context, cfg *ScanConfig, jobID *int64) (*db.ScanRun, error) {
 	// Create scan run record
 	run, err := s.db.CreateScanRun(nil, jobID)
 	if err != nil {
@@ -106,13 +106,13 @@ func (s *Scanner) StartScan(ctx context.Context, paths []string, jobID *int64) (
 	s.mu.Unlock()
 
 	// Run scan in background
-	go s.runScan(scanCtx, run.ID, paths)
+	go s.runScan(scanCtx, run.ID, cfg)
 
 	return run, nil
 }
 
 // runScan executes the actual scan
-func (s *Scanner) runScan(ctx context.Context, runID int64, paths []string) {
+func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	defer func() {
 		s.mu.Lock()
 		delete(s.activeScans, runID)
@@ -144,10 +144,13 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, paths []string) {
 		}
 	}()
 
-	// Run fclones
+	// Run fclones with full config
 	opts := fclones.ScanOptions{
-		Paths:   paths,
-		MinSize: 1, // 1 byte minimum
+		Paths:           cfg.Paths,
+		MinSize:         cfg.MinSize,
+		MaxSize:         cfg.MaxSize,
+		IncludePatterns: cfg.IncludePatterns,
+		ExcludePatterns: cfg.ExcludePatterns,
 	}
 
 	result, err := s.executor.Group(ctx, opts, progressChan)
@@ -300,26 +303,6 @@ type ScanConfig struct {
 	MaxSize         *int64
 	IncludePatterns []string
 	ExcludePatterns []string
-}
-
-// ScanConfigFromDB converts a database config to a scan config
-func ScanConfigFromDB(cfg *db.ScanConfig, database *db.DB) (*ScanConfig, error) {
-	var paths []string
-	for _, pathID := range cfg.Paths {
-		path, err := database.GetScanPath(pathID)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, path.Path)
-	}
-
-	return &ScanConfig{
-		Paths:           paths,
-		MinSize:         cfg.MinSize,
-		MaxSize:         cfg.MaxSize,
-		IncludePatterns: cfg.IncludePatterns,
-		ExcludePatterns: cfg.ExcludePatterns,
-	}, nil
 }
 
 // GroupOutputToJSON converts group output to JSON for debugging

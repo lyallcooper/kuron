@@ -237,16 +237,105 @@ button.btn {
     height: 1rem;
 }
 
-.add-path-form {
+/* List input (for paths, patterns) */
+.list-input {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+}
+
+.list-items {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-items:empty + .list-add {
+    border-top: none;
+}
+
+.list-item-text {
+    flex: 1;
+    font-size: 0.875rem;
+    word-break: break-all;
+}
+
+.list-item-remove {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.list-item-remove:hover {
+    color: var(--error);
+}
+
+.list-add {
     display: flex;
     gap: 0.5rem;
-    margin-top: 0.75rem;
+    padding: 0.5rem;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+}
+
+.list-add .form-input {
+    flex: 1;
 }
 
 .form-help {
     font-size: 0.75rem;
     color: var(--muted);
     margin-top: 0.25rem;
+}
+
+.form-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 1.5rem 0;
+}
+
+.form-group-narrow {
+    max-width: 500px;
+}
+
+/* Wide form row for side-by-side inputs */
+.form-row-wide {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-row-wide > .form-group {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+    margin-bottom: 0;
+}
+
+@media (max-width: 700px) {
+    .form-row-wide {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .form-row-wide > .form-group {
+        max-width: none;
+    }
 }
 
 .cron-description {

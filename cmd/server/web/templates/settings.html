@@ -12,65 +12,6 @@
 {{end}}
 
 <div class="card">
-    <div class="card-header">Scan Paths</div>
-    <div class="card-body">
-        <p>Configure which paths are available for scanning. Paths set via environment variables cannot be removed.</p>
-
-        {{if .Paths}}
-        <table>
-            <thead>
-                <tr>
-                    <th>Path</th>
-                    <th>Source</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Paths}}
-                <tr>
-                    <td>{{.Path}}</td>
-                    <td>
-                        {{if .FromEnv}}
-                        <span class="locked">Environment Variable</span>
-                        {{else}}
-                        User Added
-                        {{end}}
-                    </td>
-                    <td>
-                        {{if not .FromEnv}}
-                        <button type="button" class="btn btn-sm btn-danger"
-                                onclick="showDeleteModal('/settings/paths/{{.ID}}/delete', '{{.Path}}')">
-                            Remove
-                        </button>
-                        {{else}}
-                        <span class="muted">-</span>
-                        {{end}}
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
-        {{else}}
-        <div class="alert alert-info">
-            No paths configured. Add a path below or set <code>KURON_SCAN_PATHS</code> environment variable.
-        </div>
-        {{end}}
-
-        <form method="POST" action="/settings/paths" style="margin-top: 1rem;">
-            <div class="form-group">
-                <label class="form-label" for="path">Add New Path</label>
-                <div class="add-path-form">
-                    <input type="text" id="path" name="path" class="form-input"
-                           placeholder="/path/to/scan" required data-path-autocomplete>
-                    <button type="submit" class="btn btn-primary">Add Path</button>
-                </div>
-                <p class="form-help">The path must exist and be accessible.</p>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="card">
     <div class="card-header">Data Retention</div>
     <div class="card-body">
         <p>Scan history and logs older than <strong>{{.RetentionDays}} days</strong> will be automatically deleted.</p>
@@ -97,52 +38,4 @@
         </table>
     </div>
 </div>
-
-<!-- Delete Confirmation Modal -->
-<div id="delete-modal" class="modal-backdrop" style="display: none;">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>Confirm Removal</h3>
-            <button type="button" class="modal-close" onclick="hideDeleteModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <p>Are you sure you want to remove this path?</p>
-            <p><strong id="delete-path-name"></strong></p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn" onclick="hideDeleteModal()">Cancel</button>
-            <form id="delete-form" method="POST" style="display: inline;">
-                <button type="submit" class="btn btn-danger">Remove</button>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function showDeleteModal(action, path) {
-    document.getElementById('delete-form').action = action;
-    document.getElementById('delete-path-name').textContent = path;
-    document.getElementById('delete-modal').style.display = 'flex';
-    document.body.classList.add('modal-open');
-}
-
-function hideDeleteModal() {
-    document.getElementById('delete-modal').style.display = 'none';
-    document.body.classList.remove('modal-open');
-}
-
-// Close modal on backdrop click
-document.getElementById('delete-modal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideDeleteModal();
-    }
-});
-
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        hideDeleteModal();
-    }
-});
-</script>
 {{end}}

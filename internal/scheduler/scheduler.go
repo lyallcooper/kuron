@@ -98,33 +98,25 @@ func (s *Scheduler) checkJobs() {
 
 // runJob executes a scheduled job
 func (s *Scheduler) runJob(job *db.ScheduledJob) {
-	// Get scan config
-	cfg, err := s.db.GetScanConfig(job.ScanConfigID)
-	if err != nil {
-		log.Printf("scheduler: failed to get scan config for job %d: %v", job.ID, err)
+	log.Printf("scheduler: running job %d (%s)", job.ID, job.Name)
+
+	if len(job.Paths) == 0 {
+		log.Printf("scheduler: no paths configured for job %d", job.ID)
 		return
 	}
 
-	log.Printf("scheduler: running job %d (%s)", job.ID, cfg.Name)
-
-	// Get paths
-	var paths []string
-	for _, pathID := range cfg.Paths {
-		path, err := s.db.GetScanPath(pathID)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, path.Path)
-	}
-
-	if len(paths) == 0 {
-		log.Printf("scheduler: no valid paths for job %d", job.ID)
-		return
+	// Build scan config from job
+	cfg := &services.ScanConfig{
+		Paths:           job.Paths,
+		MinSize:         job.MinSize,
+		MaxSize:         job.MaxSize,
+		IncludePatterns: job.IncludePatterns,
+		ExcludePatterns: job.ExcludePatterns,
 	}
 
 	// Start scan
 	ctx := context.Background()
-	run, err := s.scanner.StartScan(ctx, paths, &job.ID)
+	run, err := s.scanner.StartScan(ctx, cfg, &job.ID)
 	if err != nil {
 		log.Printf("scheduler: failed to start scan for job %d: %v", job.ID, err)
 		return

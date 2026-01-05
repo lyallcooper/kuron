@@ -3,213 +3,10 @@ package db
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"time"
 )
 
-// ScanPath queries
-
-// CreateScanPath creates a new scan path
-func (db *DB) CreateScanPath(path string, fromEnv bool) (*ScanPath, error) {
-	result, err := db.Exec(
-		"INSERT INTO scan_paths (path, from_env) VALUES (?, ?) ON CONFLICT(path) DO UPDATE SET from_env = ?",
-		path, fromEnv, fromEnv,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-
-	return db.GetScanPath(id)
-}
-
-// GetScanPath retrieves a scan path by ID
-func (db *DB) GetScanPath(id int64) (*ScanPath, error) {
-	row := db.QueryRow("SELECT id, path, from_env, created_at FROM scan_paths WHERE id = ?", id)
-	return scanScanPath(row)
-}
-
-// GetScanPathByPath retrieves a scan path by its path
-func (db *DB) GetScanPathByPath(path string) (*ScanPath, error) {
-	row := db.QueryRow("SELECT id, path, from_env, created_at FROM scan_paths WHERE path = ?", path)
-	return scanScanPath(row)
-}
-
-// ListScanPaths returns all scan paths
-func (db *DB) ListScanPaths() ([]*ScanPath, error) {
-	rows, err := db.Query("SELECT id, path, from_env, created_at FROM scan_paths ORDER BY from_env DESC, path")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var paths []*ScanPath
-	for rows.Next() {
-		p, err := scanScanPathRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, p)
-	}
-	return paths, rows.Err()
-}
-
-// DeleteScanPath deletes a scan path (only if not from env)
-func (db *DB) DeleteScanPath(id int64) error {
-	result, err := db.Exec("DELETE FROM scan_paths WHERE id = ? AND from_env = 0", id)
-	if err != nil {
-		return err
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected == 0 {
-		return fmt.Errorf("path not found or is locked (from env)")
-	}
-	return nil
-}
-
-func scanScanPath(row *sql.Row) (*ScanPath, error) {
-	var p ScanPath
-	err := row.Scan(&p.ID, &p.Path, &p.FromEnv, &p.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
-}
-
-func scanScanPathRow(rows *sql.Rows) (*ScanPath, error) {
-	var p ScanPath
-	err := rows.Scan(&p.ID, &p.Path, &p.FromEnv, &p.CreatedAt)
-	if err != nil {
-		return nil, err
-	}
-	return &p, nil
-}
-
-// ScanConfig queries
-
-// CreateScanConfig creates a new scan configuration
-func (db *DB) CreateScanConfig(cfg *ScanConfig) (*ScanConfig, error) {
-	pathsJSON, _ := json.Marshal(cfg.Paths)
-	includeJSON, _ := json.Marshal(cfg.IncludePatterns)
-	excludeJSON, _ := json.Marshal(cfg.ExcludePatterns)
-
-	result, err := db.Exec(`
-		INSERT INTO scan_configs (name, paths, min_size, max_size, include_patterns, exclude_patterns)
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		cfg.Name, string(pathsJSON), cfg.MinSize, cfg.MaxSize, string(includeJSON), string(excludeJSON),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, err
-	}
-
-	return db.GetScanConfig(id)
-}
-
-// GetScanConfig retrieves a scan config by ID
-func (db *DB) GetScanConfig(id int64) (*ScanConfig, error) {
-	row := db.QueryRow(`
-		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns, created_at, updated_at
-		FROM scan_configs WHERE id = ?`, id)
-	return scanScanConfig(row)
-}
-
-// ListScanConfigs returns all scan configurations
-func (db *DB) ListScanConfigs() ([]*ScanConfig, error) {
-	rows, err := db.Query(`
-		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns, created_at, updated_at
-		FROM scan_configs ORDER BY name`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var configs []*ScanConfig
-	for rows.Next() {
-		c, err := scanScanConfigRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		configs = append(configs, c)
-	}
-	return configs, rows.Err()
-}
-
-// UpdateScanConfig updates a scan configuration
-func (db *DB) UpdateScanConfig(cfg *ScanConfig) error {
-	pathsJSON, _ := json.Marshal(cfg.Paths)
-	includeJSON, _ := json.Marshal(cfg.IncludePatterns)
-	excludeJSON, _ := json.Marshal(cfg.ExcludePatterns)
-
-	_, err := db.Exec(`
-		UPDATE scan_configs SET
-			name = ?, paths = ?, min_size = ?, max_size = ?,
-			include_patterns = ?, exclude_patterns = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`,
-		cfg.Name, string(pathsJSON), cfg.MinSize, cfg.MaxSize,
-		string(includeJSON), string(excludeJSON), cfg.ID,
-	)
-	return err
-}
-
-// DeleteScanConfig deletes a scan configuration
-func (db *DB) DeleteScanConfig(id int64) error {
-	_, err := db.Exec("DELETE FROM scan_configs WHERE id = ?", id)
-	return err
-}
-
-func scanScanConfig(row *sql.Row) (*ScanConfig, error) {
-	var c ScanConfig
-	var pathsJSON, includeJSON, excludeJSON string
-	var maxSize sql.NullInt64
-
-	err := row.Scan(&c.ID, &c.Name, &pathsJSON, &c.MinSize, &maxSize,
-		&includeJSON, &excludeJSON, &c.CreatedAt, &c.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-
-	json.Unmarshal([]byte(pathsJSON), &c.Paths)
-	json.Unmarshal([]byte(includeJSON), &c.IncludePatterns)
-	json.Unmarshal([]byte(excludeJSON), &c.ExcludePatterns)
-	if maxSize.Valid {
-		c.MaxSize = &maxSize.Int64
-	}
-
-	return &c, nil
-}
-
-func scanScanConfigRow(rows *sql.Rows) (*ScanConfig, error) {
-	var c ScanConfig
-	var pathsJSON, includeJSON, excludeJSON string
-	var maxSize sql.NullInt64
-
-	err := rows.Scan(&c.ID, &c.Name, &pathsJSON, &c.MinSize, &maxSize,
-		&includeJSON, &excludeJSON, &c.CreatedAt, &c.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-
-	json.Unmarshal([]byte(pathsJSON), &c.Paths)
-	json.Unmarshal([]byte(includeJSON), &c.IncludePatterns)
-	json.Unmarshal([]byte(excludeJSON), &c.ExcludePatterns)
-	if maxSize.Valid {
-		c.MaxSize = &maxSize.Int64
-	}
-
-	return &c, nil
-}
+// ScheduledJob queries
 
 // ScanRun queries
 
@@ -561,14 +358,18 @@ func scanDuplicateGroupRow(rows *sql.Rows) (*DuplicateGroup, error) {
 	return &g, nil
 }
 
-// ScheduledJob queries
-
 // CreateScheduledJob creates a new scheduled job
 func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
+	pathsJSON, _ := json.Marshal(job.Paths)
+	includeJSON, _ := json.Marshal(job.IncludePatterns)
+	excludeJSON, _ := json.Marshal(job.ExcludePatterns)
+
 	result, err := db.Exec(`
-		INSERT INTO scheduled_jobs (scan_config_id, cron_expression, action, enabled, next_run_at)
-		VALUES (?, ?, ?, ?, ?)`,
-		job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
+		INSERT INTO scheduled_jobs (name, paths, min_size, max_size, include_patterns, exclude_patterns,
+			cron_expression, action, enabled, next_run_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		job.Name, string(pathsJSON), job.MinSize, job.MaxSize, string(includeJSON), string(excludeJSON),
+		job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
 	)
 	if err != nil {
 		return nil, err
@@ -585,7 +386,8 @@ func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
 // GetScheduledJob retrieves a scheduled job by ID
 func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 	row := db.QueryRow(`
-		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at
 		FROM scheduled_jobs WHERE id = ?`, id)
 	return scanScheduledJob(row)
 }
@@ -593,8 +395,9 @@ func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 // ListScheduledJobs returns all scheduled jobs
 func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
-		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
-		FROM scheduled_jobs ORDER BY created_at`)
+		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		FROM scheduled_jobs ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +417,8 @@ func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 // GetEnabledJobs returns all enabled scheduled jobs
 func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
-		SELECT id, scan_config_id, cron_expression, action, enabled, last_run_at, next_run_at, created_at
+		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at
 		FROM scheduled_jobs WHERE enabled = 1 ORDER BY next_run_at`)
 	if err != nil {
 		return nil, err
@@ -634,11 +438,17 @@ func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 
 // UpdateScheduledJob updates a scheduled job
 func (db *DB) UpdateScheduledJob(job *ScheduledJob) error {
+	pathsJSON, _ := json.Marshal(job.Paths)
+	includeJSON, _ := json.Marshal(job.IncludePatterns)
+	excludeJSON, _ := json.Marshal(job.ExcludePatterns)
+
 	_, err := db.Exec(`
 		UPDATE scheduled_jobs SET
-			scan_config_id = ?, cron_expression = ?, action = ?, enabled = ?, next_run_at = ?
+			name = ?, paths = ?, min_size = ?, max_size = ?, include_patterns = ?, exclude_patterns = ?,
+			cron_expression = ?, action = ?, enabled = ?, next_run_at = ?
 		WHERE id = ?`,
-		job.ScanConfigID, job.CronExpression, job.Action, job.Enabled, job.NextRunAt, job.ID,
+		job.Name, string(pathsJSON), job.MinSize, job.MaxSize, string(includeJSON), string(excludeJSON),
+		job.CronExpression, job.Action, job.Enabled, job.NextRunAt, job.ID,
 	)
 	return err
 }
@@ -667,14 +477,22 @@ func (db *DB) DeleteScheduledJob(id int64) error {
 
 func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 	var j ScheduledJob
+	var pathsJSON, includeJSON, excludeJSON string
+	var maxSize sql.NullInt64
 	var lastRun, nextRun sql.NullTime
 
-	err := row.Scan(&j.ID, &j.ScanConfigID, &j.CronExpression, &j.Action,
-		&j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
+	err := row.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
+		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
+	json.Unmarshal([]byte(pathsJSON), &j.Paths)
+	json.Unmarshal([]byte(includeJSON), &j.IncludePatterns)
+	json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns)
+	if maxSize.Valid {
+		j.MaxSize = &maxSize.Int64
+	}
 	if lastRun.Valid {
 		j.LastRunAt = &lastRun.Time
 	}
@@ -687,14 +505,22 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 
 func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 	var j ScheduledJob
+	var pathsJSON, includeJSON, excludeJSON string
+	var maxSize sql.NullInt64
 	var lastRun, nextRun sql.NullTime
 
-	err := rows.Scan(&j.ID, &j.ScanConfigID, &j.CronExpression, &j.Action,
-		&j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
+	err := rows.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
+		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
+	json.Unmarshal([]byte(pathsJSON), &j.Paths)
+	json.Unmarshal([]byte(includeJSON), &j.IncludePatterns)
+	json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns)
+	if maxSize.Valid {
+		j.MaxSize = &maxSize.Int64
+	}
 	if lastRun.Valid {
 		j.LastRunAt = &lastRun.Time
 	}

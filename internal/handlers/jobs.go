@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/lyall/kuron/internal/db"
+	"github.com/lyall/kuron/internal/services"
 	"github.com/robfig/cron/v3"
 )
 
@@ -22,7 +23,6 @@ type JobFormData struct {
 	Title     string
 	ActiveNav string
 	Job       *db.ScheduledJob
-	Configs   []*db.ScanConfig
 	Error     string
 }
 
@@ -39,18 +39,16 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build view models with config names
+	// Build view models
 	var views []*JobView
 	for _, job := range jobs {
 		view := &JobView{
 			ID:             job.ID,
-			ConfigID:       job.ScanConfigID,
+			Name:           job.Name,
+			PathCount:      len(job.Paths),
 			CronExpression: job.CronExpression,
 			Action:         job.Action,
 			Enabled:        job.Enabled,
-		}
-		if cfg, err := h.db.GetScanConfig(job.ScanConfigID); err == nil {
-			view.ConfigName = cfg.Name
 		}
 		if job.NextRunAt != nil {
 			view.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")
@@ -75,16 +73,9 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 
 // JobForm handles GET /jobs/new
 func (h *Handler) JobForm(w http.ResponseWriter, r *http.Request) {
-	configs, err := h.db.ListScanConfigs()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	data := JobFormData{
 		Title:     "New Job",
 		ActiveNav: "jobs",
-		Configs:   configs,
 	}
 
 	h.render(w, "job_form.html", data)
@@ -150,61 +141,114 @@ func (h *Handler) JobRoutes(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/jobs/"+idStr+"/edit", http.StatusSeeOther)
 }
 
-// CreateJob handles POST /jobs
-func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
+// parseJobForm parses the job form and returns a ScheduledJob
+func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
-	configIDStr := r.FormValue("scan_config_id")
+	name := strings.TrimSpace(r.FormValue("name"))
+	minSizeStr := r.FormValue("min_size")
+	maxSizeStr := r.FormValue("max_size")
 	cronExpr := strings.TrimSpace(r.FormValue("cron_expression"))
 	action := r.FormValue("action")
 	enabled := r.FormValue("enabled") == "1"
 
-	configID, _ := strconv.ParseInt(configIDStr, 10, 64)
+	// Get paths from form array
+	var paths []string
+	for _, p := range r.Form["paths"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+
+	// Parse sizes
+	var minSize int64 = 0
+	if minSizeStr != "" {
+		if v, err := strconv.ParseInt(minSizeStr, 10, 64); err == nil {
+			minSize = v
+		}
+	}
+
+	var maxSize *int64
+	if maxSizeStr != "" {
+		if v, err := strconv.ParseInt(maxSizeStr, 10, 64); err == nil && v > 0 {
+			maxSize = &v
+		}
+	}
+
+	// Get patterns from form arrays
+	var includePatterns []string
+	for _, p := range r.Form["include_patterns"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			includePatterns = append(includePatterns, p)
+		}
+	}
+
+	var excludePatterns []string
+	for _, p := range r.Form["exclude_patterns"] {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			excludePatterns = append(excludePatterns, p)
+		}
+	}
+
+	return &db.ScheduledJob{
+		Name:            name,
+		Paths:           paths,
+		MinSize:         minSize,
+		MaxSize:         maxSize,
+		IncludePatterns: includePatterns,
+		ExcludePatterns: excludePatterns,
+		CronExpression:  cronExpr,
+		Action:          action,
+		Enabled:         enabled,
+	}, nil
+}
+
+// CreateJob handles POST /jobs
+func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
+	job, err := h.parseJobForm(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	// Helper to render form with error
 	renderError := func(errMsg string) {
-		configs, _ := h.db.ListScanConfigs()
 		data := JobFormData{
 			Title:     "New Job",
 			ActiveNav: "jobs",
-			Configs:   configs,
+			Job:       job,
 			Error:     errMsg,
-			Job: &db.ScheduledJob{
-				ScanConfigID:   configID,
-				CronExpression: cronExpr,
-				Action:         action,
-				Enabled:        enabled,
-			},
 		}
 		h.render(w, "job_form.html", data)
 	}
 
-	// Validate config selection
-	if configID == 0 {
-		renderError("Please select a scan configuration")
+	// Validate name
+	if job.Name == "" {
+		renderError("Name is required")
+		return
+	}
+
+	// Validate paths
+	if len(job.Paths) == 0 {
+		renderError("At least one path is required")
 		return
 	}
 
 	// Validate cron expression
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(cronExpr)
+	schedule, err := parser.Parse(job.CronExpression)
 	if err != nil {
 		renderError("Invalid cron expression: " + err.Error())
 		return
 	}
 
 	nextRun := schedule.Next(time.Now())
-
-	job := &db.ScheduledJob{
-		ScanConfigID:   configID,
-		CronExpression: cronExpr,
-		Action:         action,
-		Enabled:        enabled,
-		NextRunAt:      &nextRun,
-	}
+	job.NextRunAt = &nextRun
 
 	_, err = h.db.CreateScheduledJob(job)
 	if err != nil {
@@ -223,17 +267,10 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 		return
 	}
 
-	configs, err := h.db.ListScanConfigs()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	data := JobFormData{
 		Title:     "Edit Job",
 		ActiveNav: "jobs",
 		Job:       job,
-		Configs:   configs,
 	}
 
 	h.render(w, "job_form.html", data)
@@ -241,61 +278,46 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 
 // UpdateJob handles POST /jobs/{id}
 func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
-	if err := r.ParseForm(); err != nil {
+	job, err := h.parseJobForm(r)
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
-	configIDStr := r.FormValue("scan_config_id")
-	cronExpr := strings.TrimSpace(r.FormValue("cron_expression"))
-	action := r.FormValue("action")
-	enabled := r.FormValue("enabled") == "1"
-
-	configID, _ := strconv.ParseInt(configIDStr, 10, 64)
+	job.ID = id
 
 	// Helper to render form with error
 	renderError := func(errMsg string) {
-		configs, _ := h.db.ListScanConfigs()
 		data := JobFormData{
 			Title:     "Edit Job",
 			ActiveNav: "jobs",
-			Configs:   configs,
+			Job:       job,
 			Error:     errMsg,
-			Job: &db.ScheduledJob{
-				ID:             id,
-				ScanConfigID:   configID,
-				CronExpression: cronExpr,
-				Action:         action,
-				Enabled:        enabled,
-			},
 		}
 		h.render(w, "job_form.html", data)
 	}
 
-	// Validate config selection
-	if configID == 0 {
-		renderError("Please select a scan configuration")
+	// Validate name
+	if job.Name == "" {
+		renderError("Name is required")
+		return
+	}
+
+	// Validate paths
+	if len(job.Paths) == 0 {
+		renderError("At least one path is required")
 		return
 	}
 
 	// Validate and calculate next run
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := parser.Parse(cronExpr)
+	schedule, err := parser.Parse(job.CronExpression)
 	if err != nil {
 		renderError("Invalid cron expression: " + err.Error())
 		return
 	}
 
 	nextRun := schedule.Next(time.Now())
-
-	job := &db.ScheduledJob{
-		ID:             id,
-		ScanConfigID:   configID,
-		CronExpression: cronExpr,
-		Action:         action,
-		Enabled:        enabled,
-		NextRunAt:      &nextRun,
-	}
+	job.NextRunAt = &nextRun
 
 	if err := h.db.UpdateScheduledJob(job); err != nil {
 		renderError("Failed to update job: " + err.Error())
@@ -329,30 +351,22 @@ func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	// Get scan config
-	cfg, err := h.db.GetScanConfig(job.ScanConfigID)
-	if err != nil {
-		http.Error(w, "Scan config not found", http.StatusInternalServerError)
+	if len(job.Paths) == 0 {
+		http.Error(w, "No paths configured for this job", http.StatusBadRequest)
 		return
 	}
 
-	// Get paths
-	var paths []string
-	for _, pathID := range cfg.Paths {
-		path, err := h.db.GetScanPath(pathID)
-		if err != nil {
-			continue
-		}
-		paths = append(paths, path.Path)
-	}
-
-	if len(paths) == 0 {
-		http.Error(w, "No valid paths in scan config", http.StatusBadRequest)
-		return
+	// Build scan config from job
+	cfg := &services.ScanConfig{
+		Paths:           job.Paths,
+		MinSize:         job.MinSize,
+		MaxSize:         job.MaxSize,
+		IncludePatterns: job.IncludePatterns,
+		ExcludePatterns: job.ExcludePatterns,
 	}
 
 	// Start scan
-	run, err := h.scanner.StartScan(r.Context(), paths, &job.ID)
+	run, err := h.scanner.StartScan(r.Context(), cfg, &job.ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

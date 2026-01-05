@@ -14,7 +14,6 @@
             <a href="/" class="nav-brand">kuron</a>
             <div class="nav-links">
                 <a href="/" class="nav-link{{if eq .ActiveNav "dashboard"}} active{{end}}">Dashboard</a>
-                <a href="/scans" class="nav-link{{if eq .ActiveNav "scans"}} active{{end}}">Scan Configs</a>
                 <a href="/jobs" class="nav-link{{if eq .ActiveNav "jobs"}} active{{end}}">Jobs</a>
                 <a href="/history" class="nav-link{{if eq .ActiveNav "history"}} active{{end}}">History</a>
                 <a href="/settings" class="nav-link{{if eq .ActiveNav "settings"}} active{{end}}">Settings</a>
@@ -118,6 +117,29 @@
                 htmx.ajax('DELETE', url, {target: 'body', swap: 'none'});
             }
         });
+    }
+
+    // List input helpers (for paths, patterns)
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function addListItem(listId, inputId, fieldName) {
+        var input = document.getElementById(inputId);
+        var value = input.value.trim();
+        if (!value) return;
+
+        var list = document.getElementById(listId);
+        var item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = '<input type="hidden" name="' + fieldName + '" value="' + escapeHtml(value) + '">' +
+                         '<span class="list-item-text">' + escapeHtml(value) + '</span>' +
+                         '<button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>';
+        list.appendChild(item);
+        input.value = '';
+        input.focus();
     }
 
     // Path autocomplete system

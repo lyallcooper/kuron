@@ -3,35 +3,91 @@
     <h1>Quick Scan</h1>
 </div>
 
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
 <div class="card">
     <div class="card-body">
-        <p>Run a one-time scan without saving a configuration.</p>
+        <p>Run a one-time scan without creating a scheduled job.</p>
 
         <form method="POST" action="/scans/quick">
-            <div class="form-group">
+            <div class="form-group form-group-narrow">
                 <label class="form-label">Paths to Scan</label>
-                <div id="paths-list">
-                {{range .Paths}}
-                <div class="form-checkbox">
-                    <input type="checkbox" name="paths" value="{{.ID}}" id="path-{{.ID}}">
-                    <label for="path-{{.ID}}">
-                        {{.Path}}
-                        {{if .FromEnv}}<span class="locked">(from env)</span>{{end}}
-                    </label>
+                <div class="list-input" id="paths-container">
+                    <div class="list-items" id="paths-list">
+                        {{range .Paths}}
+                        <div class="list-item">
+                            <input type="hidden" name="paths" value="{{.}}">
+                            <span class="list-item-text">{{.}}</span>
+                            <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                        {{end}}
+                    </div>
+                    <div class="list-add">
+                        <input type="text" id="new-path" class="form-input"
+                               placeholder="/path/to/directory" data-path-autocomplete>
+                        <button type="button" class="btn" onclick="addPath()">Add</button>
+                    </div>
                 </div>
-                {{end}}
-                {{if not .Paths}}
-                <p class="form-help" id="no-paths-msg">No paths configured yet.</p>
-                {{end}}
+                <p class="form-help">Add paths to scan for duplicates</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="min_size">Minimum Size</label>
+                    <input type="text" id="min_size" name="min_size" class="form-input"
+                           value="{{.MinSize}}" placeholder="e.g., 1MB">
+                    <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
                 </div>
-                <div class="add-path-form">
-                    <input type="text" id="new-path" name="new_path" class="form-input"
-                           placeholder="/path/to/directory" data-path-autocomplete>
-                    <button type="button" class="btn"
-                            hx-post="/settings/paths/add-inline"
-                            hx-include="closest .form-group"
-                            hx-target="#paths-list"
-                            hx-swap="innerHTML">Add Path</button>
+
+                <div class="form-group">
+                    <label class="form-label" for="max_size">Maximum Size</label>
+                    <input type="text" id="max_size" name="max_size" class="form-input"
+                           value="{{.MaxSize}}" placeholder="e.g., 10GB">
+                    <p class="form-help">Leave empty for no limit</p>
+                </div>
+            </div>
+
+            <div class="form-row-wide">
+                <div class="form-group">
+                    <label class="form-label">Include Patterns</label>
+                    <div class="list-input" id="include-container">
+                        <div class="list-items" id="include-list">
+                            {{range .IncludePatterns}}
+                            <div class="list-item">
+                                <input type="hidden" name="include_patterns" value="{{.}}">
+                                <span class="list-item-text">{{.}}</span>
+                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div class="list-add">
+                            <input type="text" id="new-include" class="form-input" placeholder="*.jpg">
+                            <button type="button" class="btn" onclick="addPattern('include')">Add</button>
+                        </div>
+                    </div>
+                    <p class="form-help">Glob patterns to include (leave empty for all)</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Exclude Patterns</label>
+                    <div class="list-input" id="exclude-container">
+                        <div class="list-items" id="exclude-list">
+                            {{range .ExcludePatterns}}
+                            <div class="list-item">
+                                <input type="hidden" name="exclude_patterns" value="{{.}}">
+                                <span class="list-item-text">{{.}}</span>
+                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                            {{end}}
+                        </div>
+                        <div class="list-add">
+                            <input type="text" id="new-exclude" class="form-input" placeholder="*.xmp">
+                            <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
+                        </div>
+                    </div>
+                    <p class="form-help">Glob patterns to exclude</p>
                 </div>
             </div>
 
@@ -46,8 +102,24 @@
 <div class="card">
     <div class="card-header">Need to run scans regularly?</div>
     <div class="card-body">
-        <p>Create a scan configuration to save your settings and schedule automatic scans.</p>
-        <a href="/scans/new" class="btn">New Scan Config</a>
+        <p>Create a scheduled job to automate your duplicate detection.</p>
+        <a href="/jobs/new" class="btn">New Scheduled Job</a>
     </div>
 </div>
+
+<script>
+function addPath() { addListItem('paths-list', 'new-path', 'paths'); }
+function addPattern(type) { addListItem(type + '-list', 'new-' + type, type + '_patterns'); }
+
+// Allow Enter key to add items
+document.getElementById('new-path').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPath(); }
+});
+document.getElementById('new-include').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPattern('include'); }
+});
+document.getElementById('new-exclude').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPattern('exclude'); }
+});
+</script>
 {{end}}

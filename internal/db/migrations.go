@@ -31,6 +31,7 @@ func (db *DB) Migrate() error {
 	}{
 		{1, migration001},
 		{2, migration002},
+		{3, migration003},
 	}
 
 	for _, m := range migrations {
@@ -87,7 +88,7 @@ CREATE TABLE scan_configs (
 CREATE TABLE scheduled_jobs (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    scan_config_id INTEGER REFERENCES scan_configs(id) ON DELETE CASCADE,
+    scan_config_id INTEGER,
     cron_expression TEXT NOT NULL,
     action TEXT NOT NULL DEFAULT 'scan',
     enabled BOOLEAN DEFAULT 1,
@@ -99,8 +100,8 @@ CREATE TABLE scheduled_jobs (
 -- Scan runs (history)
 CREATE TABLE scan_runs (
     id INTEGER PRIMARY KEY,
-    scan_config_id INTEGER REFERENCES scan_configs(id) ON DELETE SET NULL,
-    scheduled_job_id INTEGER REFERENCES scheduled_jobs(id) ON DELETE SET NULL,
+    scan_config_id INTEGER,
+    scheduled_job_id INTEGER,
     status TEXT NOT NULL DEFAULT 'running',
     started_at DATETIME NOT NULL,
     completed_at DATETIME,
@@ -118,7 +119,7 @@ CREATE INDEX idx_scan_runs_started_at ON scan_runs(started_at);
 -- Duplicate groups (stored for review before action)
 CREATE TABLE duplicate_groups (
     id INTEGER PRIMARY KEY,
-    scan_run_id INTEGER REFERENCES scan_runs(id) ON DELETE CASCADE,
+    scan_run_id INTEGER,
     file_hash TEXT NOT NULL,
     file_size INTEGER NOT NULL,
     file_count INTEGER NOT NULL,
@@ -133,7 +134,7 @@ CREATE INDEX idx_duplicate_groups_status ON duplicate_groups(status);
 -- Actions taken (audit log)
 CREATE TABLE actions (
     id INTEGER PRIMARY KEY,
-    scan_run_id INTEGER REFERENCES scan_runs(id) ON DELETE SET NULL,
+    scan_run_id INTEGER,
     action_type TEXT NOT NULL,
     groups_processed INTEGER DEFAULT 0,
     files_processed INTEGER DEFAULT 0,
@@ -162,4 +163,31 @@ CREATE TABLE daily_stats (
 const migration002 = `
 -- Remove name column from scheduled_jobs (redundant with scan_config name)
 ALTER TABLE scheduled_jobs DROP COLUMN name;
+`
+
+const migration003 = `
+-- Simplify architecture: merge scan configs into jobs, remove global paths
+-- This is a breaking change - all existing jobs/configs will be lost
+
+-- Drop old tables
+DROP TABLE IF EXISTS scheduled_jobs;
+DROP TABLE IF EXISTS scan_configs;
+DROP TABLE IF EXISTS scan_paths;
+
+-- Create new self-contained scheduled_jobs table
+CREATE TABLE scheduled_jobs (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    paths TEXT NOT NULL DEFAULT '[]',
+    min_size INTEGER DEFAULT 0,
+    max_size INTEGER,
+    include_patterns TEXT DEFAULT '[]',
+    exclude_patterns TEXT DEFAULT '[]',
+    cron_expression TEXT NOT NULL,
+    action TEXT NOT NULL DEFAULT 'scan',
+    enabled BOOLEAN DEFAULT 1,
+    last_run_at DATETIME,
+    next_run_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 `

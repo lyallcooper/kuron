@@ -32,8 +32,8 @@ type ScanRunView struct {
 // JobView is a view model for scheduled jobs
 type JobView struct {
 	ID             int64
-	ConfigID       int64
-	ConfigName     string
+	Name           string
+	PathCount      int
 	CronExpression string
 	Action         string
 	NextRunAt      string
@@ -94,13 +94,11 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	for _, job := range jobs {
 		jv := &JobView{
 			ID:             job.ID,
-			ConfigID:       job.ScanConfigID,
+			Name:           job.Name,
+			PathCount:      len(job.Paths),
 			CronExpression: job.CronExpression,
 			Action:         job.Action,
 			Enabled:        job.Enabled,
-		}
-		if cfg, err := h.db.GetScanConfig(job.ScanConfigID); err == nil {
-			jv.ConfigName = cfg.Name
 		}
 		if job.NextRunAt != nil {
 			jv.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")

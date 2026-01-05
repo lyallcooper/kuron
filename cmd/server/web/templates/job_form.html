@@ -10,53 +10,127 @@
 <div class="card">
     <div class="card-body">
         <form method="POST" action="{{if .Job}}/jobs/{{.Job.ID}}{{else}}/jobs{{end}}">
-            <div class="form-group">
-                <label class="form-label" for="scan_config_id">Scan Configuration</label>
-                <select id="scan_config_id" name="scan_config_id" class="form-select" required>
-                    <option value="">Select a configuration...</option>
-                    {{range .Configs}}
-                    <option value="{{.ID}}"
-                            {{if $.Job}}{{if eq $.Job.ScanConfigID .ID}}selected{{end}}{{end}}>
-                        {{.Name}}
-                    </option>
-                    {{end}}
-                </select>
-                {{if not .Configs}}
-                <p class="form-help">No scan configurations. <a href="/scans/new">Create one first</a>.</p>
-                {{end}}
+            <div class="form-group form-group-narrow">
+                <label class="form-label" for="name">Name</label>
+                <input type="text" id="name" name="name" class="form-input"
+                       value="{{if .Job}}{{.Job.Name}}{{end}}" required
+                       placeholder="Photos">
+                <p class="form-help">A descriptive name for this job</p>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="cron_expression">Schedule (Cron Expression)</label>
-                <input type="text" id="cron_expression" name="cron_expression" class="form-input"
-                       value="{{if .Job}}{{.Job.CronExpression}}{{else}}0 2 * * *{{end}}" required
-                       placeholder="0 2 * * *">
-                <p class="cron-description" id="cron-description"></p>
-                <p class="form-help">
-                    Format: minute hour day-of-month month day-of-week<br>
-                    Examples: <code>0 2 * * *</code> (daily at 2am),
-                    <code>0 */6 * * *</code> (every 6 hours),
-                    <code>0 0 * * 0</code> (weekly on Sunday)
-                </p>
+            <div class="form-group form-group-narrow">
+                <label class="form-label">Paths to Scan</label>
+                <div class="list-input" id="paths-container">
+                    <div class="list-items" id="paths-list">
+                        {{if .Job}}{{range .Job.Paths}}
+                        <div class="list-item">
+                            <input type="hidden" name="paths" value="{{.}}">
+                            <span class="list-item-text">{{.}}</span>
+                            <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                        {{end}}{{end}}
+                    </div>
+                    <div class="list-add">
+                        <input type="text" id="new-path" class="form-input"
+                               placeholder="/path/to/directory" data-path-autocomplete>
+                        <button type="button" class="btn" onclick="addPath()">Add</button>
+                    </div>
+                </div>
+                <p class="form-help">Add paths to scan for duplicates</p>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="action">Action After Scan</label>
-                <select id="action" name="action" class="form-select" required>
-                    <option value="scan" {{if .Job}}{{if eq .Job.Action "scan"}}selected{{end}}{{end}}>
-                        Scan Only (find duplicates, take no action)
-                    </option>
-                    <option value="scan_hardlink" {{if .Job}}{{if eq .Job.Action "scan_hardlink"}}selected{{end}}{{end}}>
-                        Scan + Hardlink (replace duplicates with hard links)
-                    </option>
-                    <option value="scan_reflink" {{if .Job}}{{if eq .Job.Action "scan_reflink"}}selected{{end}}{{end}}>
-                        Scan + Reflink (replace duplicates with reflinks/CoW)
-                    </option>
-                </select>
-                <p class="form-help">
-                    <strong>Hardlink:</strong> Files share the same data on disk. Deleting one doesn't affect others.<br>
-                    <strong>Reflink:</strong> Copy-on-write. Files start sharing data but become independent on modification.
-                </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="min_size">Minimum Size</label>
+                    <input type="text" id="min_size" name="min_size" class="form-input"
+                           value="{{if .Job}}{{if gt .Job.MinSize 0}}{{.Job.MinSize}}{{end}}{{end}}"
+                           placeholder="e.g., 1MB">
+                    <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="max_size">Maximum Size</label>
+                    <input type="text" id="max_size" name="max_size" class="form-input"
+                           value="{{if .Job}}{{if .Job.MaxSize}}{{derefInt64 .Job.MaxSize}}{{end}}{{end}}"
+                           placeholder="e.g., 10GB">
+                    <p class="form-help">Leave empty for no limit</p>
+                </div>
+            </div>
+
+            <div class="form-row-wide">
+                <div class="form-group">
+                    <label class="form-label">Include Patterns</label>
+                    <div class="list-input" id="include-container">
+                        <div class="list-items" id="include-list">
+                            {{if .Job}}{{range .Job.IncludePatterns}}
+                            <div class="list-item">
+                                <input type="hidden" name="include_patterns" value="{{.}}">
+                                <span class="list-item-text">{{.}}</span>
+                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                            {{end}}{{end}}
+                        </div>
+                        <div class="list-add">
+                            <input type="text" id="new-include" class="form-input" placeholder="*.jpg">
+                            <button type="button" class="btn" onclick="addPattern('include')">Add</button>
+                        </div>
+                    </div>
+                    <p class="form-help">Glob patterns to include (leave empty for all)</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Exclude Patterns</label>
+                    <div class="list-input" id="exclude-container">
+                        <div class="list-items" id="exclude-list">
+                            {{if .Job}}{{range .Job.ExcludePatterns}}
+                            <div class="list-item">
+                                <input type="hidden" name="exclude_patterns" value="{{.}}">
+                                <span class="list-item-text">{{.}}</span>
+                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                            </div>
+                            {{end}}{{end}}
+                        </div>
+                        <div class="list-add">
+                            <input type="text" id="new-exclude" class="form-input" placeholder="*.xmp">
+                            <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
+                        </div>
+                    </div>
+                    <p class="form-help">Glob patterns to exclude</p>
+                </div>
+            </div>
+
+            <hr class="form-divider">
+
+            <div class="form-row-wide">
+                <div class="form-group">
+                    <label class="form-label" for="cron_expression">Schedule (Cron)</label>
+                    <input type="text" id="cron_expression" name="cron_expression" class="form-input"
+                           value="{{if .Job}}{{.Job.CronExpression}}{{else}}30 2 * * *{{end}}" required
+                           placeholder="30 2 * * *">
+                    <p class="cron-description" id="cron-description"></p>
+                    <p class="form-help">
+                        e.g., <code>30 2 * * *</code> (daily at 02:30),
+                        <code>0 */6 * * *</code> (every 6h)
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="action">Action After Scan</label>
+                    <select id="action" name="action" class="form-select" required>
+                        <option value="scan" {{if .Job}}{{if eq .Job.Action "scan"}}selected{{end}}{{end}}>
+                            Scan Only
+                        </option>
+                        <option value="scan_hardlink" {{if .Job}}{{if eq .Job.Action "scan_hardlink"}}selected{{end}}{{end}}>
+                            Scan + Hardlink
+                        </option>
+                        <option value="scan_reflink" {{if .Job}}{{if eq .Job.Action "scan_reflink"}}selected{{end}}{{end}}>
+                            Scan + Reflink
+                        </option>
+                    </select>
+                    <p class="form-help">
+                        Hardlink: share data on disk. Reflink: copy-on-write.
+                    </p>
+                </div>
             </div>
 
             <div class="form-group">
@@ -84,6 +158,21 @@
 </div>
 
 <script>
+function addPath() { addListItem('paths-list', 'new-path', 'paths'); }
+function addPattern(type) { addListItem(type + '-list', 'new-' + type, type + '_patterns'); }
+
+// Allow Enter key to add items
+document.getElementById('new-path').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPath(); }
+});
+document.getElementById('new-include').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPattern('include'); }
+});
+document.getElementById('new-exclude').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); addPattern('exclude'); }
+});
+
+// Cron expression parser
 (function() {
     var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     var months = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -92,9 +181,7 @@
     function formatTime(hour, minute) {
         var h = parseInt(hour, 10);
         var m = parseInt(minute, 10);
-        var suffix = h >= 12 ? 'PM' : 'AM';
-        h = h % 12 || 12;
-        return h + ':' + (m < 10 ? '0' : '') + m + ' ' + suffix;
+        return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
     }
 
     function ordinal(n) {
@@ -108,68 +195,44 @@
         if (parts.length !== 5) return null;
 
         var minute = parts[0], hour = parts[1], dom = parts[2], month = parts[3], dow = parts[4];
-
-        // Check for step patterns
         var minStep = minute.match(/^\*\/(\d+)$/);
         var hourStep = hour.match(/^\*\/(\d+)$/);
 
-        // Every minute
         if (minute === '*' && hour === '*' && dom === '*' && month === '*' && dow === '*') {
             return 'Every minute';
         }
-
-        // Every N minutes
         if (minStep && hour === '*' && dom === '*' && month === '*' && dow === '*') {
             var n = parseInt(minStep[1], 10);
             return 'Every ' + n + ' minute' + (n > 1 ? 's' : '');
         }
-
-        // Every hour (at specific minute)
         if (minute.match(/^\d+$/) && hour === '*' && dom === '*' && month === '*' && dow === '*') {
             var m = parseInt(minute, 10);
             if (m === 0) return 'Every hour';
             return 'Every hour at ' + m + ' minute' + (m > 1 ? 's' : '') + ' past';
         }
-
-        // Every N hours
         if (minute.match(/^\d+$/) && hourStep && dom === '*' && month === '*' && dow === '*') {
             var n = parseInt(hourStep[1], 10);
             var m = parseInt(minute, 10);
             if (m === 0) return 'Every ' + n + ' hour' + (n > 1 ? 's' : '');
             return 'Every ' + n + ' hour' + (n > 1 ? 's' : '') + ' at ' + m + ' minutes past';
         }
-
-        // Need specific minute and hour for remaining patterns
         if (!minute.match(/^\d+$/) || !hour.match(/^\d+$/)) return null;
 
         var time = formatTime(hour, minute);
-
-        // Daily
         if (dom === '*' && month === '*' && dow === '*') {
             return 'Daily at ' + time;
         }
-
-        // Weekly (specific day of week)
         if (dom === '*' && month === '*' && dow.match(/^\d$/)) {
             var d = parseInt(dow, 10);
-            if (d >= 0 && d <= 6) {
-                return 'Weekly on ' + days[d] + ' at ' + time;
-            }
+            if (d >= 0 && d <= 6) return 'Weekly on ' + days[d] + ' at ' + time;
         }
-
-        // Monthly (specific day of month)
         if (dom.match(/^\d+$/) && month === '*' && dow === '*') {
             return 'Monthly on the ' + ordinal(parseInt(dom, 10)) + ' at ' + time;
         }
-
-        // Yearly (specific month and day)
         if (dom.match(/^\d+$/) && month.match(/^\d+$/) && dow === '*') {
             var mo = parseInt(month, 10);
-            if (mo >= 1 && mo <= 12) {
-                return 'Yearly on ' + months[mo - 1] + ' ' + ordinal(parseInt(dom, 10)) + ' at ' + time;
-            }
+            if (mo >= 1 && mo <= 12) return 'Yearly on ' + months[mo - 1] + ' ' + ordinal(parseInt(dom, 10)) + ' at ' + time;
         }
-
         return null;
     }
 

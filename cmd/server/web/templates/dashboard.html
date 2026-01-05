@@ -63,7 +63,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Scan Config</th>
+                        <th>Name</th>
                         <th>Next Run</th>
                         <th>Status</th>
                         <th></th>
@@ -72,7 +72,7 @@
                 <tbody>
                     {{range .Jobs}}
                     <tr>
-                        <td><a href="/scans/{{.ConfigID}}/edit">{{.ConfigName}}</a></td>
+                        <td><a href="/jobs/{{.ID}}/edit">{{.Name}}</a></td>
                         <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                         <td>
                             {{if .Enabled}}

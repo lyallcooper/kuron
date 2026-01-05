@@ -34,7 +34,7 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 		"formatTime":    formatTime,
 		"truncateHash":  truncateHash,
 		"joinPatterns":  joinPatterns,
-		"containsPath":  containsPath,
+		"joinLines":     joinLines,
 		"derefInt64":    derefInt64,
 		"add":           func(a, b int) int { return a + b },
 		"subtract":      func(a, b int) int { return a - b },
@@ -66,12 +66,9 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Dashboard
 	mux.HandleFunc("/", h.Dashboard)
 
-	// Scans
-	mux.HandleFunc("/scans", h.Scans)
-	mux.HandleFunc("/scans/new", h.ScanForm)
+	// Quick scan and scan results
 	mux.HandleFunc("/scans/quick", h.QuickScan)
 	mux.HandleFunc("/scans/runs/", h.ScanResults)
-	mux.HandleFunc("/scans/", h.ScanConfigRoutes)
 
 	// Jobs
 	mux.HandleFunc("/jobs", h.Jobs)
@@ -83,9 +80,6 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Settings
 	mux.HandleFunc("/settings", h.Settings)
-	mux.HandleFunc("/settings/paths", h.AddPath)
-	mux.HandleFunc("/settings/paths/add-inline", h.AddPathInline)
-	mux.HandleFunc("/settings/paths/", h.DeletePath)
 
 	// API
 	mux.HandleFunc("/api/paths/suggest", h.SuggestPaths)
@@ -198,13 +192,8 @@ func joinPatterns(patterns []string) string {
 	return strings.Join(patterns, ", ")
 }
 
-func containsPath(paths []int64, id int64) bool {
-	for _, p := range paths {
-		if p == id {
-			return true
-		}
-	}
-	return false
+func joinLines(items []string) string {
+	return strings.Join(items, "\n")
 }
 
 func derefInt64(p *int64) int64 {

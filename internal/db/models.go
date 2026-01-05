@@ -5,37 +5,21 @@ import (
 	"time"
 )
 
-// ScanPath represents a configured path for scanning
-type ScanPath struct {
-	ID        int64
-	Path      string
-	FromEnv   bool // If true, path is locked (configured via env var)
-	CreatedAt time.Time
-}
-
-// ScanConfig represents a reusable scan configuration
-type ScanConfig struct {
+// ScheduledJob represents a scheduled scan job with all configuration
+type ScheduledJob struct {
 	ID              int64
 	Name            string
-	Paths           []int64  // JSON array of path IDs
+	Paths           []string // Paths to scan
 	MinSize         int64    // Minimum file size in bytes
 	MaxSize         *int64   // Maximum file size (nil = no limit)
 	IncludePatterns []string // Glob patterns to include
 	ExcludePatterns []string // Glob patterns to exclude
+	CronExpression  string
+	Action          string // 'scan', 'scan_hardlink', 'scan_reflink'
+	Enabled         bool
+	LastRunAt       *time.Time
+	NextRunAt       *time.Time
 	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
-
-// ScheduledJob represents a cron job for automatic scans
-type ScheduledJob struct {
-	ID             int64
-	ScanConfigID   int64
-	CronExpression string
-	Action         string // 'scan', 'scan_hardlink', 'scan_reflink'
-	Enabled        bool
-	LastRunAt      *time.Time
-	NextRunAt      *time.Time
-	CreatedAt      time.Time
 }
 
 // ScanRunStatus represents the status of a scan run

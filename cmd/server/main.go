@@ -30,9 +30,6 @@ func main() {
 	log.Printf("  Database: %s", cfg.DBPath)
 	log.Printf("  Port: %d", cfg.Port)
 	log.Printf("  Retention: %d days", cfg.RetentionDays)
-	if len(cfg.ScanPaths) > 0 {
-		log.Printf("  Scan paths (from env): %v", cfg.ScanPaths)
-	}
 
 	// Initialize database
 	database, err := db.Open(cfg.DBPath)
@@ -40,13 +37,6 @@ func main() {
 		log.Fatalf("Failed to open database: %v", err)
 	}
 	defer database.Close()
-
-	// Initialize scan paths from environment
-	for _, path := range cfg.ScanPaths {
-		if _, err := database.CreateScanPath(path, true); err != nil {
-			log.Printf("Warning: failed to add scan path %s: %v", path, err)
-		}
-	}
 
 	// Initialize fclones executor
 	executor := fclones.NewExecutor()
