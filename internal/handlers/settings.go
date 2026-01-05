@@ -124,42 +124,48 @@ func (h *Handler) AddPathInline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get currently checked paths to preserve them
+	checkedPaths := make(map[int64]bool)
+	for _, idStr := range r.Form["paths"] {
+		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
+			checkedPaths[id] = true
+		}
+	}
+
 	path := strings.TrimSpace(r.FormValue("new_path"))
 	if path == "" {
-		// Return current paths list without error
-		h.renderPathsList(w, nil)
+		// Return current paths list preserving checked state
+		h.renderPathsListWithCheckedMap(w, checkedPaths)
 		return
 	}
 
 	// Validate path exists
 	info, err := os.Stat(path)
 	if err != nil {
-		h.renderPathsList(w, fmt.Errorf("Path does not exist: %s", path))
+		h.renderPathsListWithCheckedMap(w, checkedPaths)
 		return
 	}
 	if !info.IsDir() {
-		h.renderPathsList(w, fmt.Errorf("Path is not a directory: %s", path))
+		h.renderPathsListWithCheckedMap(w, checkedPaths)
 		return
 	}
 
 	// Add path
 	newPath, err := h.db.CreateScanPath(path, false)
 	if err != nil {
-		h.renderPathsList(w, err)
+		h.renderPathsListWithCheckedMap(w, checkedPaths)
 		return
 	}
 
-	// Return updated paths list with new path checked
-	h.renderPathsListWithChecked(w, newPath.ID)
+	// Mark the new path as checked too
+	checkedPaths[newPath.ID] = true
+
+	// Return updated paths list with preserved + new path checked
+	h.renderPathsListWithCheckedMap(w, checkedPaths)
 }
 
-// renderPathsList renders just the paths checkboxes for HTMX
-func (h *Handler) renderPathsList(w http.ResponseWriter, err error) {
-	h.renderPathsListWithChecked(w, 0)
-}
-
-// renderPathsListWithChecked renders paths list with specified path checked
-func (h *Handler) renderPathsListWithChecked(w http.ResponseWriter, checkedID int64) {
+// renderPathsListWithCheckedMap renders paths list with specified paths checked
+func (h *Handler) renderPathsListWithCheckedMap(w http.ResponseWriter, checkedPaths map[int64]bool) {
 	paths, _ := h.db.ListScanPaths()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -171,7 +177,7 @@ func (h *Handler) renderPathsListWithChecked(w http.ResponseWriter, checkedID in
 
 	for _, p := range paths {
 		checked := ""
-		if p.ID == checkedID {
+		if checkedPaths[p.ID] {
 			checked = " checked"
 		}
 		locked := ""

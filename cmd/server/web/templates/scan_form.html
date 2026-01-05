@@ -36,7 +36,7 @@
                            placeholder="/path/to/directory" style="flex: 1;">
                     <button type="button" class="btn"
                             hx-post="/settings/paths/add-inline"
-                            hx-include="#new-path"
+                            hx-include="#new-path, #paths-list input[name='paths']:checked"
                             hx-target="#paths-list"
                             hx-swap="innerHTML">Add Path</button>
                 </div>
