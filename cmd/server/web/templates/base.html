@@ -220,11 +220,41 @@
         });
     }
 
+    // Auto-add pending list inputs on form submit
+    function initFormSubmitHandlers() {
+        document.querySelectorAll('form').forEach(function(form) {
+            if (form.dataset.submitInit) return;
+            form.dataset.submitInit = 'true';
+            form.addEventListener('submit', function() {
+                // Add any pending path
+                var pathInput = document.getElementById('new-path');
+                if (pathInput && pathInput.value.trim()) {
+                    addPath();
+                }
+                // Add any pending include pattern
+                var includeInput = document.getElementById('new-include');
+                if (includeInput && includeInput.value.trim()) {
+                    addPattern('include');
+                }
+                // Add any pending exclude pattern
+                var excludeInput = document.getElementById('new-exclude');
+                if (excludeInput && excludeInput.value.trim()) {
+                    addPattern('exclude');
+                }
+            });
+        });
+    }
+
     // Initialize on page load
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initListInputEnterHandlers);
-    } else {
+    function initListInputs() {
         initListInputEnterHandlers();
+        initFormSubmitHandlers();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initListInputs);
+    } else {
+        initListInputs();
     }
 
     // Path autocomplete system
