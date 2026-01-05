@@ -1,6 +1,7 @@
 package config
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -28,7 +29,13 @@ func Load() *Config {
 		for _, p := range strings.Split(paths, ",") {
 			p = strings.TrimSpace(p)
 			if p != "" {
-				cfg.ScanPaths = append(cfg.ScanPaths, filepath.Clean(p))
+				cleanPath := filepath.Clean(p)
+				if info, err := os.Stat(cleanPath); err != nil {
+					log.Printf("Warning: KURON_SCAN_PATHS contains non-existent path: %s", cleanPath)
+				} else if !info.IsDir() {
+					log.Printf("Warning: KURON_SCAN_PATHS contains non-directory path: %s", cleanPath)
+				}
+				cfg.ScanPaths = append(cfg.ScanPaths, cleanPath)
 			}
 		}
 	}

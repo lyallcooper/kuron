@@ -42,38 +42,34 @@
                 </div>
             </div>
 
-            <div class="grid-2">
+            <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label" for="min_size">Minimum File Size</label>
+                    <label class="form-label" for="min_size">Min Size</label>
                     <input type="text" id="min_size" name="min_size" class="form-input"
-                           value="{{if .Config}}{{.Config.MinSize | formatBytes}}{{else}}1 MB{{end}}"
-                           placeholder="e.g., 1 MB, 100 KB">
-                    <p class="form-help">Files smaller than this will be ignored</p>
+                           value="{{if .Config}}{{if .Config.MinSize}}{{.Config.MinSize | formatBytes}}{{end}}{{end}}"
+                           placeholder="e.g., 1 MB">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="max_size">Maximum File Size (optional)</label>
+                    <label class="form-label" for="max_size">Max Size</label>
                     <input type="text" id="max_size" name="max_size" class="form-input"
                            value="{{if .Config}}{{if .Config.MaxSize}}{{.Config.MaxSize | formatBytes}}{{end}}{{end}}"
                            placeholder="e.g., 10 GB">
-                    <p class="form-help">Leave empty for no limit</p>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label class="form-label" for="include_patterns">Include Patterns (optional)</label>
-                <input type="text" id="include_patterns" name="include_patterns" class="form-input"
-                       value="{{if .Config}}{{.Config.IncludePatterns | joinPatterns}}{{end}}"
-                       placeholder="e.g., *.mp4, *.mkv, *.avi">
-                <p class="form-help">Comma-separated glob patterns. Leave empty to include all files.</p>
-            </div>
+                <div class="form-group form-group-wide">
+                    <label class="form-label" for="include_patterns">Include Patterns</label>
+                    <input type="text" id="include_patterns" name="include_patterns" class="form-input"
+                           value="{{if .Config}}{{.Config.IncludePatterns | joinPatterns}}{{end}}"
+                           placeholder="e.g., *.mp4, *.mkv">
+                </div>
 
-            <div class="form-group">
-                <label class="form-label" for="exclude_patterns">Exclude Patterns (optional)</label>
-                <input type="text" id="exclude_patterns" name="exclude_patterns" class="form-input"
-                       value="{{if .Config}}{{.Config.ExcludePatterns | joinPatterns}}{{end}}"
-                       placeholder="e.g., *.nfo, *.txt, Thumbs.db">
-                <p class="form-help">Comma-separated glob patterns to exclude</p>
+                <div class="form-group form-group-wide">
+                    <label class="form-label" for="exclude_patterns">Exclude Patterns</label>
+                    <input type="text" id="exclude_patterns" name="exclude_patterns" class="form-input"
+                           value="{{if .Config}}{{.Config.ExcludePatterns | joinPatterns}}{{end}}"
+                           placeholder="e.g., *.nfo, Thumbs.db">
+                </div>
             </div>
 
             <div class="actions-bar">
