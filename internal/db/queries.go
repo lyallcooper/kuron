@@ -268,6 +268,15 @@ func (db *DB) GetRecentScanRuns(limit int) ([]*ScanRun, error) {
 	return db.ListScanRuns(limit, 0)
 }
 
+// GetLastRunForJob returns the most recent scan run for a scheduled job
+func (db *DB) GetLastRunForJob(jobID int64) (*ScanRun, error) {
+	row := db.QueryRow(`
+		SELECT id, scan_config_id, scheduled_job_id, status, started_at, completed_at,
+			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
+		FROM scan_runs WHERE scheduled_job_id = ? ORDER BY started_at DESC LIMIT 1`, jobID)
+	return scanScanRun(row)
+}
+
 // UpdateScanRunProgress updates scan progress
 func (db *DB) UpdateScanRunProgress(id int64, filesScanned, bytesScanned, groups, files, wasted int64) error {
 	_, err := db.Exec(`

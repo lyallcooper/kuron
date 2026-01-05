@@ -56,6 +56,9 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 		if job.LastRunAt != nil {
 			view.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
 		}
+		if lastRun, err := h.db.GetLastRunForJob(job.ID); err == nil {
+			view.LastRunID = lastRun.ID
+		}
 		views = append(views, view)
 	}
 

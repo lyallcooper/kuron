@@ -37,6 +37,7 @@ type JobView struct {
 	Action         string
 	NextRunAt      string
 	LastRunAt      string
+	LastRunID      int64
 	Enabled        bool
 }
 
