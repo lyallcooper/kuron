@@ -20,6 +20,8 @@ type Scheduler struct {
 	mu       sync.RWMutex
 	running  bool
 	stopChan chan struct{}
+	cancel   context.CancelFunc // Cancel function for running jobs
+	wg       sync.WaitGroup     // Tracks spawned job goroutines
 }
 
 // New creates a new scheduler
@@ -40,12 +42,16 @@ func (s *Scheduler) Start() {
 	}
 	s.running = true
 	s.stopChan = make(chan struct{})
+
+	// Create cancellable context for all spawned jobs
+	ctx, cancel := context.WithCancel(context.Background())
+	s.cancel = cancel
 	s.mu.Unlock()
 
-	go s.run()
+	go s.run(ctx)
 }
 
-// Stop stops the scheduler
+// Stop stops the scheduler and waits for running jobs to complete
 func (s *Scheduler) Stop() {
 	s.mu.Lock()
 	if !s.running {
@@ -54,29 +60,37 @@ func (s *Scheduler) Stop() {
 	}
 	s.running = false
 	close(s.stopChan)
+
+	// Cancel all running job contexts
+	if s.cancel != nil {
+		s.cancel()
+	}
 	s.mu.Unlock()
+
+	// Wait for all spawned job goroutines to finish
+	s.wg.Wait()
 }
 
 // run is the main scheduler loop
-func (s *Scheduler) run() {
+func (s *Scheduler) run(ctx context.Context) {
 	ticker := time.NewTicker(time.Minute)
 	defer ticker.Stop()
 
 	// Check immediately on start
-	s.checkJobs()
+	s.checkJobs(ctx)
 
 	for {
 		select {
 		case <-s.stopChan:
 			return
 		case <-ticker.C:
-			s.checkJobs()
+			s.checkJobs(ctx)
 		}
 	}
 }
 
 // checkJobs checks for jobs that need to run
-func (s *Scheduler) checkJobs() {
+func (s *Scheduler) checkJobs(ctx context.Context) {
 	jobs, err := s.db.GetEnabledJobs()
 	if err != nil {
 		log.Printf("scheduler: failed to get jobs: %v", err)
@@ -91,14 +105,23 @@ func (s *Scheduler) checkJobs() {
 		}
 
 		if now.After(*job.NextRunAt) || now.Equal(*job.NextRunAt) {
-			go s.runJob(job)
+			s.wg.Add(1)
+			go s.runJob(ctx, job)
 		}
 	}
 }
 
 // runJob executes a scheduled job
-func (s *Scheduler) runJob(job *db.ScheduledJob) {
+func (s *Scheduler) runJob(ctx context.Context, job *db.ScheduledJob) {
+	defer s.wg.Done()
+
 	log.Printf("scheduler: running job %d (%s)", job.ID, job.Name)
+
+	// Check if context is already cancelled
+	if ctx.Err() != nil {
+		log.Printf("scheduler: job %d cancelled before start", job.ID)
+		return
+	}
 
 	if len(job.Paths) == 0 {
 		log.Printf("scheduler: no paths configured for job %d", job.ID)
@@ -114,8 +137,7 @@ func (s *Scheduler) runJob(job *db.ScheduledJob) {
 		ExcludePatterns: job.ExcludePatterns,
 	}
 
-	// Start scan
-	ctx := context.Background()
+	// Start scan with cancellable context
 	run, err := s.scanner.StartScan(ctx, cfg, &job.ID)
 	if err != nil {
 		log.Printf("scheduler: failed to start scan for job %d: %v", job.ID, err)
@@ -139,7 +161,7 @@ func (s *Scheduler) runJob(job *db.ScheduledJob) {
 
 	// If action is specified, wait for scan to complete and execute action
 	if job.Action != "scan" {
-		go s.waitAndExecuteAction(ctx, run.ID, job)
+		s.waitAndExecuteAction(ctx, run.ID, job)
 	}
 }
 

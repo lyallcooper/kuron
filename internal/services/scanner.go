@@ -4,16 +4,44 @@ import (
 	"context"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/lyall/kuron/internal/db"
 	"github.com/lyall/kuron/internal/fclones"
 	"github.com/lyall/kuron/internal/types"
 )
 
+// subscriber wraps a channel with safe close handling
+type subscriber struct {
+	ch        chan *types.ScanProgress
+	closeOnce sync.Once
+	closed    bool
+}
+
+func (sub *subscriber) close() {
+	sub.closeOnce.Do(func() {
+		sub.closed = true
+		close(sub.ch)
+	})
+}
+
+func (sub *subscriber) send(progress *types.ScanProgress) bool {
+	if sub.closed {
+		return false
+	}
+	select {
+	case sub.ch <- progress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Scanner orchestrates scan operations
 type Scanner struct {
-	db       *db.DB
-	executor *fclones.Executor
+	db          *db.DB
+	executor    *fclones.Executor
+	scanTimeout time.Duration
 
 	// Active scans and their cancellation functions
 	mu          sync.RWMutex
@@ -21,16 +49,17 @@ type Scanner struct {
 
 	// SSE subscribers
 	subMu       sync.RWMutex
-	subscribers map[int64][]chan *types.ScanProgress
+	subscribers map[int64][]*subscriber
 }
 
 // NewScanner creates a new scanner service
-func NewScanner(database *db.DB, executor *fclones.Executor) *Scanner {
+func NewScanner(database *db.DB, executor *fclones.Executor, scanTimeout time.Duration) *Scanner {
 	return &Scanner{
 		db:          database,
 		executor:    executor,
+		scanTimeout: scanTimeout,
 		activeScans: make(map[int64]context.CancelFunc),
-		subscribers: make(map[int64][]chan *types.ScanProgress),
+		subscribers: make(map[int64][]*subscriber),
 	}
 }
 
@@ -39,9 +68,11 @@ func (s *Scanner) Subscribe(runID int64) chan *types.ScanProgress {
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
 
-	ch := make(chan *types.ScanProgress, 10)
-	s.subscribers[runID] = append(s.subscribers[runID], ch)
-	return ch
+	sub := &subscriber{
+		ch: make(chan *types.ScanProgress, 10),
+	}
+	s.subscribers[runID] = append(s.subscribers[runID], sub)
+	return sub.ch
 }
 
 // Unsubscribe removes a subscriber
@@ -51,9 +82,10 @@ func (s *Scanner) Unsubscribe(runID int64, ch chan *types.ScanProgress) {
 
 	subs := s.subscribers[runID]
 	for i, sub := range subs {
-		if sub == ch {
+		if sub.ch == ch {
+			// Remove from slice first, then close safely
 			s.subscribers[runID] = append(subs[:i], subs[i+1:]...)
-			close(ch)
+			sub.close()
 			break
 		}
 	}
@@ -67,15 +99,13 @@ func (s *Scanner) Unsubscribe(runID int64, ch chan *types.ScanProgress) {
 // broadcast sends progress to all subscribers
 func (s *Scanner) broadcast(runID int64, progress *types.ScanProgress) {
 	s.subMu.RLock()
-	subs := s.subscribers[runID]
+	// Make a copy of the slice to avoid holding lock during send
+	subs := make([]*subscriber, len(s.subscribers[runID]))
+	copy(subs, s.subscribers[runID])
 	s.subMu.RUnlock()
 
-	for _, ch := range subs {
-		select {
-		case ch <- progress:
-		default:
-			// Skip if channel is full
-		}
+	for _, sub := range subs {
+		sub.send(progress)
 	}
 }
 
@@ -84,8 +114,8 @@ func (s *Scanner) closeSubscribers(runID int64) {
 	s.subMu.Lock()
 	defer s.subMu.Unlock()
 
-	for _, ch := range s.subscribers[runID] {
-		close(ch)
+	for _, sub := range s.subscribers[runID] {
+		sub.close()
 	}
 	delete(s.subscribers, runID)
 }
@@ -98,8 +128,8 @@ func (s *Scanner) StartScan(ctx context.Context, cfg *ScanConfig, jobID *int64) 
 		return nil, err
 	}
 
-	// Create cancellable context
-	scanCtx, cancel := context.WithCancel(context.Background())
+	// Create context with timeout (can also be cancelled manually)
+	scanCtx, cancel := context.WithTimeout(context.Background(), s.scanTimeout)
 
 	s.mu.Lock()
 	s.activeScans[run.ID] = cancel

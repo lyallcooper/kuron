@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 )
 
 // Config holds all application configuration
@@ -11,6 +12,7 @@ type Config struct {
 	DBPath               string
 	RetentionDays        int
 	RetentionDaysFromEnv bool // true if set via KURON_RETENTION_DAYS env var
+	ScanTimeout          time.Duration
 }
 
 // Load reads configuration from environment variables
@@ -21,6 +23,7 @@ func Load() *Config {
 		DBPath:               getEnv("KURON_DB_PATH", "./data/kuron.db"),
 		RetentionDays:        getEnvInt("KURON_RETENTION_DAYS", 30),
 		RetentionDaysFromEnv: retentionFromEnv,
+		ScanTimeout:          getEnvDuration("KURON_SCAN_TIMEOUT", 30*time.Minute),
 	}
 }
 
@@ -35,6 +38,15 @@ func getEnvInt(key string, defaultVal int) int {
 	if val := os.Getenv(key); val != "" {
 		if i, err := strconv.Atoi(val); err == nil {
 			return i
+		}
+	}
+	return defaultVal
+}
+
+func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
+	if val := os.Getenv(key); val != "" {
+		if d, err := time.ParseDuration(val); err == nil {
+			return d
 		}
 	}
 	return defaultVal

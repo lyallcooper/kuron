@@ -60,7 +60,7 @@ func main() {
 	cancel()
 
 	// Initialize scanner service
-	scanner := services.NewScanner(database, executor)
+	scanner := services.NewScanner(database, executor, cfg.ScanTimeout)
 
 	// Initialize scheduler
 	sched := scheduler.New(database, scanner)

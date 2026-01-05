@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"html"
 	"net/http"
 	"strconv"
 	"strings"
@@ -351,8 +352,11 @@ func (h *Handler) renderDryRunModal(w http.ResponseWriter, action, output string
 		actionName = "Reflink"
 	}
 
+	// Escape output to prevent XSS
+	escapedOutput := html.EscapeString(output)
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	html := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
 	<div class="modal" onclick="event.stopPropagation()">
 		<div class="modal-header">
 			<h3>` + actionName + ` Preview (Dry Run)</h3>
@@ -360,7 +364,7 @@ func (h *Handler) renderDryRunModal(w http.ResponseWriter, action, output string
 		</div>
 		<div class="modal-body">
 			<p>The following operations would be performed:</p>
-			<pre class="output">` + output + `</pre>
+			<pre class="output">` + escapedOutput + `</pre>
 		</div>
 		<div class="modal-footer">
 			<button class="btn" onclick="closeModal()">Close</button>
@@ -377,7 +381,7 @@ document.addEventListener('keydown', function(e) {
 	if (e.key === 'Escape') closeModal();
 });
 </script>`
-	w.Write([]byte(html))
+	w.Write([]byte(modalHTML))
 }
 
 // CancelScan handles POST /scans/runs/{id}/cancel
