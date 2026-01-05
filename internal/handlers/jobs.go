@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -239,6 +240,16 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate paths against allowlist
+	if len(h.cfg.AllowedPaths) > 0 {
+		for _, p := range job.Paths {
+			if !h.cfg.IsPathAllowed(p) {
+				renderError(fmt.Sprintf("Path not allowed: %s", p))
+				return
+			}
+		}
+	}
+
 	// Validate cron expression
 	parser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 	schedule, err := parser.Parse(job.CronExpression)
@@ -306,6 +317,16 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 	if len(job.Paths) == 0 {
 		renderError("At least one path is required")
 		return
+	}
+
+	// Validate paths against allowlist
+	if len(h.cfg.AllowedPaths) > 0 {
+		for _, p := range job.Paths {
+			if !h.cfg.IsPathAllowed(p) {
+				renderError(fmt.Sprintf("Path not allowed: %s", p))
+				return
+			}
+		}
 	}
 
 	// Validate and calculate next run

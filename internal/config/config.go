@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -13,6 +14,7 @@ type Config struct {
 	RetentionDays        int
 	RetentionDaysFromEnv bool // true if set via KURON_RETENTION_DAYS env var
 	ScanTimeout          time.Duration
+	AllowedPaths         []string // Restrict scanning/autocomplete to these paths (empty = unrestricted)
 }
 
 // Load reads configuration from environment variables
@@ -24,6 +26,7 @@ func Load() *Config {
 		RetentionDays:        getEnvInt("KURON_RETENTION_DAYS", 30),
 		RetentionDaysFromEnv: retentionFromEnv,
 		ScanTimeout:          getEnvDuration("KURON_SCAN_TIMEOUT", 30*time.Minute),
+		AllowedPaths:         getEnvPaths("KURON_ALLOWED_PATHS"),
 	}
 }
 
@@ -50,4 +53,35 @@ func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
 		}
 	}
 	return defaultVal
+}
+
+func getEnvPaths(key string) []string {
+	val := os.Getenv(key)
+	if val == "" {
+		return nil
+	}
+
+	var paths []string
+	for _, p := range strings.Split(val, ",") {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
+}
+
+// IsPathAllowed checks if a path is within the allowed paths.
+// Returns true if no allowed paths are configured (unrestricted) or if the path is a subpath of an allowed path.
+func (c *Config) IsPathAllowed(path string) bool {
+	if len(c.AllowedPaths) == 0 {
+		return true
+	}
+
+	for _, allowed := range c.AllowedPaths {
+		if path == allowed || strings.HasPrefix(path, allowed+"/") {
+			return true
+		}
+	}
+	return false
 }

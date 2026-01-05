@@ -114,6 +114,16 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate paths against allowlist
+	if len(h.cfg.AllowedPaths) > 0 {
+		for _, p := range paths {
+			if !h.cfg.IsPathAllowed(p) {
+				renderError(fmt.Sprintf("Path not allowed: %s", p))
+				return
+			}
+		}
+	}
+
 	// Parse sizes
 	minSize, err := parseSizeWithError(minSizeStr)
 	if err != nil {

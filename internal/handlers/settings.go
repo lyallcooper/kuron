@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,6 +21,7 @@ type SettingsData struct {
 	FclonesVersion    string
 	DBPath            string
 	Port              int
+	AllowedPaths      []string
 	Error             string
 	Success           string
 }
@@ -49,6 +50,7 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 		FclonesVersion:    fclonesVersion,
 		DBPath:            h.cfg.DBPath,
 		Port:              h.cfg.Port,
+		AllowedPaths:      h.cfg.AllowedPaths,
 		Error:             r.URL.Query().Get("error"),
 		Success:           r.URL.Query().Get("success"),
 	}
@@ -101,6 +103,13 @@ func (h *Handler) SuggestPaths(w http.ResponseWriter, r *http.Request) {
 	// Clean the prefix
 	prefix = filepath.Clean(prefix)
 
+	// Check if the prefix is within allowed paths
+	if !h.cfg.IsPathAllowed(prefix) && !h.isAllowedPathPrefix(prefix) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("[]"))
+		return
+	}
+
 	// Determine the directory to list and the partial name to match
 	var dir, partial string
 	if strings.HasSuffix(r.URL.Query().Get("prefix"), "/") {
@@ -135,24 +144,33 @@ func (h *Handler) SuggestPaths(w http.ResponseWriter, r *http.Request) {
 		// Match prefix (case-insensitive)
 		if partial == "" || strings.HasPrefix(strings.ToLower(name), strings.ToLower(partial)) {
 			fullPath := filepath.Join(dir, name)
-			suggestions = append(suggestions, fullPath)
-			if len(suggestions) >= 15 {
-				break
+			// Only suggest paths within allowed paths
+			if h.cfg.IsPathAllowed(fullPath) || h.isAllowedPathPrefix(fullPath) {
+				suggestions = append(suggestions, fullPath)
+				if len(suggestions) >= 15 {
+					break
+				}
 			}
 		}
 	}
 
 	// Return as JSON array
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte("["))
-	for i, s := range suggestions {
-		if i > 0 {
-			w.Write([]byte(","))
-		}
-		// Simple JSON string escaping
-		escaped := strings.ReplaceAll(s, `\`, `\\`)
-		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
-		fmt.Fprintf(w, `"%s"`, escaped)
+	data, _ := json.Marshal(suggestions)
+	w.Write(data)
+}
+
+// isAllowedPathPrefix checks if a path is a prefix of any allowed path.
+// This allows browsing directories that lead to allowed paths.
+func (h *Handler) isAllowedPathPrefix(path string) bool {
+	if len(h.cfg.AllowedPaths) == 0 {
+		return true
 	}
-	w.Write([]byte("]"))
+
+	for _, allowed := range h.cfg.AllowedPaths {
+		if strings.HasPrefix(allowed, path) || strings.HasPrefix(allowed+"/", path) {
+			return true
+		}
+	}
+	return false
 }

@@ -47,6 +47,10 @@
                     <td>Port</td>
                     <td>{{.Port}}</td>
                 </tr>
+                <tr>
+                    <td>Allowed Paths</td>
+                    <td>{{if .AllowedPaths}}{{range $i, $p := .AllowedPaths}}{{if $i}}, {{end}}{{$p}}{{end}}{{else}}<em>Unrestricted</em>{{end}}</td>
+                </tr>
             </table>
         </div>
     </div>
