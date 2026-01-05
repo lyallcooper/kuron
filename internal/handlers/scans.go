@@ -339,27 +339,33 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		return
 	}
 
-	// For HTMX requests
+	// For HTMX requests, show modal with results
 	if r.Header.Get("HX-Request") == "true" {
-		if dryRun {
-			// Return modal content for dry runs
-			h.renderDryRunModal(w, action, result.Output)
-			return
-		}
-		// For actual runs, tell HTMX to redirect
-		w.Header().Set("HX-Redirect", "/scans/runs/"+runIDStr)
-		w.WriteHeader(http.StatusOK)
+		h.renderActionResultModal(w, action, result.Output, dryRun, "/scans/runs/"+runIDStr)
 		return
 	}
 
 	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
 }
 
-// renderDryRunModal renders the dry run results modal
-func (h *Handler) renderDryRunModal(w http.ResponseWriter, action, output string) {
+// renderActionResultModal renders the action results modal
+func (h *Handler) renderActionResultModal(w http.ResponseWriter, action, output string, dryRun bool, redirectURL string) {
 	actionName := "Hardlink"
 	if action == "reflink" {
 		actionName = "Reflink"
+	}
+
+	var title, description, buttonText, buttonAction string
+	if dryRun {
+		title = actionName + " Preview (Dry Run)"
+		description = "The following operations would be performed:"
+		buttonText = "Close"
+		buttonAction = "closeModal()"
+	} else {
+		title = actionName + " Complete"
+		description = "The following operations were performed:"
+		buttonText = "Done"
+		buttonAction = "window.location.href='" + redirectURL + "'"
 	}
 
 	// Escape output to prevent XSS
@@ -369,15 +375,15 @@ func (h *Handler) renderDryRunModal(w http.ResponseWriter, action, output string
 	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
 	<div class="modal" onclick="event.stopPropagation()">
 		<div class="modal-header">
-			<h3>` + actionName + ` Preview (Dry Run)</h3>
+			<h3>` + title + `</h3>
 			<button class="modal-close" onclick="closeModal()">&times;</button>
 		</div>
 		<div class="modal-body">
-			<p>The following operations would be performed:</p>
+			<p>` + description + `</p>
 			<pre class="output">` + escapedOutput + `</pre>
 		</div>
 		<div class="modal-footer">
-			<button class="btn" onclick="closeModal()">Close</button>
+			<button class="btn" onclick="` + buttonAction + `">` + buttonText + `</button>
 		</div>
 	</div>
 </div>
