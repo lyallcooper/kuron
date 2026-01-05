@@ -131,10 +131,10 @@
                         <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
                         Dry run
                     </label>
-                    <button type="submit" name="action" value="hardlink" class="btn btn-sm">
+                    <button type="submit" name="action" value="hardlink" class="btn btn-sm" id="btn-hardlink" disabled>
                         Hardlink Selected
                     </button>
-                    <button type="submit" name="action" value="reflink" class="btn btn-sm">
+                    <button type="submit" name="action" value="reflink" class="btn btn-sm" id="btn-reflink" disabled>
                         Reflink Selected
                     </button>
                 </div>
@@ -279,24 +279,33 @@ function updateSelection() {
 }
 
 function updateSelectionDisplay() {
-    const countEl = document.getElementById('selection-count');
-    const groupIdsEl = document.getElementById('selected-groups');
-    const selectAllFlagEl = document.getElementById('select-all-flag');
+    var countEl = document.getElementById('selection-count');
+    var groupIdsEl = document.getElementById('selected-groups');
+    var selectAllFlagEl = document.getElementById('select-all-flag');
+    var btnHardlink = document.getElementById('btn-hardlink');
+    var btnReflink = document.getElementById('btn-reflink');
+
+    var hasSelection = false;
 
     if (selectAllMode) {
         countEl.textContent = '(' + totalCount + ' groups selected)';
         groupIdsEl.value = '';
         selectAllFlagEl.value = '1';
+        hasSelection = totalCount > 0;
     } else {
-        const count = manualSelections.size;
+        var count = manualSelections.size;
         if (count > 0) {
             countEl.textContent = '(' + count + ' group' + (count !== 1 ? 's' : '') + ' selected)';
+            hasSelection = true;
         } else {
             countEl.textContent = '';
         }
         groupIdsEl.value = Array.from(manualSelections).join(',');
         selectAllFlagEl.value = '';
     }
+
+    btnHardlink.disabled = !hasSelection;
+    btnReflink.disabled = !hasSelection;
 }
 
 function sortBy(field) {
