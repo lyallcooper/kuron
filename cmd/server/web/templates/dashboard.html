@@ -68,7 +68,7 @@
                 <tbody>
                     {{range .Jobs}}
                     <tr>
-                        <td><a href="/jobs/{{.ID}}">{{.ConfigName}}</a></td>
+                        <td><a href="/jobs/{{.ID}}/edit">{{.ConfigName}}</a></td>
                         <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                         <td>
                             {{if .Enabled}}
