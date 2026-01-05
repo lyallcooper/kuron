@@ -27,6 +27,7 @@
                 <input type="text" id="cron_expression" name="cron_expression" class="form-input"
                        value="{{if .Job}}{{.Job.CronExpression}}{{else}}0 2 * * *{{end}}" required
                        placeholder="0 2 * * *">
+                <p class="cron-description" id="cron-description"></p>
                 <p class="form-help">
                     Format: minute hour day-of-month month day-of-week<br>
                     Examples: <code>0 2 * * *</code> (daily at 2am),
@@ -77,4 +78,115 @@
         </form>
     </div>
 </div>
+
+<script>
+(function() {
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var months = ['January', 'February', 'March', 'April', 'May', 'June',
+                  'July', 'August', 'September', 'October', 'November', 'December'];
+
+    function formatTime(hour, minute) {
+        var h = parseInt(hour, 10);
+        var m = parseInt(minute, 10);
+        var suffix = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return h + ':' + (m < 10 ? '0' : '') + m + ' ' + suffix;
+    }
+
+    function ordinal(n) {
+        var s = ['th', 'st', 'nd', 'rd'];
+        var v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
+    function parseCron(expr) {
+        var parts = expr.trim().split(/\s+/);
+        if (parts.length !== 5) return null;
+
+        var minute = parts[0], hour = parts[1], dom = parts[2], month = parts[3], dow = parts[4];
+
+        // Check for step patterns
+        var minStep = minute.match(/^\*\/(\d+)$/);
+        var hourStep = hour.match(/^\*\/(\d+)$/);
+
+        // Every minute
+        if (minute === '*' && hour === '*' && dom === '*' && month === '*' && dow === '*') {
+            return 'Every minute';
+        }
+
+        // Every N minutes
+        if (minStep && hour === '*' && dom === '*' && month === '*' && dow === '*') {
+            var n = parseInt(minStep[1], 10);
+            return 'Every ' + n + ' minute' + (n > 1 ? 's' : '');
+        }
+
+        // Every hour (at specific minute)
+        if (minute.match(/^\d+$/) && hour === '*' && dom === '*' && month === '*' && dow === '*') {
+            var m = parseInt(minute, 10);
+            if (m === 0) return 'Every hour';
+            return 'Every hour at ' + m + ' minute' + (m > 1 ? 's' : '') + ' past';
+        }
+
+        // Every N hours
+        if (minute.match(/^\d+$/) && hourStep && dom === '*' && month === '*' && dow === '*') {
+            var n = parseInt(hourStep[1], 10);
+            var m = parseInt(minute, 10);
+            if (m === 0) return 'Every ' + n + ' hour' + (n > 1 ? 's' : '');
+            return 'Every ' + n + ' hour' + (n > 1 ? 's' : '') + ' at ' + m + ' minutes past';
+        }
+
+        // Need specific minute and hour for remaining patterns
+        if (!minute.match(/^\d+$/) || !hour.match(/^\d+$/)) return null;
+
+        var time = formatTime(hour, minute);
+
+        // Daily
+        if (dom === '*' && month === '*' && dow === '*') {
+            return 'Daily at ' + time;
+        }
+
+        // Weekly (specific day of week)
+        if (dom === '*' && month === '*' && dow.match(/^\d$/)) {
+            var d = parseInt(dow, 10);
+            if (d >= 0 && d <= 6) {
+                return 'Weekly on ' + days[d] + ' at ' + time;
+            }
+        }
+
+        // Monthly (specific day of month)
+        if (dom.match(/^\d+$/) && month === '*' && dow === '*') {
+            return 'Monthly on the ' + ordinal(parseInt(dom, 10)) + ' at ' + time;
+        }
+
+        // Yearly (specific month and day)
+        if (dom.match(/^\d+$/) && month.match(/^\d+$/) && dow === '*') {
+            var mo = parseInt(month, 10);
+            if (mo >= 1 && mo <= 12) {
+                return 'Yearly on ' + months[mo - 1] + ' ' + ordinal(parseInt(dom, 10)) + ' at ' + time;
+            }
+        }
+
+        return null;
+    }
+
+    function updateDescription() {
+        var input = document.getElementById('cron_expression');
+        var desc = document.getElementById('cron-description');
+        var result = parseCron(input.value);
+        if (result) {
+            desc.textContent = result;
+            desc.className = 'cron-description cron-valid';
+        } else if (input.value.trim().split(/\s+/).length === 5) {
+            desc.textContent = 'Custom schedule';
+            desc.className = 'cron-description cron-valid';
+        } else {
+            desc.textContent = 'Invalid cron expression';
+            desc.className = 'cron-description cron-invalid';
+        }
+    }
+
+    document.getElementById('cron_expression').addEventListener('input', updateDescription);
+    updateDescription();
+})();
+</script>
 {{end}}

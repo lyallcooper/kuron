@@ -249,6 +249,24 @@ button.btn {
     margin-top: 0.25rem;
 }
 
+.cron-description {
+    font-size: 0.875rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.cron-valid {
+    background: rgba(46, 160, 67, 0.15);
+    color: var(--success);
+}
+
+.cron-invalid {
+    background: rgba(248, 81, 73, 0.15);
+    color: var(--danger);
+}
+
 /* Cards */
 .card {
     border: 1px solid var(--border);
