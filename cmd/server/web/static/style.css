@@ -347,8 +347,8 @@ button.btn {
 }
 
 .cron-valid {
-    background: rgba(46, 160, 67, 0.15);
-    color: var(--success);
+    background: var(--bg-secondary);
+    color: var(--fg);
 }
 
 .cron-invalid {
