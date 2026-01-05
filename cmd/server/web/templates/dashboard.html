@@ -1,0 +1,93 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <a href="/scans/new" class="btn btn-primary">New Scan</a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{.Stats.TotalSaved | formatBytes}}</div>
+        <div class="stat-label">Total Space Saved</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Stats.PendingGroups}}</div>
+        <div class="stat-label">Pending Groups</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Stats.RecentScans}}</div>
+        <div class="stat-label">Scans (24h)</div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <div class="card-header">Recent Scans</div>
+        <div class="card-body">
+            {{if .RecentScans}}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Started</th>
+                        <th>Status</th>
+                        <th>Groups</th>
+                        <th>Wasted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .RecentScans}}
+                    <tr>
+                        <td><a href="/scans/runs/{{.ID}}">{{.StartedAt | formatTime}}</a></td>
+                        <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                        <td>{{.DuplicateGroups}}</td>
+                        <td class="size">{{.WastedBytes | formatBytes}}</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            {{else}}
+            <div class="empty-state">
+                <p>No scans yet</p>
+                <a href="/scans/new" class="btn btn-primary">Run your first scan</a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Scheduled Jobs</div>
+        <div class="card-body">
+            {{if .Jobs}}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Next Run</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .Jobs}}
+                    <tr>
+                        <td><a href="/jobs/{{.ID}}">{{.Name}}</a></td>
+                        <td class="timestamp">{{if .NextRunAt}}{{.NextRunAt | formatTime}}{{else}}-{{end}}</td>
+                        <td>
+                            {{if .Enabled}}
+                            <span class="badge badge-completed">Active</span>
+                            {{else}}
+                            <span class="badge badge-cancelled">Disabled</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+            {{else}}
+            <div class="empty-state">
+                <p>No scheduled jobs</p>
+                <a href="/jobs/new" class="btn">Create a job</a>
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+{{end}}

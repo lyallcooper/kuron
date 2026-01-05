@@ -1,0 +1,88 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>{{if .Job}}Edit{{else}}New{{end}} Scheduled Job</h1>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST" action="{{if .Job}}/jobs/{{.Job.ID}}{{else}}/jobs{{end}}">
+            <div class="form-group">
+                <label class="form-label" for="name">Job Name</label>
+                <input type="text" id="name" name="name" class="form-input"
+                       value="{{if .Job}}{{.Job.Name}}{{end}}" required
+                       placeholder="e.g., Nightly Media Dedupe">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="scan_config_id">Scan Configuration</label>
+                <select id="scan_config_id" name="scan_config_id" class="form-select" required>
+                    <option value="">Select a configuration...</option>
+                    {{range .Configs}}
+                    <option value="{{.ID}}"
+                            {{if $.Job}}{{if eq $.Job.ScanConfigID .ID}}selected{{end}}{{end}}>
+                        {{.Name}}
+                    </option>
+                    {{end}}
+                </select>
+                {{if not .Configs}}
+                <p class="form-help">No scan configurations. <a href="/scans/new">Create one first</a>.</p>
+                {{end}}
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="cron_expression">Schedule (Cron Expression)</label>
+                <input type="text" id="cron_expression" name="cron_expression" class="form-input"
+                       value="{{if .Job}}{{.Job.CronExpression}}{{else}}0 2 * * *{{end}}" required
+                       placeholder="0 2 * * *">
+                <p class="form-help">
+                    Format: minute hour day-of-month month day-of-week<br>
+                    Examples: <code>0 2 * * *</code> (daily at 2am),
+                    <code>0 */6 * * *</code> (every 6 hours),
+                    <code>0 0 * * 0</code> (weekly on Sunday)
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="action">Action After Scan</label>
+                <select id="action" name="action" class="form-select" required>
+                    <option value="scan" {{if .Job}}{{if eq .Job.Action "scan"}}selected{{end}}{{end}}>
+                        Scan Only (find duplicates, take no action)
+                    </option>
+                    <option value="scan_hardlink" {{if .Job}}{{if eq .Job.Action "scan_hardlink"}}selected{{end}}{{end}}>
+                        Scan + Hardlink (replace duplicates with hard links)
+                    </option>
+                    <option value="scan_reflink" {{if .Job}}{{if eq .Job.Action "scan_reflink"}}selected{{end}}{{end}}>
+                        Scan + Reflink (replace duplicates with reflinks/CoW)
+                    </option>
+                </select>
+                <p class="form-help">
+                    <strong>Hardlink:</strong> Files share the same data on disk. Deleting one doesn't affect others.<br>
+                    <strong>Reflink:</strong> Copy-on-write. Files start sharing data but become independent on modification.
+                </p>
+            </div>
+
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" name="enabled" value="1"
+                           {{if .Job}}{{if .Job.Enabled}}checked{{end}}{{else}}checked{{end}}>
+                    Enable this job
+                </label>
+            </div>
+
+            <div class="actions-bar">
+                <button type="submit" class="btn btn-primary">
+                    {{if .Job}}Save Changes{{else}}Create Job{{end}}
+                </button>
+                <a href="/jobs" class="btn">Cancel</a>
+                {{if .Job}}
+                <button type="button" class="btn btn-danger"
+                        hx-delete="/jobs/{{.Job.ID}}"
+                        hx-confirm="Are you sure you want to delete this job?">
+                    Delete
+                </button>
+                {{end}}
+            </div>
+        </form>
+    </div>
+</div>
+{{end}}

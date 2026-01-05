@@ -1,0 +1,97 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>History</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <span>Scan Runs</span>
+        <div class="actions-bar" style="margin: 0;">
+            <select class="form-select" style="width: auto;"
+                    onchange="window.location.href='?status=' + this.value">
+                <option value="" {{if not .StatusFilter}}selected{{end}}>All statuses</option>
+                <option value="completed" {{if eq .StatusFilter "completed"}}selected{{end}}>Completed</option>
+                <option value="failed" {{if eq .StatusFilter "failed"}}selected{{end}}>Failed</option>
+                <option value="running" {{if eq .StatusFilter "running"}}selected{{end}}>Running</option>
+            </select>
+        </div>
+    </div>
+    {{if .Runs}}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Files</th>
+                    <th>Groups</th>
+                    <th>Wasted</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Runs}}
+                <tr>
+                    <td><a href="/scans/runs/{{.ID}}">{{.StartedAt | formatTime}}</a></td>
+                    <td class="timestamp">{{.Duration}}</td>
+                    <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                    <td>{{.FilesScanned}}</td>
+                    <td>{{.DuplicateGroups}}</td>
+                    <td class="size">{{.WastedBytes | formatBytes}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{if .HasMore}}
+    <div class="card-body">
+        <a href="?page={{.NextPage}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}" class="btn">
+            Load More
+        </a>
+    </div>
+    {{end}}
+    {{else}}
+    <div class="card-body">
+        <div class="table-empty">No scan runs found</div>
+    </div>
+    {{end}}
+</div>
+
+<div class="card">
+    <div class="card-header">Actions</div>
+    {{if .Actions}}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Groups</th>
+                    <th>Files</th>
+                    <th>Saved</th>
+                    <th>Dry Run</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Actions}}
+                <tr>
+                    <td class="timestamp">{{.StartedAt | formatTime}}</td>
+                    <td>{{.ActionType}}</td>
+                    <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                    <td>{{.GroupsProcessed}}</td>
+                    <td>{{.FilesProcessed}}</td>
+                    <td class="size">{{.BytesSaved | formatBytes}}</td>
+                    <td>{{if .DryRun}}Yes{{else}}No{{end}}</td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+    {{else}}
+    <div class="card-body">
+        <div class="table-empty">No actions taken yet</div>
+    </div>
+    {{end}}
+</div>
+{{end}}

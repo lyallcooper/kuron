@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Scheduled Jobs</h1>
+    <a href="/jobs/new" class="btn btn-primary">New Job</a>
+</div>
+
+{{if .Jobs}}
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Schedule</th>
+                    <th>Action</th>
+                    <th>Last Run</th>
+                    <th>Next Run</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Jobs}}
+                <tr>
+                    <td><a href="/jobs/{{.ID}}">{{.Name}}</a></td>
+                    <td class="cron">{{.CronExpression}}</td>
+                    <td>{{.Action}}</td>
+                    <td class="timestamp">{{if .LastRunAt}}{{.LastRunAt | formatTime}}{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if .NextRunAt}}{{.NextRunAt | formatTime}}{{else}}-{{end}}</td>
+                    <td>
+                        {{if .Enabled}}
+                        <span class="badge badge-completed">Active</span>
+                        {{else}}
+                        <span class="badge badge-cancelled">Disabled</span>
+                        {{end}}
+                    </td>
+                    <td>
+                        <form action="/jobs/{{.ID}}/toggle" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-sm">
+                                {{if .Enabled}}Disable{{else}}Enable{{end}}
+                            </button>
+                        </form>
+                        <a href="/jobs/{{.ID}}/edit" class="btn btn-sm">Edit</a>
+                        <form action="/jobs/{{.ID}}/run" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-sm">Run Now</button>
+                        </form>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{else}}
+<div class="empty-state">
+    <h3>No scheduled jobs</h3>
+    <p>Create a job to automatically scan and deduplicate files on a schedule.</p>
+    <a href="/jobs/new" class="btn btn-primary">New Job</a>
+</div>
+{{end}}
+{{end}}

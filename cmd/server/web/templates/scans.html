@@ -1,0 +1,46 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Scan Configurations</h1>
+    <a href="/scans/new" class="btn btn-primary">New Scan</a>
+</div>
+
+{{if .Configs}}
+<div class="card">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Paths</th>
+                    <th>Min Size</th>
+                    <th>Last Run</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Configs}}
+                <tr>
+                    <td><a href="/scans/{{.ID}}">{{.Name}}</a></td>
+                    <td>{{len .Paths}} path(s)</td>
+                    <td class="size">{{.MinSize | formatBytes}}</td>
+                    <td class="timestamp">{{if .LastRun}}{{.LastRun.StartedAt | formatTime}}{{else}}-{{end}}</td>
+                    <td>
+                        <form action="/scans/{{.ID}}/run" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-sm">Run</button>
+                        </form>
+                        <a href="/scans/{{.ID}}/edit" class="btn btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+{{else}}
+<div class="empty-state">
+    <h3>No scan configurations</h3>
+    <p>Create a scan configuration to get started</p>
+    <a href="/scans/new" class="btn btn-primary">New Scan</a>
+</div>
+{{end}}
+{{end}}

@@ -1,0 +1,102 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Settings</h1>
+</div>
+
+<div class="card">
+    <div class="card-header">Scan Paths</div>
+    <div class="card-body">
+        <p>Configure which paths are available for scanning. Paths set via environment variables cannot be removed.</p>
+
+        {{if .Paths}}
+        <table>
+            <thead>
+                <tr>
+                    <th>Path</th>
+                    <th>Source</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Paths}}
+                <tr>
+                    <td>{{.Path}}</td>
+                    <td>
+                        {{if .FromEnv}}
+                        <span class="locked">Environment Variable</span>
+                        {{else}}
+                        User Added
+                        {{end}}
+                    </td>
+                    <td>
+                        {{if not .FromEnv}}
+                        <form action="/settings/paths/{{.ID}}/delete" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-sm btn-danger"
+                                    onclick="return confirm('Remove this path?')">
+                                Remove
+                            </button>
+                        </form>
+                        {{else}}
+                        <span class="muted">-</span>
+                        {{end}}
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+        {{else}}
+        <div class="alert alert-info">
+            No paths configured. Add a path below or set <code>KURON_SCAN_PATHS</code> environment variable.
+        </div>
+        {{end}}
+
+        <form method="POST" action="/settings/paths" style="margin-top: 1rem;">
+            <div class="form-group">
+                <label class="form-label" for="path">Add New Path</label>
+                <div style="display: flex; gap: 0.5rem;">
+                    <input type="text" id="path" name="path" class="form-input"
+                           placeholder="/path/to/scan" required>
+                    <button type="submit" class="btn btn-primary">Add Path</button>
+                </div>
+                <p class="form-help">The path must exist and be accessible.</p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Data Retention</div>
+    <div class="card-body">
+        <p>Scan history and logs older than <strong>{{.RetentionDays}} days</strong> will be automatically deleted.</p>
+        <p class="form-help">Set via <code>KURON_RETENTION_DAYS</code> environment variable.</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">About</div>
+    <div class="card-body">
+        <table>
+            <tr>
+                <td>Version</td>
+                <td>{{.Version}}</td>
+            </tr>
+            <tr>
+                <td>fclones</td>
+                <td>{{.FclonesVersion}}</td>
+            </tr>
+            <tr>
+                <td>Database</td>
+                <td>{{.DBPath}}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
+{{if .Success}}
+<div class="alert alert-success">{{.Success}}</div>
+{{end}}
+{{end}}

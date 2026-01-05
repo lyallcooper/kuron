@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{if .Title}}{{.Title}} - {{end}}kuron</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/htmx.min.js"></script>
+    <script src="/static/htmx-sse.js"></script>
+</head>
+<body>
+    <nav class="nav">
+        <div class="container nav-inner">
+            <a href="/" class="nav-brand">kuron</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link{{if eq .ActiveNav "dashboard"}} active{{end}}">Dashboard</a>
+                <a href="/scans" class="nav-link{{if eq .ActiveNav "scans"}} active{{end}}">Scans</a>
+                <a href="/jobs" class="nav-link{{if eq .ActiveNav "jobs"}} active{{end}}">Jobs</a>
+                <a href="/history" class="nav-link{{if eq .ActiveNav "history"}} active{{end}}">History</a>
+                <a href="/settings" class="nav-link{{if eq .ActiveNav "settings"}} active{{end}}">Settings</a>
+            </div>
+        </div>
+    </nav>
+    <main class="main">
+        <div class="container">
+            {{template "content" .}}
+        </div>
+    </main>
+</body>
+</html>

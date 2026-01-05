@@ -1,0 +1,157 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Scan Results</h1>
+    <div class="actions-bar">
+        {{if eq .Run.Status "running"}}
+        <form action="/scans/runs/{{.Run.ID}}/cancel" method="POST">
+            <button type="submit" class="btn btn-danger">Cancel Scan</button>
+        </form>
+        {{end}}
+        <a href="/scans" class="btn">Back to Scans</a>
+    </div>
+</div>
+
+{{if eq .Run.Status "running"}}
+<div class="card" hx-ext="sse" sse-connect="/sse/scan/{{.Run.ID}}" sse-swap="progress">
+    <div class="card-header">
+        <span>Scan in Progress</span>
+        <span class="loading"></span>
+    </div>
+    <div class="card-body" id="progress-content">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="files-scanned">{{.Run.FilesScanned}}</div>
+                <div class="stat-label">Files Scanned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="bytes-scanned">{{.Run.BytesScanned | formatBytes}}</div>
+                <div class="stat-label">Data Scanned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="groups-found">{{.Run.DuplicateGroups}}</div>
+                <div class="stat-label">Groups Found</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="wasted-bytes">{{.Run.WastedBytes | formatBytes}}</div>
+                <div class="stat-label">Wasted Space</div>
+            </div>
+        </div>
+    </div>
+</div>
+{{else}}
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.FilesScanned}}</div>
+        <div class="stat-label">Files Scanned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.BytesScanned | formatBytes}}</div>
+        <div class="stat-label">Data Scanned</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.DuplicateGroups}}</div>
+        <div class="stat-label">Duplicate Groups</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Run.WastedBytes | formatBytes}}</div>
+        <div class="stat-label">Wasted Space</div>
+    </div>
+</div>
+
+{{if .Run.ErrorMessage}}
+<div class="alert alert-error">
+    <strong>Error:</strong> {{.Run.ErrorMessage}}
+</div>
+{{end}}
+
+{{if .Groups}}
+<div class="card">
+    <div class="card-header">
+        <span>Duplicate Groups ({{len .Groups}})</span>
+        <div class="actions-bar" style="margin: 0;">
+            <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action">
+                <input type="hidden" name="group_ids" id="selected-groups" value="">
+                <label class="form-checkbox" style="margin-right: 1rem;">
+                    <input type="checkbox" name="dry_run" value="1" checked>
+                    Dry run
+                </label>
+                <button type="submit" name="action" value="hardlink" class="btn btn-sm">
+                    Hardlink Selected
+                </button>
+                <button type="submit" name="action" value="reflink" class="btn btn-sm">
+                    Reflink Selected
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-checkbox">
+                        <input type="checkbox" id="select-all" onclick="toggleAll(this)">
+                    </th>
+                    <th>Hash</th>
+                    <th>Size</th>
+                    <th>Count</th>
+                    <th>Wasted</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{range .Groups}}
+                <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})">
+                    <td class="col-checkbox" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="group-checkbox" value="{{.ID}}"
+                               onchange="updateSelection()">
+                    </td>
+                    <td class="hash" title="{{.FileHash}}">{{.FileHash | truncateHash}}</td>
+                    <td class="size">{{.FileSize | formatBytes}}</td>
+                    <td>{{.FileCount}}</td>
+                    <td class="size">{{.WastedBytes | formatBytes}}</td>
+                    <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                </tr>
+                <tr id="expanded-{{.ID}}" class="expanded-content">
+                    <td colspan="6">
+                        <strong>Files:</strong>
+                        <ul class="file-list">
+                            {{range .Files}}
+                            <li>{{.}}</li>
+                            {{end}}
+                        </ul>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+function toggleRow(event, id) {
+    if (event.target.type === 'checkbox') return;
+    const row = document.getElementById('expanded-' + id);
+    row.classList.toggle('show');
+}
+
+function toggleAll(checkbox) {
+    document.querySelectorAll('.group-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateSelection();
+}
+
+function updateSelection() {
+    const selected = Array.from(document.querySelectorAll('.group-checkbox:checked'))
+        .map(cb => cb.value);
+    document.getElementById('selected-groups').value = selected.join(',');
+}
+</script>
+{{else}}
+<div class="empty-state">
+    <h3>No duplicates found</h3>
+    <p>The scan completed without finding any duplicate files.</p>
+</div>
+{{end}}
+{{end}}
+{{end}}
