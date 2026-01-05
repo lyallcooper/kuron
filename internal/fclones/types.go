@@ -4,46 +4,46 @@ package fclones
 type GroupOutput struct {
 	Header Header  `json:"header"`
 	Groups []Group `json:"groups"`
-	Stats  Stats   `json:"stats"`
 }
 
 // Header contains metadata about the scan
 type Header struct {
 	Version   string   `json:"version"`
 	Timestamp string   `json:"timestamp"`
-	Command   string   `json:"command"`
-	Paths     []string `json:"paths"`
+	Command   []string `json:"command"`
+	BaseDir   string   `json:"base_dir"`
+	Stats     Stats    `json:"stats"`
 }
 
 // Group represents a group of duplicate files
 type Group struct {
 	FileLen  int64    `json:"file_len"`
-	FileHash Hash     `json:"file_hash"`
-	Files    []File   `json:"files"`
+	FileHash string   `json:"file_hash"`
+	Files    []string `json:"files"`
 }
 
-// Hash represents a file hash
+// File represents a single file in a duplicate group (for building input)
+type File struct {
+	Path string
+}
+
+// Stats contains statistics from the scan
+type Stats struct {
+	GroupCount         int64 `json:"group_count"`
+	TotalFileCount     int64 `json:"total_file_count"`
+	TotalFileSize      int64 `json:"total_file_size"`
+	RedundantFileCount int64 `json:"redundant_file_count"`
+	RedundantFileSize  int64 `json:"redundant_file_size"`
+	MissingFileCount   int64 `json:"missing_file_count"`
+	MissingFileSize    int64 `json:"missing_file_size"`
+}
+
+// Hash represents a file hash (kept for compatibility)
 type Hash struct {
 	Blake3 string `json:"blake3,omitempty"`
 	Md5    string `json:"md5,omitempty"`
 	Sha1   string `json:"sha1,omitempty"`
 	Sha256 string `json:"sha256,omitempty"`
-}
-
-// File represents a single file in a duplicate group
-type File struct {
-	Path string `json:"path"`
-}
-
-// Stats contains statistics from the scan
-type Stats struct {
-	FilesTotal     int64 `json:"files_total"`
-	FilesMatched   int64 `json:"files_matched"`
-	FilesRedundant int64 `json:"files_redundant"`
-	BytesTotal     int64 `json:"bytes_total"`
-	BytesMatched   int64 `json:"bytes_matched"`
-	BytesRedundant int64 `json:"bytes_redundant"`
-	GroupsTotal    int64 `json:"groups_total"`
 }
 
 // String returns a string representation of the hash

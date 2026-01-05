@@ -163,7 +163,7 @@ func (e *Executor) GroupToInput(groups []Group) string {
 
 		// Write file paths
 		for _, f := range g.Files {
-			builder.WriteString(f.Path)
+			builder.WriteString(f)
 			builder.WriteString("\n")
 		}
 

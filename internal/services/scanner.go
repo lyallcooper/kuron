@@ -172,41 +172,37 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, paths []string) {
 			continue
 		}
 
-		var files []string
-		for _, f := range group.Files {
-			files = append(files, f.Path)
-		}
-
 		wastedBytes := group.FileLen * int64(len(group.Files)-1)
 
 		dg := &db.DuplicateGroup{
 			ScanRunID:   runID,
-			FileHash:    group.FileHash.String(),
+			FileHash:    group.FileHash,
 			FileSize:    group.FileLen,
 			FileCount:   len(group.Files),
 			WastedBytes: wastedBytes,
 			Status:      db.DuplicateGroupStatusPending,
-			Files:       files,
+			Files:       group.Files,
 		}
 		s.db.CreateDuplicateGroup(dg)
 	}
 
 	// Update final stats
+	stats := result.Header.Stats
 	s.db.UpdateScanRunProgress(runID,
-		result.Stats.FilesTotal,
-		result.Stats.BytesTotal,
-		result.Stats.GroupsTotal,
-		result.Stats.FilesRedundant,
-		result.Stats.BytesRedundant,
+		stats.TotalFileCount,
+		stats.TotalFileSize,
+		stats.GroupCount,
+		stats.RedundantFileCount,
+		stats.RedundantFileSize,
 	)
 
 	// Mark complete
 	s.db.CompleteScanRun(runID, db.ScanRunStatusCompleted, nil)
 	s.broadcast(runID, &types.ScanProgress{
-		FilesScanned: result.Stats.FilesTotal,
-		BytesScanned: result.Stats.BytesTotal,
-		GroupsFound:  result.Stats.GroupsTotal,
-		WastedBytes:  result.Stats.BytesRedundant,
+		FilesScanned: stats.TotalFileCount,
+		BytesScanned: stats.TotalFileSize,
+		GroupsFound:  stats.GroupCount,
+		WastedBytes:  stats.RedundantFileSize,
 		Status:       "completed",
 	})
 
@@ -246,15 +242,10 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 			continue
 		}
 
-		var files []fclones.File
-		for _, f := range g.Files {
-			files = append(files, fclones.File{Path: f})
-		}
-
 		groups = append(groups, fclones.Group{
 			FileLen:  g.FileSize,
-			FileHash: fclones.Hash{Blake3: g.FileHash},
-			Files:    files,
+			FileHash: g.FileHash,
+			Files:    g.Files,
 		})
 	}
 
