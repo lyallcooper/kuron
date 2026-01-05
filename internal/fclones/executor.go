@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Executor runs fclones commands
@@ -149,29 +150,58 @@ func (e *Executor) Dedupe(ctx context.Context, input string, opts DedupeOptions)
 	return string(output), nil
 }
 
-// GroupToInput converts a group output to input format for link/dedupe commands
+// GroupToInput converts groups to JSON format for link/dedupe commands
 func (e *Executor) GroupToInput(groups []Group) string {
-	var builder strings.Builder
+	// Filter out groups with less than 2 files and calculate stats
+	var validGroups []Group
+	var totalFiles int64
+	var totalSize int64
+	var redundantFiles int64
+	var redundantSize int64
+
+	// Collect unique base paths for the command field
+	pathSet := make(map[string]bool)
 
 	for _, g := range groups {
-		if len(g.Files) < 2 {
-			continue
+		if len(g.Files) >= 2 {
+			validGroups = append(validGroups, g)
+			totalFiles += int64(len(g.Files))
+			totalSize += g.FileLen * int64(len(g.Files))
+			redundantFiles += int64(len(g.Files) - 1)
+			redundantSize += g.FileLen * int64(len(g.Files)-1)
+
+			// Extract base path from first file for command reconstruction
+			if len(g.Files) > 0 {
+				pathSet["/"] = true // Use root as fallback
+			}
 		}
-
-		// Write group header
-		builder.WriteString(fmt.Sprintf("%d\n", g.FileLen))
-
-		// Write file paths
-		for _, f := range g.Files {
-			builder.WriteString(f)
-			builder.WriteString("\n")
-		}
-
-		// Empty line between groups
-		builder.WriteString("\n")
 	}
 
-	return builder.String()
+	// Build command array (fclones requires this to have valid paths)
+	command := []string{"fclones", "group", "--format", "json"}
+	for path := range pathSet {
+		command = append(command, path)
+	}
+
+	output := GroupOutput{
+		Header: Header{
+			Version:   "0.35.0",
+			Timestamp: time.Now().Format(time.RFC3339),
+			Command:   command,
+			BaseDir:   "/",
+			Stats: Stats{
+				GroupCount:         int64(len(validGroups)),
+				TotalFileCount:     totalFiles,
+				TotalFileSize:      totalSize,
+				RedundantFileCount: redundantFiles,
+				RedundantFileSize:  redundantSize,
+			},
+		},
+		Groups: validGroups,
+	}
+
+	data, _ := json.Marshal(output)
+	return string(data)
 }
 
 // readProgress parses fclones stderr for progress updates
