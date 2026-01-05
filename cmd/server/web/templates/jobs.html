@@ -22,10 +22,10 @@
             <tbody>
                 {{range .Jobs}}
                 <tr>
-                    <td>{{if .LastRunID}}<a href="/scans/runs/{{.LastRunID}}">{{.ConfigName}}</a>{{else}}{{.ConfigName}}{{end}}</td>
+                    <td><a href="/jobs/{{.ID}}/edit">{{.ConfigName}}</a></td>
                     <td class="cron">{{.CronExpression}}</td>
                     <td>{{.Action}}</td>
-                    <td class="timestamp">{{if .LastRunAt}}{{.LastRunAt}}{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if .LastRunID}}<a href="/scans/runs/{{.LastRunID}}">{{.LastRunAt}}</a>{{else}}-{{end}}</td>
                     <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                     <td>
                         {{if .Enabled}}
