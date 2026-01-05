@@ -403,3 +403,116 @@ func parseSize(s string) int64 {
 
 	return int64(n * float64(multiplier))
 }
+
+// ScanConfigRoutes handles routes under /scans/{id}
+func (h *Handler) ScanConfigRoutes(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(r.URL.Path, "/")
+	if len(parts) < 3 {
+		http.NotFound(w, r)
+		return
+	}
+
+	idStr := parts[2]
+
+	// Skip routes handled elsewhere
+	if idStr == "new" || idStr == "quick" || idStr == "runs" {
+		http.NotFound(w, r)
+		return
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Handle sub-routes
+	if len(parts) >= 4 {
+		switch parts[3] {
+		case "run":
+			if r.Method == http.MethodPost {
+				h.RunScanConfig(w, r, id)
+				return
+			}
+		case "edit":
+			h.EditScanConfigForm(w, r, id)
+			return
+		case "delete":
+			if r.Method == http.MethodPost || r.Method == http.MethodDelete {
+				h.DeleteScanConfig(w, r, id)
+				return
+			}
+		}
+	}
+
+	// GET /scans/{id} = view config (redirect to edit for now)
+	http.Redirect(w, r, "/scans/"+idStr+"/edit", http.StatusSeeOther)
+}
+
+// RunScanConfig handles POST /scans/{id}/run
+func (h *Handler) RunScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
+	config, err := h.db.GetScanConfig(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	// Get actual paths from path IDs
+	var paths []string
+	for _, pathID := range config.Paths {
+		path, err := h.db.GetScanPath(pathID)
+		if err != nil {
+			continue
+		}
+		paths = append(paths, path.Path)
+	}
+
+	if len(paths) == 0 {
+		http.Error(w, "No valid paths in scan configuration", http.StatusBadRequest)
+		return
+	}
+
+	// Start scan
+	run, err := h.scanner.StartScan(r.Context(), paths, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
+}
+
+// EditScanConfigForm handles GET /scans/{id}/edit
+func (h *Handler) EditScanConfigForm(w http.ResponseWriter, r *http.Request, id int64) {
+	config, err := h.db.GetScanConfig(id)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	paths, err := h.db.ListScanPaths()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	data := ScanFormData{
+		Title:     "Edit Scan",
+		ActiveNav: "scans",
+		Config:    config,
+		Paths:     paths,
+	}
+
+	h.render(w, "scan_form.html", data)
+}
+
+// DeleteScanConfig handles DELETE /scans/{id}
+func (h *Handler) DeleteScanConfig(w http.ResponseWriter, r *http.Request, id int64) {
+	err := h.db.DeleteScanConfig(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/scans", http.StatusSeeOther)
+}

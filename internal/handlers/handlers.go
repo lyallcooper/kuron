@@ -67,6 +67,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/scans/new", h.ScanForm)
 	mux.HandleFunc("/scans/quick", h.QuickScan)
 	mux.HandleFunc("/scans/runs/", h.ScanResults)
+	mux.HandleFunc("/scans/", h.ScanConfigRoutes)
 
 	// Jobs
 	mux.HandleFunc("/jobs", h.Jobs)
