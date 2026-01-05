@@ -4,6 +4,7 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
+	"math"
 	"net/http"
 	"strings"
 	"time"
@@ -136,12 +137,26 @@ func formatInt(n int64) string {
 
 func formatFloat(f float64) string {
 	if f >= 100 {
-		return formatInt(int64(f))
+		return formatInt(int64(math.Round(f)))
 	}
 	if f >= 10 {
-		return formatInt(int64(f*10)/10) + "." + string('0'+byte(int64(f*10)%10))
+		r := int64(math.Round(f * 10))
+		d := r % 10
+		if d == 0 {
+			return formatInt(r / 10)
+		}
+		return formatInt(r/10) + "." + string('0'+byte(d))
 	}
-	return formatInt(int64(f*100)/100) + "." + string('0'+byte(int64(f*100)/10%10)) + string('0'+byte(int64(f*100)%10))
+	r := int64(math.Round(f * 100))
+	d1 := r / 10 % 10
+	d2 := r % 10
+	if d1 == 0 && d2 == 0 {
+		return formatInt(r / 100)
+	}
+	if d2 == 0 {
+		return formatInt(r/100) + "." + string('0'+byte(d1))
+	}
+	return formatInt(r/100) + "." + string('0'+byte(d1)) + string('0'+byte(d2))
 }
 
 func formatTime(t any) string {
