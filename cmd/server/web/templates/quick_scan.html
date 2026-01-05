@@ -107,19 +107,4 @@
     </div>
 </div>
 
-<script>
-function addPath() { addListItem('paths-list', 'new-path', 'paths'); }
-function addPattern(type) { addListItem(type + '-list', 'new-' + type, type + '_patterns'); }
-
-// Allow Enter key to add items
-document.getElementById('new-path').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); addPath(); }
-});
-document.getElementById('new-include').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); addPattern('include'); }
-});
-document.getElementById('new-exclude').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') { e.preventDefault(); addPattern('exclude'); }
-});
-</script>
 {{end}}

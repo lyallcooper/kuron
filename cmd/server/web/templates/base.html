@@ -70,29 +70,65 @@
         var onConfirm = options.onConfirm;
 
         var container = document.getElementById('confirm-modal');
-        container.innerHTML = '<div class="modal-backdrop" onclick="closeConfirmModal()">' +
-            '<div class="modal modal-sm" onclick="event.stopPropagation()">' +
-                '<div class="modal-header">' +
-                    '<h3>' + title + '</h3>' +
-                    '<button class="modal-close" onclick="closeConfirmModal()">&times;</button>' +
-                '</div>' +
-                '<div class="modal-body">' +
-                    '<p>' + message + '</p>' +
-                '</div>' +
-                '<div class="modal-footer">' +
-                    '<button class="btn" onclick="closeConfirmModal()">Cancel</button>' +
-                    '<button class="btn ' + confirmClass + '" id="confirm-btn">' + confirmText + '</button>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
 
-        document.body.classList.add('modal-open');
+        // Build modal using createElement for safety
+        var backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.onclick = closeConfirmModal;
 
-        document.getElementById('confirm-btn').onclick = function() {
+        var modal = document.createElement('div');
+        modal.className = 'modal modal-sm';
+        modal.onclick = function(e) { e.stopPropagation(); };
+
+        var header = document.createElement('div');
+        header.className = 'modal-header';
+
+        var h3 = document.createElement('h3');
+        h3.textContent = title;
+
+        var closeBtn = document.createElement('button');
+        closeBtn.className = 'modal-close';
+        closeBtn.textContent = '×';
+        closeBtn.onclick = closeConfirmModal;
+
+        header.appendChild(h3);
+        header.appendChild(closeBtn);
+
+        var body = document.createElement('div');
+        body.className = 'modal-body';
+        var p = document.createElement('p');
+        p.textContent = message;
+        body.appendChild(p);
+
+        var footer = document.createElement('div');
+        footer.className = 'modal-footer';
+
+        var cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = closeConfirmModal;
+
+        var confirmBtn = document.createElement('button');
+        confirmBtn.className = 'btn ' + confirmClass;
+        confirmBtn.id = 'confirm-btn';
+        confirmBtn.textContent = confirmText;
+        confirmBtn.onclick = function() {
             closeConfirmModal();
             if (onConfirm) onConfirm();
         };
 
+        footer.appendChild(cancelBtn);
+        footer.appendChild(confirmBtn);
+
+        modal.appendChild(header);
+        modal.appendChild(body);
+        modal.appendChild(footer);
+        backdrop.appendChild(modal);
+
+        container.innerHTML = '';
+        container.appendChild(backdrop);
+
+        document.body.classList.add('modal-open');
         document.addEventListener('keydown', handleConfirmEscape);
     }
 
@@ -134,12 +170,57 @@
         var list = document.getElementById(listId);
         var item = document.createElement('div');
         item.className = 'list-item';
-        item.innerHTML = '<input type="hidden" name="' + fieldName + '" value="' + escapeHtml(value) + '">' +
-                         '<span class="list-item-text">' + escapeHtml(value) + '</span>' +
-                         '<button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>';
+
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = fieldName;
+        hidden.value = value;
+
+        var span = document.createElement('span');
+        span.className = 'list-item-text';
+        span.textContent = value;
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'list-item-remove';
+        btn.textContent = '×';
+        btn.onclick = function() { item.remove(); };
+
+        item.appendChild(hidden);
+        item.appendChild(span);
+        item.appendChild(btn);
         list.appendChild(item);
         input.value = '';
         input.focus();
+    }
+
+    // Common form helpers for path/pattern list inputs
+    function addPath() { addListItem('paths-list', 'new-path', 'paths'); }
+    function addPattern(type) { addListItem(type + '-list', 'new-' + type, type + '_patterns'); }
+
+    // Initialize Enter key handlers for list inputs
+    function initListInputEnterHandlers() {
+        var handlers = [
+            { id: 'new-path', fn: addPath },
+            { id: 'new-include', fn: function() { addPattern('include'); } },
+            { id: 'new-exclude', fn: function() { addPattern('exclude'); } }
+        ];
+        handlers.forEach(function(h) {
+            var el = document.getElementById(h.id);
+            if (el && !el.dataset.enterInit) {
+                el.dataset.enterInit = 'true';
+                el.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') { e.preventDefault(); h.fn(); }
+                });
+            }
+        });
+    }
+
+    // Initialize on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initListInputEnterHandlers);
+    } else {
+        initListInputEnterHandlers();
     }
 
     // Path autocomplete system
