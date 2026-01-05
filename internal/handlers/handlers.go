@@ -169,8 +169,8 @@ func formatTime(t any) string {
 }
 
 func truncateHash(hash string) string {
-	if len(hash) > 12 {
-		return hash[:12] + "..."
+	if len(hash) > 7 {
+		return hash[:7]
 	}
 	return hash
 }

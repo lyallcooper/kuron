@@ -97,19 +97,6 @@
         <span>Duplicate Groups ({{.TotalCount}} total{{if gt .TotalPages 1}}, page {{.Page}} of {{.TotalPages}}{{end}})</span>
     </div>
     <div class="card-body">
-        <!-- Filter Controls -->
-        <div class="controls-bar">
-            <div class="filter-controls">
-                <label class="form-label" style="display: inline; margin-right: 0.5rem;">Status:</label>
-                <select id="status-select" class="form-select" style="width: auto; display: inline-block;" onchange="updateFilter()">
-                    <option value=""{{if eq .Status ""}} selected{{end}}>All</option>
-                    <option value="pending"{{if eq .Status "pending"}} selected{{end}}>Pending</option>
-                    <option value="processed"{{if eq .Status "processed"}} selected{{end}}>Processed</option>
-                    <option value="ignored"{{if eq .Status "ignored"}} selected{{end}}>Ignored</option>
-                </select>
-            </div>
-        </div>
-
         <!-- Action Form -->
         <div class="action-controls">
             <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
@@ -124,6 +111,7 @@
                         <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
                         <span id="select-all-label">Select all {{.TotalCount}}</span>
                     </label>
+                    <button type="button" class="btn btn-sm" onclick="toggleAllRows()">Expand All</button>
                 </div>
                 <div class="action-buttons">
                     <span id="selection-count" class="muted">0 selected</span>
@@ -150,7 +138,7 @@
                         <th class="col-checkbox">
                             <input type="checkbox" id="select-page" onclick="togglePage(this)" title="Select all on this page">
                         </th>
-                        <th>Hash</th>
+                        <th>Hash Prefix</th>
                         <th class="sortable{{if eq .SortBy "size"}} sorted{{end}}" onclick="sortBy('size')">
                             Size {{if eq .SortBy "size"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
                         </th>
@@ -197,7 +185,7 @@
         {{if gt .TotalPages 1}}
         <div class="pagination">
             {{if gt .Page 1}}
-            <a href="?page={{subtract .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}&status={{.Status}}" class="btn btn-sm">Previous</a>
+            <a href="?page={{subtract .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}" class="btn btn-sm">Previous</a>
             {{else}}
             <span class="btn btn-sm" style="opacity: 0.5;">Previous</span>
             {{end}}
@@ -207,7 +195,7 @@
             </span>
 
             {{if lt .Page .TotalPages}}
-            <a href="?page={{add .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}&status={{.Status}}" class="btn btn-sm">Next</a>
+            <a href="?page={{add .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}" class="btn btn-sm">Next</a>
             {{else}}
             <span class="btn btn-sm" style="opacity: 0.5;">Next</span>
             {{end}}
@@ -223,8 +211,34 @@ var totalCount = {{.TotalCount}};
 
 function toggleRow(event, id) {
     if (event.target.type === 'checkbox') return;
-    const row = document.getElementById('expanded-' + id);
+    var row = document.getElementById('expanded-' + id);
     row.classList.toggle('show');
+    updateExpandButtonText();
+}
+
+var allExpanded = false;
+
+function toggleAllRows() {
+    var rows = document.querySelectorAll('.expanded-content');
+    allExpanded = !allExpanded;
+    rows.forEach(function(row) {
+        if (allExpanded) {
+            row.classList.add('show');
+        } else {
+            row.classList.remove('show');
+        }
+    });
+    updateExpandButtonText();
+}
+
+function updateExpandButtonText() {
+    var rows = document.querySelectorAll('.expanded-content');
+    var expandedCount = document.querySelectorAll('.expanded-content.show').length;
+    allExpanded = expandedCount === rows.length && rows.length > 0;
+    var btn = document.querySelector('.selection-info .btn');
+    if (btn) {
+        btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    }
 }
 
 function toggleSelectAll(checkbox) {
@@ -308,7 +322,6 @@ function updateSelectionDisplay() {
 function sortBy(field) {
     var currentSort = '{{.SortBy}}';
     var currentOrder = '{{.SortOrder}}';
-    var status = document.getElementById('status-select').value;
 
     var newOrder = 'desc';
     if (field === currentSort) {
@@ -316,28 +329,16 @@ function sortBy(field) {
         newOrder = currentOrder === 'desc' ? 'asc' : 'desc';
     }
 
-    window.location.href = '?sort=' + field + '&order=' + newOrder + '&status=' + status;
-}
-
-function updateFilter() {
-    var status = document.getElementById('status-select').value;
-    var currentSort = '{{.SortBy}}';
-    var currentOrder = '{{.SortOrder}}';
-    window.location.href = '?sort=' + currentSort + '&order=' + currentOrder + '&status=' + status;
+    window.location.href = '?sort=' + field + '&order=' + newOrder;
 }
 
 // Initialize on page load
 updateSelectionDisplay();
 </script>
-{{else if eq .TotalCount 0}}
+{{else}}
 <div class="empty-state">
     <h3>No duplicates found</h3>
     <p>The scan completed without finding any duplicate files.</p>
-</div>
-{{else}}
-<div class="empty-state">
-    <h3>No matching groups</h3>
-    <p>No groups match the current filter. <a href="?">Clear filters</a></p>
 </div>
 {{end}}
 {{end}}
