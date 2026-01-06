@@ -13,11 +13,15 @@ import (
 
 // ScanProgressData is sent via SSE during scans
 type ScanProgressData struct {
-	FilesScanned int64  `json:"files_scanned"`
-	BytesScanned string `json:"bytes_scanned"`
-	GroupsFound  int64  `json:"groups_found"`
-	WastedBytes  string `json:"wasted_bytes"`
-	Status       string `json:"status"`
+	FilesScanned int64   `json:"files_scanned"`
+	BytesScanned string  `json:"bytes_scanned"`
+	GroupsFound  int64   `json:"groups_found"`
+	WastedBytes  string  `json:"wasted_bytes"`
+	Status       string  `json:"status"`
+	PhaseNum     int     `json:"phase_num,omitempty"`
+	PhaseTotal   int     `json:"phase_total,omitempty"`
+	PhaseName    string  `json:"phase_name,omitempty"`
+	PhasePercent float64 `json:"phase_percent,omitempty"`
 }
 
 // ScanProgressSSE handles SSE connections for scan progress
@@ -107,6 +111,10 @@ func (h *Handler) sendScanProgress(w http.ResponseWriter, flusher http.Flusher, 
 		GroupsFound:  progress.GroupsFound,
 		WastedBytes:  formatBytes(progress.WastedBytes),
 		Status:       progress.Status,
+		PhaseNum:     progress.PhaseNum,
+		PhaseTotal:   progress.PhaseTotal,
+		PhaseName:    progress.PhaseName,
+		PhasePercent: progress.PhasePercent,
 	}
 	jsonData, _ := json.Marshal(data)
 	h.sendEvent(w, flusher, "progress", string(jsonData))

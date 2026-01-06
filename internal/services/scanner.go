@@ -3,6 +3,8 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -143,6 +145,9 @@ func (s *Scanner) StartScan(ctx context.Context, cfg *ScanConfig, jobID *int64) 
 
 // runScan executes the actual scan
 func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
+	startTime := time.Now()
+	log.Printf("scan %d: starting scan of %s", runID, strings.Join(cfg.Paths, ", "))
+
 	defer func() {
 		s.mu.Lock()
 		delete(s.activeScans, runID)
@@ -152,11 +157,19 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 
 	// Progress channel
 	progressChan := make(chan fclones.Progress, 100)
-	defer close(progressChan)
+
+	// Track last progress for final stats (files_scanned from progress != files in duplicate groups from JSON)
+	var lastProgress fclones.Progress
+	var progressMu sync.Mutex
+	progressDone := make(chan struct{})
 
 	// Listen for progress updates
 	go func() {
+		defer close(progressDone)
 		for progress := range progressChan {
+			progressMu.Lock()
+			lastProgress = progress
+			progressMu.Unlock()
 			s.db.UpdateScanRunProgress(runID,
 				progress.FilesScanned,
 				progress.BytesScanned,
@@ -170,6 +183,10 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 				GroupsFound:  progress.GroupsFound,
 				WastedBytes:  progress.WastedBytes,
 				Status:       "running",
+				PhaseNum:     progress.PhaseNum,
+				PhaseTotal:   progress.PhaseTotal,
+				PhaseName:    progress.PhaseName,
+				PhasePercent: progress.PhasePercent,
 			})
 		}
 	}()
@@ -184,18 +201,31 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	}
 
 	result, err := s.executor.Group(ctx, opts, progressChan)
+
+	// Close progress channel and wait for goroutine to finish processing
+	close(progressChan)
+	<-progressDone
+
+	// Get final progress values
+	progressMu.Lock()
+	filesScanned := lastProgress.FilesScanned
+	bytesScanned := lastProgress.BytesScanned
+	progressMu.Unlock()
+
 	if err != nil {
 		// Check if cancelled
 		if ctx.Err() != nil {
 			errMsg := "Scan cancelled"
 			s.db.CompleteScanRun(runID, db.ScanRunStatusCancelled, &errMsg)
 			s.broadcast(runID, &types.ScanProgress{Status: "cancelled"})
+			log.Printf("scan %d: cancelled after %s", runID, time.Since(startTime).Round(time.Second))
 			return
 		}
 
 		errMsg := err.Error()
 		s.db.CompleteScanRun(runID, db.ScanRunStatusFailed, &errMsg)
 		s.broadcast(runID, &types.ScanProgress{Status: "failed"})
+		log.Printf("scan %d: failed after %s: %s", runID, time.Since(startTime).Round(time.Second), errMsg)
 		return
 	}
 
@@ -220,10 +250,12 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	}
 
 	// Update final stats
+	// Note: stats.TotalFileCount/TotalFileSize are files IN duplicate groups, not total scanned
+	// We use filesScanned and bytesScanned from progress parsing for the actual values
 	stats := result.Header.Stats
 	s.db.UpdateScanRunProgress(runID,
-		stats.TotalFileCount,
-		stats.TotalFileSize,
+		filesScanned,
+		bytesScanned,
 		stats.GroupCount,
 		stats.RedundantFileCount,
 		stats.RedundantFileSize,
@@ -232,15 +264,14 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	// Mark complete
 	s.db.CompleteScanRun(runID, db.ScanRunStatusCompleted, nil)
 	s.broadcast(runID, &types.ScanProgress{
-		FilesScanned: stats.TotalFileCount,
-		BytesScanned: stats.TotalFileSize,
+		FilesScanned: filesScanned,
+		BytesScanned: bytesScanned,
 		GroupsFound:  stats.GroupCount,
 		WastedBytes:  stats.RedundantFileSize,
 		Status:       "completed",
 	})
 
-	// Update daily stats
-	// s.db.UpdateDailyStats(time.Now(), 1, int(result.Stats.GroupsTotal), int(result.Stats.FilesRedundant), result.Stats.BytesRedundant, 0)
+	log.Printf("scan %d: completed in %s, found %d duplicate groups", runID, time.Since(startTime).Round(time.Second), stats.GroupCount)
 }
 
 // CancelScan cancels an active scan

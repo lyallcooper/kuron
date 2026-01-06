@@ -7,4 +7,10 @@ type ScanProgress struct {
 	GroupsFound  int64
 	WastedBytes  int64
 	Status       string
+
+	// Progress bar info
+	PhaseNum     int
+	PhaseTotal   int
+	PhaseName    string
+	PhasePercent float64
 }

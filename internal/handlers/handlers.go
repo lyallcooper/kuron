@@ -18,29 +18,34 @@ import (
 
 // Handler holds all HTTP handlers
 type Handler struct {
-	db        *db.DB
-	cfg       *config.Config
-	executor  *fclones.Executor
-	scanner   *services.Scanner
-	webFS     embed.FS
-	funcMap   template.FuncMap
-	staticFS  fs.FS
+	db       *db.DB
+	cfg      *config.Config
+	executor *fclones.Executor
+	scanner  *services.Scanner
+	webFS    embed.FS
+	funcMap  template.FuncMap
+	staticFS fs.FS
 }
 
 // New creates a new Handler
 func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanner *services.Scanner, webFS embed.FS) (*Handler, error) {
 	// Template functions
 	funcMap := template.FuncMap{
-		"formatBytes":   formatBytes,
-		"formatTime":    formatTime,
-		"timeAgo":       timeAgo,
-		"truncateHash":  truncateHash,
-		"joinPatterns":  joinPatterns,
-		"joinLines":     joinLines,
-		"derefInt64":    derefInt64,
-		"add":           func(a, b int) int { return a + b },
-		"subtract":      func(a, b int) int { return a - b },
-		"plural":        func(n int, singular, plural string) string { if n == 1 { return singular }; return plural },
+		"formatBytes":  formatBytes,
+		"formatTime":   formatTime,
+		"timeAgo":      timeAgo,
+		"truncateHash": truncateHash,
+		"joinPatterns": joinPatterns,
+		"joinLines":    joinLines,
+		"derefInt64":   derefInt64,
+		"add":          func(a, b int) int { return a + b },
+		"subtract":     func(a, b int) int { return a - b },
+		"plural": func(n int, singular, plural string) string {
+			if n == 1 {
+				return singular
+			}
+			return plural
+		},
 	}
 
 	// Get static files
@@ -108,7 +113,8 @@ func (h *Handler) render(w http.ResponseWriter, pageName string, data any) {
 // Template functions
 
 func formatBytes(bytes int64) string {
-	const unit = 1024
+	// Use decimal (SI) units to match fclones output
+	const unit = 1000
 	if bytes < unit {
 		return formatInt(bytes) + " B"
 	}

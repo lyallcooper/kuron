@@ -18,6 +18,13 @@
         <span class="loading"></span>
     </div>
     <div class="card-body">
+        <div class="progress-container" id="progress-container" style="display: none;">
+            <div class="progress-phase" id="progress-phase">Initializing...</div>
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+            <div class="progress-percent" id="progress-percent">0%</div>
+        </div>
         <div class="stats-grid">
             <div class="stat-card">
                 <div class="stat-value" id="files-scanned">{{.Run.FilesScanned}}</div>
@@ -49,6 +56,19 @@
             document.getElementById('bytes-scanned').textContent = data.bytes_scanned;
             document.getElementById('groups-found').textContent = data.groups_found;
             document.getElementById('wasted-bytes').textContent = data.wasted_bytes;
+
+            // Update progress bar if we have phase info
+            if (data.phase_total > 0) {
+                var container = document.getElementById('progress-container');
+                container.style.display = 'flex';
+
+                var phaseText = data.phase_num + '/' + data.phase_total + ': ' + data.phase_name;
+                document.getElementById('progress-phase').textContent = phaseText;
+
+                var percent = Math.round(data.phase_percent);
+                document.getElementById('progress-bar').style.width = percent + '%';
+                document.getElementById('progress-percent').textContent = percent + '%';
+            }
         } catch(err) {
             console.error('Failed to parse progress:', err);
         }

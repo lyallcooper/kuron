@@ -75,8 +75,8 @@ type ScanOptions struct {
 
 // LinkOptions configures a link operation
 type LinkOptions struct {
-	DryRun  bool
-	Soft    bool // Use symlinks instead of hardlinks
+	DryRun bool
+	Soft   bool // Use symlinks instead of hardlinks
 }
 
 // DedupeOptions configures a dedupe (reflink) operation
@@ -86,10 +86,16 @@ type DedupeOptions struct {
 
 // Progress represents scan progress
 type Progress struct {
-	Phase        string // "scanning", "hashing", "grouping"
+	Phase        string // "scanning", "filtering", "grouping", "hashing"
 	FilesScanned int64
 	BytesScanned int64
 	GroupsFound  int64
 	FilesMatched int64
 	WastedBytes  int64
+
+	// Progress bar info (from lines like "4/6: Grouping by prefix [...] 12027 / 60000")
+	PhaseNum     int     // Current phase number (e.g., 4)
+	PhaseTotal   int     // Total phases (e.g., 6)
+	PhaseName    string  // Phase description (e.g., "Grouping by prefix")
+	PhasePercent float64 // Progress within current phase (0-100)
 }
