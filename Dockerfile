@@ -18,8 +18,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o kuron ./cmd/server
 # Runtime stage
 FROM alpine:3.20
 
-# Install fclones from community repository
-RUN apk add --no-cache fclones ca-certificates tzdata
+# Install fclones from community repository (pinned for reproducibility)
+RUN apk add --no-cache fclones=0.34.0-r0 ca-certificates tzdata
 
 WORKDIR /app
 
