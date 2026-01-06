@@ -26,7 +26,8 @@
                     </div>
                     <div class="list-add">
                         <input type="text" id="new-path" class="form-input"
-                               placeholder="/path/to/directory" data-path-autocomplete>
+                               placeholder="/path/to/directory" data-path-autocomplete
+                               autocorrect="off" autocapitalize="off" spellcheck="false">
                         <button type="button" class="btn" onclick="addPath()">Add</button>
                     </div>
                 </div>
@@ -37,14 +38,16 @@
                 <div class="form-group">
                     <label class="form-label" for="min_size">Minimum Size</label>
                     <input type="text" id="min_size" name="min_size" class="form-input"
-                           value="{{.MinSize}}" placeholder="e.g., 1MB">
+                           value="{{.MinSize}}" placeholder="e.g., 1MB"
+                           autocorrect="off" autocapitalize="off">
                     <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="max_size">Maximum Size</label>
                     <input type="text" id="max_size" name="max_size" class="form-input"
-                           value="{{.MaxSize}}" placeholder="e.g., 10GB">
+                           value="{{.MaxSize}}" placeholder="e.g., 10GB"
+                           autocorrect="off" autocapitalize="off">
                     <p class="form-help">Leave empty for no limit</p>
                 </div>
             </div>
@@ -63,7 +66,8 @@
                             {{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg">
+                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg"
+                                   autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('include')">Add</button>
                         </div>
                     </div>
@@ -83,7 +87,8 @@
                             {{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp">
+                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp"
+                                   autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
                         </div>
                     </div>

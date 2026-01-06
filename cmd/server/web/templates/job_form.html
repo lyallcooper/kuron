@@ -32,7 +32,8 @@
                     </div>
                     <div class="list-add">
                         <input type="text" id="new-path" class="form-input"
-                               placeholder="/path/to/directory" data-path-autocomplete>
+                               placeholder="/path/to/directory" data-path-autocomplete
+                               autocorrect="off" autocapitalize="off" spellcheck="false">
                         <button type="button" class="btn" onclick="addPath()">Add</button>
                     </div>
                 </div>
@@ -44,7 +45,7 @@
                     <label class="form-label" for="min_size">Minimum Size</label>
                     <input type="text" id="min_size" name="min_size" class="form-input"
                            value="{{if .Job}}{{if gt .Job.MinSize 0}}{{.Job.MinSize}}{{end}}{{end}}"
-                           placeholder="e.g., 1MB">
+                           placeholder="e.g., 1MB" autocorrect="off" autocapitalize="off">
                     <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
                 </div>
 
@@ -52,7 +53,7 @@
                     <label class="form-label" for="max_size">Maximum Size</label>
                     <input type="text" id="max_size" name="max_size" class="form-input"
                            value="{{if .Job}}{{if .Job.MaxSize}}{{derefInt64 .Job.MaxSize}}{{end}}{{end}}"
-                           placeholder="e.g., 10GB">
+                           placeholder="e.g., 10GB" autocorrect="off" autocapitalize="off">
                     <p class="form-help">Leave empty for no limit</p>
                 </div>
             </div>
@@ -71,7 +72,8 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg">
+                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg"
+                                   autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('include')">Add</button>
                         </div>
                     </div>
@@ -91,7 +93,8 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp">
+                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp"
+                                   autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
                         </div>
                     </div>
@@ -170,7 +173,7 @@
                     <label class="form-label" for="cron_expression">Schedule (Cron)</label>
                     <input type="text" id="cron_expression" name="cron_expression" class="form-input"
                            value="{{if .Job}}{{.Job.CronExpression}}{{else}}30 2 * * *{{end}}" required
-                           placeholder="30 2 * * *">
+                           placeholder="30 2 * * *" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <p class="cron-description" id="cron-description"></p>
                     <p class="form-help">
                         e.g., <code>30 2 * * *</code> (daily at 02:30),
