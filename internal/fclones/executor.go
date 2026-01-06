@@ -6,22 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/creack/pty"
 )
-
-// ansiRegex matches ANSI escape codes
-var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]|\x1b\].*?\x07`)
-
-// stripANSI removes ANSI escape codes from a string
-func stripANSI(s string) string {
-	return ansiRegex.ReplaceAllString(s, "")
-}
 
 // Executor runs fclones commands
 type Executor struct {
@@ -70,7 +62,7 @@ func (e *Executor) Version(ctx context.Context) (string, error) {
 
 // Group runs fclones group and returns duplicate groups
 func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan chan<- Progress) (*GroupOutput, error) {
-	args := []string{"group", "--format", "json"}
+	args := []string{"--progress=true", "group", "--format", "json"}
 
 	// Add size filters
 	if opts.MinSize > 0 {
@@ -100,58 +92,39 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 
 	cmd := exec.CommandContext(ctx, e.binaryPath, args...)
 
-	// Use pty to trick fclones into showing progress bar
-	ptmx, err := pty.Start(cmd)
+	// Get stdout for JSON output
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
+		return nil, fmt.Errorf("failed to get stdout pipe: %w", err)
+	}
+
+	// Get stderr for progress output
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("failed to start fclones: %w", err)
 	}
-	defer ptmx.Close()
 
-	// Read from pty and separate progress lines from JSON output
-	// Progress/log lines start with '[' (timestamp) or digit (progress bar like "6/6:")
-	// JSON output starts with '{'
-	var jsonBuf bytes.Buffer
-	inJSON := false
+	// Read stderr (progress) in a goroutine
 	var progress Progress
+	var lastSendTime time.Time
+	var wg sync.WaitGroup
 
-	scanner := bufio.NewScanner(ptmx)
-	scanner.Split(scanLinesOrCR)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		e.readProgress(stderr, &progress, progressChan, &lastSendTime)
+	}()
 
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
+	// Read stdout (JSON output)
+	var jsonBuf bytes.Buffer
+	io.Copy(&jsonBuf, stdout)
 
-		// Strip ANSI escape codes for clean parsing
-		cleaned := stripANSI(line)
-		trimmed := strings.TrimSpace(cleaned)
-		if trimmed == "" {
-			continue
-		}
-
-		// Detect start of JSON output
-		// JSON starts with '{' - could be on its own line or at end of a progress line
-		// Progress lines never contain '{', so the first '{' marks the start of JSON
-		if !inJSON {
-			if idx := strings.Index(cleaned, "{"); idx != -1 {
-				inJSON = true
-				jsonBuf.WriteString(cleaned[idx:] + "\n")
-				// Parse any progress text before the JSON started
-				if idx > 0 {
-					e.parseProgressLine(cleaned[:idx], &progress, progressChan)
-				}
-				continue
-			}
-		}
-
-		if inJSON {
-			jsonBuf.WriteString(cleaned + "\n")
-		} else {
-			// Parse progress line and send update
-			e.parseProgressLine(cleaned, &progress, progressChan)
-		}
-	}
+	// Wait for stderr reading to complete
+	wg.Wait()
 
 	// Check for context cancellation
 	if ctx.Err() != nil {
@@ -170,6 +143,34 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 	}
 
 	return &result, nil
+}
+
+// readProgress reads progress output from fclones stderr and sends updates
+func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) {
+	scanner := bufio.NewScanner(r)
+	// Use custom split function that splits on both \r and \n for progress bar updates
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		for i, b := range data {
+			if b == '\n' || b == '\r' {
+				return i + 1, data[0:i], nil
+			}
+		}
+		if atEOF {
+			return len(data), data, nil
+		}
+		return 0, nil, nil
+	})
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if line == "" {
+			continue
+		}
+		e.parseProgressLine(line, progress, progressChan, lastSendTime)
+	}
 }
 
 // Link runs fclones link to hardlink duplicate files
@@ -267,23 +268,6 @@ func (e *Executor) GroupToInput(groups []Group) string {
 	return string(data)
 }
 
-// scanLinesOrCR is a custom split function for bufio.Scanner that splits on
-// both \n and \r. This is needed because fclones uses \r for progress bar updates.
-func scanLinesOrCR(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
-		return 0, nil, nil
-	}
-	for i, b := range data {
-		if b == '\n' || b == '\r' {
-			return i + 1, data[0:i], nil
-		}
-	}
-	if atEOF {
-		return len(data), data, nil
-	}
-	return 0, nil, nil
-}
-
 // parseBytes converts human-readable byte strings like "4.0 GB" to int64
 func parseBytes(s string) int64 {
 	s = strings.TrimSpace(s)
@@ -343,78 +327,81 @@ type progressBarInfo struct {
 	PhasePercent float64
 }
 
-// parseProgressBar parses a progress bar line like "4/6: Grouping by prefix [...] 12027 / 60000"
+// progressBarRegex matches progress bar patterns with current/total format:
+// "6/6: Grouping by contents [...] 630.5 MB / 3.6 GB" or "4/6: Grouping by prefix [...] 12027 / 60000"
+var progressBarRegex = regexp.MustCompile(`(\d)/(\d): ([^[]+)\[([^\]]*)\]\s*(\S+(?:\s+[KMGT]i?B)?)\s*/\s*(\S+(?:\s+[KMGT]i?B)?)`)
+
+// scanningPhaseRegex matches phase 1 scanning format: "1/6: Scanning files [...] 12345" (count only, no total)
+var scanningPhaseRegex = regexp.MustCompile(`(\d)/(\d): ([^[]+)\[([^\]]*)\]\s+(\d+)(?:\s|$)`)
+
+// parseProgressBar parses the LAST progress bar from a line that may contain multiple concatenated progress bars
+// Handles two formats:
+// 1. "4/6: Grouping by prefix [...] 12027 / 60000" (current/total)
+// 2. "1/6: Scanning files [...] 12345" (count only, no total)
 func parseProgressBar(line string) *progressBarInfo {
-	// Find phase number pattern "N/M:"
-	colonIdx := strings.Index(line, ":")
-	if colonIdx == -1 || colonIdx < 3 {
-		return nil
-	}
+	// First try the current/total format (phases 2-6)
+	matches := progressBarRegex.FindAllStringSubmatch(line, -1)
+	if len(matches) > 0 {
+		// Use the last match (most recent progress)
+		match := matches[len(matches)-1]
 
-	phaseStr := strings.TrimSpace(line[:colonIdx])
-	slashIdx := strings.Index(phaseStr, "/")
-	if slashIdx == -1 {
-		return nil
-	}
+		phaseNum, _ := strconv.Atoi(match[1])
+		phaseTotal, _ := strconv.Atoi(match[2])
+		phaseName := strings.TrimSpace(match[3])
+		currentStr := match[5]
+		totalStr := match[6]
 
-	phaseNum, err1 := strconv.Atoi(phaseStr[:slashIdx])
-	phaseTotal, err2 := strconv.Atoi(phaseStr[slashIdx+1:])
-	if err1 != nil || err2 != nil {
-		return nil
-	}
+		// Parse values - could be bytes (4.0 GB) or counts (12027)
+		current := parseBytes(currentStr)
+		total := parseBytes(totalStr)
 
-	// Extract phase name (between ":" and "[")
-	remainder := line[colonIdx+1:]
-	bracketIdx := strings.Index(remainder, "[")
-	if bracketIdx == -1 {
-		return nil
-	}
-	phaseName := strings.TrimSpace(remainder[:bracketIdx])
-
-	// Find the progress values after "]"
-	closeBracketIdx := strings.LastIndex(remainder, "]")
-	if closeBracketIdx == -1 {
-		return nil
-	}
-
-	progressStr := strings.TrimSpace(remainder[closeBracketIdx+1:])
-	// Parse "12027 / 60000" or "4.0 GB / 59.3 GB"
-	slashIdx = strings.Index(progressStr, " / ")
-	if slashIdx == -1 {
-		return nil
-	}
-
-	currentStr := strings.TrimSpace(progressStr[:slashIdx])
-	totalStr := strings.TrimSpace(progressStr[slashIdx+3:])
-
-	// Try parsing as bytes first (handles "4.0 GB" format)
-	current := parseBytes(currentStr)
-	total := parseBytes(totalStr)
-
-	// If parseBytes returns 0 for both, try parsing as plain integers
-	if current == 0 && total == 0 {
-		if c, err := strconv.ParseInt(currentStr, 10, 64); err == nil {
-			current = c
+		// If parseBytes returns 0, try parsing as plain integers
+		if current == 0 {
+			if c, err := strconv.ParseInt(currentStr, 10, 64); err == nil {
+				current = c
+			}
 		}
-		if t, err := strconv.ParseInt(totalStr, 10, 64); err == nil {
-			total = t
+		if total == 0 {
+			if t, err := strconv.ParseInt(totalStr, 10, 64); err == nil {
+				total = t
+			}
+		}
+
+		var percent float64
+		if total > 0 {
+			percent = float64(current) / float64(total) * 100
+			if percent > 100 {
+				percent = 100
+			}
+		}
+
+		return &progressBarInfo{
+			PhaseNum:     phaseNum,
+			PhaseTotal:   phaseTotal,
+			PhaseName:    phaseName,
+			PhasePercent: percent,
 		}
 	}
 
-	var percent float64
-	if total > 0 {
-		percent = float64(current) / float64(total) * 100
-		if percent > 100 {
-			percent = 100
+	// Try the scanning format (phase 1 - count only, no total)
+	scanMatches := scanningPhaseRegex.FindAllStringSubmatch(line, -1)
+	if len(scanMatches) > 0 {
+		match := scanMatches[len(scanMatches)-1]
+
+		phaseNum, _ := strconv.Atoi(match[1])
+		phaseTotal, _ := strconv.Atoi(match[2])
+		phaseName := strings.TrimSpace(match[3])
+
+		// For scanning phase, we don't have a total so we use -1 to indicate indeterminate
+		return &progressBarInfo{
+			PhaseNum:     phaseNum,
+			PhaseTotal:   phaseTotal,
+			PhaseName:    phaseName,
+			PhasePercent: -1, // Indeterminate - we don't know the total
 		}
 	}
 
-	return &progressBarInfo{
-		PhaseNum:     phaseNum,
-		PhaseTotal:   phaseTotal,
-		PhaseName:    phaseName,
-		PhasePercent: percent,
-	}
+	return nil
 }
 
 // phaseNameToPhase converts a phase name to a short phase identifier
@@ -434,8 +421,9 @@ func phaseNameToPhase(name string) string {
 	}
 }
 
-// parseProgressLine parses a single line of fclones output and updates progress
-func (e *Executor) parseProgressLine(line string, progress *Progress, progressChan chan<- Progress) {
+// parseProgressLine parses a single line of fclones output and updates progress.
+// If lastSendTime is provided, progress updates are throttled to 50ms minimum between sends.
+func (e *Executor) parseProgressLine(line string, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) {
 	if progressChan == nil {
 		return
 	}
@@ -506,6 +494,15 @@ func (e *Executor) parseProgressLine(line string, progress *Progress, progressCh
 	}
 
 	if updated {
+		// Throttle progress updates if lastSendTime is provided (50ms = 20 updates/sec max)
+		if lastSendTime != nil {
+			now := time.Now()
+			if now.Sub(*lastSendTime) < 50*time.Millisecond {
+				return // Skip this update, too soon
+			}
+			*lastSendTime = now
+		}
+
 		select {
 		case progressChan <- *progress:
 		default:

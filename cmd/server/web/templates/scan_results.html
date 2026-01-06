@@ -18,28 +18,24 @@
         <span class="loading"></span>
     </div>
     <div class="card-body">
-        <div class="progress-container" id="progress-container" style="display: none;">
-            <div class="progress-phase" id="progress-phase">Initializing...</div>
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-            </div>
-            <div class="progress-percent" id="progress-percent">0%</div>
+        <div class="phase-timeline" id="phase-timeline">
+            <!-- Phases are created dynamically based on phase_total -->
         </div>
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="files-scanned">{{.Run.FilesScanned}}</div>
-                <div class="stat-label">Files Scanned</div>
+                <div class="stat-value" id="files-scanned">{{if gt .Run.FilesScanned 0}}{{.Run.FilesScanned}}{{else}}-{{end}}</div>
+                <div class="stat-label">Files Matched</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="bytes-scanned">{{.Run.BytesScanned | formatBytes}}</div>
-                <div class="stat-label">Data Scanned</div>
+                <div class="stat-value" id="bytes-scanned">{{if gt .Run.BytesScanned 0}}{{.Run.BytesScanned | formatBytes}}{{else}}-{{end}}</div>
+                <div class="stat-label">Data Matched</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="groups-found">{{.Run.DuplicateGroups}}</div>
+                <div class="stat-value" id="groups-found">{{if gt .Run.DuplicateGroups 0}}{{.Run.DuplicateGroups}}{{else}}-{{end}}</div>
                 <div class="stat-label">Groups Found</div>
             </div>
             <div class="stat-card">
-                <div class="stat-value" id="wasted-bytes">{{.Run.WastedBytes | formatBytes}}</div>
+                <div class="stat-value" id="wasted-bytes">{{if gt .Run.WastedBytes 0}}{{.Run.WastedBytes | formatBytes}}{{else}}-{{end}}</div>
                 <div class="stat-label">Wasted Space</div>
             </div>
         </div>
@@ -48,26 +44,111 @@
 <script>
 (function() {
     var source = new EventSource('/sse/scan/{{.Run.ID}}');
+    var phasesCreated = 0;
+    var phaseNames = {}; // Store phase names as they're reported
+
+    function createPhaseElement(num) {
+        var phaseEl = document.createElement('div');
+        phaseEl.id = 'phase-' + num;
+        phaseEl.className = 'phase-item pending';
+        phaseEl.innerHTML =
+            '<div class="phase-header">' +
+                '<span class="phase-number">' + num + '</span>' +
+                '<span class="phase-name">Phase ' + num + '</span>' +
+                '<span class="phase-status"></span>' +
+            '</div>' +
+            '<div class="phase-bar-wrapper">' +
+                '<div class="phase-bar"></div>' +
+            '</div>';
+        return phaseEl;
+    }
+
+    function ensurePhasesExist(total) {
+        if (phasesCreated >= total) return;
+
+        var timeline = document.getElementById('phase-timeline');
+        for (var i = phasesCreated + 1; i <= total; i++) {
+            var phaseEl = createPhaseElement(i);
+            // Apply stored name if we have one
+            if (phaseNames[i]) {
+                phaseEl.querySelector('.phase-name').textContent = phaseNames[i];
+            }
+            timeline.appendChild(phaseEl);
+        }
+        phasesCreated = total;
+    }
 
     source.addEventListener('progress', function(e) {
         try {
             var data = JSON.parse(e.data);
-            document.getElementById('files-scanned').textContent = data.files_scanned;
-            document.getElementById('bytes-scanned').textContent = data.bytes_scanned;
-            document.getElementById('groups-found').textContent = data.groups_found;
-            document.getElementById('wasted-bytes').textContent = data.wasted_bytes;
 
-            // Update progress bar if we have phase info
-            if (data.phase_total > 0) {
-                var container = document.getElementById('progress-container');
-                container.style.display = 'flex';
+            // Update stats (show '-' for zero values)
+            var filesEl = document.getElementById('files-scanned');
+            var bytesEl = document.getElementById('bytes-scanned');
+            var groupsEl = document.getElementById('groups-found');
+            var wastedEl = document.getElementById('wasted-bytes');
 
-                var phaseText = data.phase_num + '/' + data.phase_total + ': ' + data.phase_name;
-                document.getElementById('progress-phase').textContent = phaseText;
+            filesEl.textContent = data.files_scanned > 0 ? data.files_scanned.toLocaleString() : '-';
+            bytesEl.textContent = data.bytes_scanned && data.bytes_scanned !== '0 B' ? data.bytes_scanned : '-';
+            groupsEl.textContent = data.groups_found > 0 ? data.groups_found.toLocaleString() : '-';
+            wastedEl.textContent = data.wasted_bytes && data.wasted_bytes !== '0 B' ? data.wasted_bytes : '-';
 
-                var percent = Math.round(data.phase_percent);
-                document.getElementById('progress-bar').style.width = percent + '%';
-                document.getElementById('progress-percent').textContent = percent + '%';
+            // Update phase timeline
+            if (data.phase_num > 0 && data.phase_total > 0) {
+                var phaseNum = data.phase_num;
+                var phaseTotal = data.phase_total;
+                var phasePercent = data.phase_percent;
+
+                // Create phase elements if needed
+                ensurePhasesExist(phaseTotal);
+
+                // Store phase name for this phase
+                if (data.phase_name) {
+                    phaseNames[phaseNum] = data.phase_name.trim();
+                }
+
+                // Mark previous phases as completed
+                for (var i = 1; i < phaseNum; i++) {
+                    var prevPhase = document.getElementById('phase-' + i);
+                    if (prevPhase && !prevPhase.classList.contains('completed')) {
+                        prevPhase.classList.remove('pending', 'active', 'indeterminate');
+                        prevPhase.classList.add('completed');
+                        var prevBar = prevPhase.querySelector('.phase-bar');
+                        if (prevBar) prevBar.style.width = '100%';
+                        var prevStatus = prevPhase.querySelector('.phase-status');
+                        if (prevStatus) prevStatus.textContent = '';
+                    }
+                }
+
+                // Update current phase
+                var currentPhase = document.getElementById('phase-' + phaseNum);
+                if (currentPhase) {
+                    currentPhase.classList.remove('pending', 'completed');
+
+                    // Update phase name
+                    if (data.phase_name) {
+                        var nameEl = currentPhase.querySelector('.phase-name');
+                        if (nameEl) nameEl.textContent = data.phase_name.trim();
+                    }
+
+                    var bar = currentPhase.querySelector('.phase-bar');
+                    var statusEl = currentPhase.querySelector('.phase-status');
+
+                    if (phasePercent < 0) {
+                        // Indeterminate progress
+                        currentPhase.classList.add('active', 'indeterminate');
+                        if (statusEl) statusEl.textContent = '';
+                    } else {
+                        // Determinate progress
+                        currentPhase.classList.add('active');
+                        currentPhase.classList.remove('indeterminate');
+                        var percent = Math.round(phasePercent);
+                        // Guard against NaN
+                        if (isNaN(percent)) percent = 0;
+                        if (bar) bar.style.width = percent + '%';
+                        if (statusEl) statusEl.textContent = percent + '%';
+                    }
+                }
             }
         } catch(err) {
             console.error('Failed to parse progress:', err);

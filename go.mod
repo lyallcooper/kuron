@@ -5,10 +5,10 @@ go 1.24.0
 require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/robfig/cron/v3 v3.0.1
+	modernc.org/sqlite v1.42.2
 )
 
 require (
-	github.com/creack/pty v1.1.24 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -19,5 +19,4 @@ require (
 	modernc.org/libc v1.66.10 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.42.2 // indirect
 )
