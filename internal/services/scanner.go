@@ -198,6 +198,12 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 		MaxSize:         cfg.MaxSize,
 		IncludePatterns: cfg.IncludePatterns,
 		ExcludePatterns: cfg.ExcludePatterns,
+		IncludeHidden:   cfg.IncludeHidden,
+		FollowLinks:     cfg.FollowLinks,
+		OneFileSystem:   cfg.OneFileSystem,
+		NoIgnore:        cfg.NoIgnore,
+		IgnoreCase:      cfg.IgnoreCase,
+		MaxDepth:        cfg.MaxDepth,
 	}
 
 	result, err := s.executor.Group(ctx, opts, progressChan)
@@ -364,6 +370,14 @@ type ScanConfig struct {
 	MaxSize         *int64
 	IncludePatterns []string
 	ExcludePatterns []string
+
+	// Advanced options
+	IncludeHidden bool
+	FollowLinks   bool
+	OneFileSystem bool
+	NoIgnore      bool
+	IgnoreCase    bool
+	MaxDepth      *int
 }
 
 // GroupOutputToJSON converts group output to JSON for debugging

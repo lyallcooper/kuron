@@ -399,10 +399,12 @@ func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
 
 	result, err := db.Exec(`
 		INSERT INTO scheduled_jobs (name, paths, min_size, max_size, include_patterns, exclude_patterns,
-			cron_expression, action, enabled, next_run_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			cron_expression, action, enabled, next_run_at,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		job.Name, string(pathsJSON), job.MinSize, job.MaxSize, string(includeJSON), string(excludeJSON),
 		job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
+		job.IncludeHidden, job.FollowLinks, job.OneFileSystem, job.NoIgnore, job.IgnoreCase, job.MaxDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -420,7 +422,8 @@ func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
 func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 	row := db.QueryRow(`
 		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
-			cron_expression, action, enabled, last_run_at, next_run_at, created_at
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scheduled_jobs WHERE id = ?`, id)
 	return scanScheduledJob(row)
 }
@@ -429,7 +432,8 @@ func (db *DB) GetScheduledJob(id int64) (*ScheduledJob, error) {
 func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
 		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
-			cron_expression, action, enabled, last_run_at, next_run_at, created_at
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scheduled_jobs ORDER BY name`)
 	if err != nil {
 		return nil, err
@@ -451,7 +455,8 @@ func (db *DB) ListScheduledJobs() ([]*ScheduledJob, error) {
 func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 	rows, err := db.Query(`
 		SELECT id, name, paths, min_size, max_size, include_patterns, exclude_patterns,
-			cron_expression, action, enabled, last_run_at, next_run_at, created_at
+			cron_expression, action, enabled, last_run_at, next_run_at, created_at,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scheduled_jobs WHERE enabled = 1 ORDER BY next_run_at`)
 	if err != nil {
 		return nil, err
@@ -478,10 +483,13 @@ func (db *DB) UpdateScheduledJob(job *ScheduledJob) error {
 	_, err := db.Exec(`
 		UPDATE scheduled_jobs SET
 			name = ?, paths = ?, min_size = ?, max_size = ?, include_patterns = ?, exclude_patterns = ?,
-			cron_expression = ?, action = ?, enabled = ?, next_run_at = ?
+			cron_expression = ?, action = ?, enabled = ?, next_run_at = ?,
+			include_hidden = ?, follow_links = ?, one_file_system = ?, no_ignore = ?, ignore_case = ?, max_depth = ?
 		WHERE id = ?`,
 		job.Name, string(pathsJSON), job.MinSize, job.MaxSize, string(includeJSON), string(excludeJSON),
-		job.CronExpression, job.Action, job.Enabled, job.NextRunAt, job.ID,
+		job.CronExpression, job.Action, job.Enabled, job.NextRunAt,
+		job.IncludeHidden, job.FollowLinks, job.OneFileSystem, job.NoIgnore, job.IgnoreCase, job.MaxDepth,
+		job.ID,
 	)
 	return err
 }
@@ -511,11 +519,12 @@ func (db *DB) DeleteScheduledJob(id int64) error {
 func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 	var j ScheduledJob
 	var pathsJSON, includeJSON, excludeJSON string
-	var maxSize sql.NullInt64
+	var maxSize, maxDepth sql.NullInt64
 	var lastRun, nextRun sql.NullTime
 
 	err := row.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
-		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
+		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt,
+		&j.IncludeHidden, &j.FollowLinks, &j.OneFileSystem, &j.NoIgnore, &j.IgnoreCase, &maxDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -537,6 +546,10 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 	}
 	if nextRun.Valid {
 		j.NextRunAt = &nextRun.Time
+	}
+	if maxDepth.Valid {
+		depth := int(maxDepth.Int64)
+		j.MaxDepth = &depth
 	}
 
 	return &j, nil
@@ -545,11 +558,12 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 	var j ScheduledJob
 	var pathsJSON, includeJSON, excludeJSON string
-	var maxSize sql.NullInt64
+	var maxSize, maxDepth sql.NullInt64
 	var lastRun, nextRun sql.NullTime
 
 	err := rows.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
-		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt)
+		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt,
+		&j.IncludeHidden, &j.FollowLinks, &j.OneFileSystem, &j.NoIgnore, &j.IgnoreCase, &maxDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -571,6 +585,10 @@ func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 	}
 	if nextRun.Valid {
 		j.NextRunAt = &nextRun.Time
+	}
+	if maxDepth.Valid {
+		depth := int(maxDepth.Int64)
+		j.MaxDepth = &depth
 	}
 
 	return &j, nil

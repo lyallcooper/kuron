@@ -87,6 +87,26 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 		args = append(args, "--hash-fn", opts.HashFunction)
 	}
 
+	// Advanced options
+	if opts.IncludeHidden {
+		args = append(args, "--hidden")
+	}
+	if opts.FollowLinks {
+		args = append(args, "--follow-links")
+	}
+	if opts.OneFileSystem {
+		args = append(args, "--one-fs")
+	}
+	if opts.NoIgnore {
+		args = append(args, "--no-ignore")
+	}
+	if opts.IgnoreCase {
+		args = append(args, "--ignore-case")
+	}
+	if opts.MaxDepth != nil {
+		args = append(args, "--depth", strconv.Itoa(*opts.MaxDepth))
+	}
+
 	// Add paths
 	args = append(args, opts.Paths...)
 

@@ -197,6 +197,21 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 		}
 	}
 
+	// Parse advanced options
+	includeHidden := r.FormValue("include_hidden") == "1"
+	followLinks := r.FormValue("follow_links") == "1"
+	oneFileSystem := r.FormValue("one_file_system") == "1"
+	noIgnore := r.FormValue("no_ignore") == "1"
+	ignoreCase := r.FormValue("ignore_case") == "1"
+	maxDepthStr := r.FormValue("max_depth")
+
+	var maxDepth *int
+	if maxDepthStr != "" {
+		if d, err := strconv.Atoi(maxDepthStr); err == nil && d >= 0 {
+			maxDepth = &d
+		}
+	}
+
 	return &db.ScheduledJob{
 		Name:            name,
 		Paths:           paths,
@@ -207,6 +222,12 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 		CronExpression:  cronExpr,
 		Action:          action,
 		Enabled:         enabled,
+		IncludeHidden:   includeHidden,
+		FollowLinks:     followLinks,
+		OneFileSystem:   oneFileSystem,
+		NoIgnore:        noIgnore,
+		IgnoreCase:      ignoreCase,
+		MaxDepth:        maxDepth,
 	}, nil
 }
 
@@ -385,6 +406,12 @@ func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request, id int64) {
 		MaxSize:         job.MaxSize,
 		IncludePatterns: job.IncludePatterns,
 		ExcludePatterns: job.ExcludePatterns,
+		IncludeHidden:   job.IncludeHidden,
+		FollowLinks:     job.FollowLinks,
+		OneFileSystem:   job.OneFileSystem,
+		NoIgnore:        job.NoIgnore,
+		IgnoreCase:      job.IgnoreCase,
+		MaxDepth:        job.MaxDepth,
 	}
 
 	// Start scan

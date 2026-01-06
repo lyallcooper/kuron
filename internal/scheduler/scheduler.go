@@ -135,6 +135,12 @@ func (s *Scheduler) runJob(ctx context.Context, job *db.ScheduledJob) {
 		MaxSize:         job.MaxSize,
 		IncludePatterns: job.IncludePatterns,
 		ExcludePatterns: job.ExcludePatterns,
+		IncludeHidden:   job.IncludeHidden,
+		FollowLinks:     job.FollowLinks,
+		OneFileSystem:   job.OneFileSystem,
+		NoIgnore:        job.NoIgnore,
+		IgnoreCase:      job.IgnoreCase,
+		MaxDepth:        job.MaxDepth,
 	}
 
 	// Start scan with cancellable context

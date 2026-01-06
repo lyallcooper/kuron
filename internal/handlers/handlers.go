@@ -38,6 +38,7 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 		"joinPatterns": joinPatterns,
 		"joinLines":    joinLines,
 		"derefInt64":   derefInt64,
+		"derefInt":     derefInt,
 		"add":          func(a, b int) int { return a + b },
 		"subtract":     func(a, b int) int { return a - b },
 		"plural": func(n int, singular, plural string) string {
@@ -262,6 +263,13 @@ func joinLines(items []string) string {
 }
 
 func derefInt64(p *int64) int64 {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+func derefInt(p *int) int {
 	if p == nil {
 		return 0
 	}

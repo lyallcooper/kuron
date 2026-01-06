@@ -41,6 +41,14 @@ type QuickScanData struct {
 	IncludePatterns []string
 	ExcludePatterns []string
 	Error           string
+
+	// Advanced options
+	IncludeHidden bool
+	FollowLinks   bool
+	OneFileSystem bool
+	NoIgnore      bool
+	IgnoreCase    bool
+	MaxDepth      string
 }
 
 // QuickScan handles GET/POST /scans/quick
@@ -96,6 +104,14 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Parse advanced options
+	includeHidden := r.FormValue("include_hidden") == "1"
+	followLinks := r.FormValue("follow_links") == "1"
+	oneFileSystem := r.FormValue("one_file_system") == "1"
+	noIgnore := r.FormValue("no_ignore") == "1"
+	ignoreCase := r.FormValue("ignore_case") == "1"
+	maxDepthStr := r.FormValue("max_depth")
+
 	// Helper to render form with error
 	renderError := func(errMsg string) {
 		data := QuickScanData{
@@ -106,6 +122,12 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 			MaxSize:         maxSizeStr,
 			IncludePatterns: includePatterns,
 			ExcludePatterns: excludePatterns,
+			IncludeHidden:   includeHidden,
+			FollowLinks:     followLinks,
+			OneFileSystem:   oneFileSystem,
+			NoIgnore:        noIgnore,
+			IgnoreCase:      ignoreCase,
+			MaxDepth:        maxDepthStr,
 			Error:           errMsg,
 		}
 		h.render(w, "quick_scan.html", data)
@@ -151,6 +173,14 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse max depth
+	var maxDepth *int
+	if maxDepthStr != "" {
+		if d, err := strconv.Atoi(maxDepthStr); err == nil && d >= 0 {
+			maxDepth = &d
+		}
+	}
+
 	// Build scan config
 	cfg := &services.ScanConfig{
 		Paths:           paths,
@@ -158,6 +188,12 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		MaxSize:         maxSize,
 		IncludePatterns: includePatterns,
 		ExcludePatterns: excludePatterns,
+		IncludeHidden:   includeHidden,
+		FollowLinks:     followLinks,
+		OneFileSystem:   oneFileSystem,
+		NoIgnore:        noIgnore,
+		IgnoreCase:      ignoreCase,
+		MaxDepth:        maxDepth,
 	}
 
 	// Start scan

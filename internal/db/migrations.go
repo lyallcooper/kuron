@@ -33,6 +33,7 @@ func (db *DB) Migrate() error {
 		{2, migration002},
 		{3, migration003},
 		{4, migration004},
+		{5, migration005},
 	}
 
 	for _, m := range migrations {
@@ -205,4 +206,14 @@ INSERT INTO settings (key, value) VALUES ('retention_days', '30');
 const migration004 = `
 -- Add paths column to scan_runs to store scanned paths for all scans (including quick scans)
 ALTER TABLE scan_runs ADD COLUMN paths TEXT NOT NULL DEFAULT '[]';
+`
+
+const migration005 = `
+-- Add advanced scan options to scheduled_jobs
+ALTER TABLE scheduled_jobs ADD COLUMN include_hidden BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scheduled_jobs ADD COLUMN follow_links BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scheduled_jobs ADD COLUMN one_file_system BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scheduled_jobs ADD COLUMN no_ignore BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scheduled_jobs ADD COLUMN ignore_case BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scheduled_jobs ADD COLUMN max_depth INTEGER;
 `

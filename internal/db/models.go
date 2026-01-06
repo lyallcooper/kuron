@@ -20,6 +20,14 @@ type ScheduledJob struct {
 	LastRunAt       *time.Time
 	NextRunAt       *time.Time
 	CreatedAt       time.Time
+
+	// Advanced options
+	IncludeHidden bool // Include hidden files
+	FollowLinks   bool // Follow symbolic links
+	OneFileSystem bool // Stay on same filesystem
+	NoIgnore      bool // Don't respect .gitignore/.fdignore
+	IgnoreCase    bool // Case-insensitive pattern matching
+	MaxDepth      *int // Recursion depth limit (nil = unlimited)
 }
 
 // ScanRunStatus represents the status of a scan run

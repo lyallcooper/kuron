@@ -99,6 +99,70 @@
                 </div>
             </div>
 
+            <details class="advanced-section">
+                <summary class="advanced-toggle">Advanced Options</summary>
+                <div class="advanced-content">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="include_hidden" value="1"
+                                       {{if .Job}}{{if .Job.IncludeHidden}}checked{{end}}{{end}}>
+                                Include hidden files
+                            </label>
+                            <p class="form-help">Scan files and directories starting with a dot</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="follow_links" value="1"
+                                       {{if .Job}}{{if .Job.FollowLinks}}checked{{end}}{{end}}>
+                                Follow symbolic links
+                            </label>
+                            <p class="form-help">Follow symlinks when scanning directories</p>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="one_file_system" value="1"
+                                       {{if .Job}}{{if .Job.OneFileSystem}}checked{{end}}{{end}}>
+                                Same filesystem only
+                            </label>
+                            <p class="form-help">Don't cross filesystem boundaries or mount points</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="no_ignore" value="1"
+                                       {{if .Job}}{{if .Job.NoIgnore}}checked{{end}}{{end}}>
+                                Ignore .gitignore
+                            </label>
+                            <p class="form-help">Don't respect .gitignore and .fdignore files</p>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" name="ignore_case" value="1"
+                                       {{if .Job}}{{if .Job.IgnoreCase}}checked{{end}}{{end}}>
+                                Case-insensitive patterns
+                            </label>
+                            <p class="form-help">Make include/exclude pattern matching case-insensitive</p>
+                        </div>
+
+                        <div class="form-group form-group-narrow-input">
+                            <label class="form-label" for="max_depth">Max Depth</label>
+                            <input type="number" id="max_depth" name="max_depth" class="form-input"
+                                   value="{{if .Job}}{{if .Job.MaxDepth}}{{derefInt .Job.MaxDepth}}{{end}}{{end}}"
+                                   placeholder="Unlimited" min="0" style="max-width: 120px;">
+                            <p class="form-help">Limit recursion depth (0 = no descent)</p>
+                        </div>
+                    </div>
+                </div>
+            </details>
+
             <hr class="form-divider">
 
             <div class="form-row-wide">

@@ -71,6 +71,14 @@ type ScanOptions struct {
 	IncludePatterns []string // Glob patterns to include
 	ExcludePatterns []string // Glob patterns to exclude
 	HashFunction    string   // blake3, sha256, etc.
+
+	// Advanced options
+	IncludeHidden bool // Include hidden files (--hidden)
+	FollowLinks   bool // Follow symbolic links (--follow-links)
+	OneFileSystem bool // Stay on same filesystem (--one-fs)
+	NoIgnore      bool // Don't respect .gitignore/.fdignore (--no-ignore)
+	IgnoreCase    bool // Case-insensitive pattern matching (--ignore-case)
+	MaxDepth      *int // Recursion depth limit (nil = unlimited)
 }
 
 // LinkOptions configures a link operation
