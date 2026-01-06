@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyall/kuron/internal/db"
-	"github.com/lyall/kuron/internal/services"
+	"github.com/lyallcooper/kuron/internal/db"
+	"github.com/lyallcooper/kuron/internal/services"
 	"github.com/robfig/cron/v3"
 )
 

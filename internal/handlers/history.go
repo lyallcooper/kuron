@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/lyall/kuron/internal/db"
+	"github.com/lyallcooper/kuron/internal/db"
 )
 
 // HistoryData holds data for the history template

@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lyall/kuron/internal/db"
-	"github.com/lyall/kuron/internal/services"
+	"github.com/lyallcooper/kuron/internal/db"
+	"github.com/lyallcooper/kuron/internal/services"
 )
 
 // ScanResultsData holds data for the scan results template

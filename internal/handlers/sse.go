@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyall/kuron/internal/types"
+	"github.com/lyallcooper/kuron/internal/types"
 )
 
 // ScanProgressData is sent via SSE during scans

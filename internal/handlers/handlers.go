@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lyall/kuron/internal/config"
-	"github.com/lyall/kuron/internal/db"
-	"github.com/lyall/kuron/internal/fclones"
-	"github.com/lyall/kuron/internal/services"
+	"github.com/lyallcooper/kuron/internal/config"
+	"github.com/lyallcooper/kuron/internal/db"
+	"github.com/lyallcooper/kuron/internal/fclones"
+	"github.com/lyallcooper/kuron/internal/services"
 )
 
 // Handler holds all HTTP handlers

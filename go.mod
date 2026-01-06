@@ -1,4 +1,4 @@
-module github.com/lyall/kuron
+module github.com/lyallcooper/kuron
 
 go 1.24.0
 

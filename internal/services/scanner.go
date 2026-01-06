@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lyall/kuron/internal/db"
-	"github.com/lyall/kuron/internal/fclones"
-	"github.com/lyall/kuron/internal/types"
+	"github.com/lyallcooper/kuron/internal/db"
+	"github.com/lyallcooper/kuron/internal/fclones"
+	"github.com/lyallcooper/kuron/internal/types"
 )
 
 // subscriber wraps a channel with safe close handling
