@@ -5,14 +5,22 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Development Commands
 
 ```bash
-# Build the binary
+# Build the binary (dev version)
 go build -o kuron ./cmd/server
+
+# Build with version info (for releases)
+VERSION=$(git describe --tags --always)
+COMMIT=$(git rev-parse --short HEAD)
+go build -ldflags="-X main.version=${VERSION} -X main.commit=${COMMIT}" -o kuron ./cmd/server
 
 # Run with hot reload (requires air: go install github.com/air-verse/air@latest)
 air
 
 # Run directly
 go run ./cmd/server
+
+# Docker build with version
+docker build --build-arg VERSION=${VERSION} --build-arg COMMIT=${COMMIT} -t kuron .
 ```
 
 ## Architecture Overview

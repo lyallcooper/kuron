@@ -20,6 +20,12 @@ import (
 	"github.com/lyallcooper/kuron/internal/services"
 )
 
+// Version info - injected at build time via ldflags
+var (
+	version = "dev"
+	commit  = "unknown"
+)
+
 //go:embed all:web
 var webFS embed.FS
 
@@ -67,8 +73,17 @@ func main() {
 	sched.Start()
 	defer sched.Stop()
 
+	// Build version string
+	versionStr := version
+	if version == "dev" {
+		versionStr = "dev-" + commit
+		if len(commit) > 7 {
+			versionStr = "dev-" + commit[:7]
+		}
+	}
+
 	// Initialize handlers
-	h, err := handlers.New(database, cfg, executor, scanner, webFS)
+	h, err := handlers.New(database, cfg, executor, scanner, webFS, versionStr)
 	if err != nil {
 		log.Fatalf("Failed to initialize handlers: %v", err)
 	}

@@ -25,10 +25,11 @@ type Handler struct {
 	webFS    embed.FS
 	funcMap  template.FuncMap
 	staticFS fs.FS
+	version  string
 }
 
 // New creates a new Handler
-func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanner *services.Scanner, webFS embed.FS) (*Handler, error) {
+func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanner *services.Scanner, webFS embed.FS, version string) (*Handler, error) {
 	// Template functions
 	funcMap := template.FuncMap{
 		"formatBytes":  formatBytes,
@@ -63,6 +64,7 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 		webFS:    webFS,
 		funcMap:  funcMap,
 		staticFS: staticFS,
+		version:  version,
 	}, nil
 }
 

@@ -46,7 +46,7 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 		ActiveNav:         "settings",
 		RetentionDays:     h.cfg.RetentionDays,
 		RetentionEditable: !h.cfg.RetentionDaysFromEnv,
-		Version:           "0.2.0",
+		Version:           h.version,
 		FclonesVersion:    fclonesVersion,
 		DBPath:            h.cfg.DBPath,
 		Port:              h.cfg.Port,

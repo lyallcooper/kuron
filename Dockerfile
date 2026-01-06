@@ -1,6 +1,10 @@
 # Build stage
 FROM golang:1.25-alpine AS builder
 
+# Version info - pass via --build-arg
+ARG VERSION=dev
+ARG COMMIT=unknown
+
 RUN apk add --no-cache gcc musl-dev
 
 WORKDIR /app
@@ -12,8 +16,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
-# Build with CGO enabled for SQLite
-RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o kuron ./cmd/server
+# Build with CGO enabled for SQLite, injecting version info
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-w -s -X main.version=${VERSION} -X main.commit=${COMMIT}" \
+    -o kuron ./cmd/server
 
 # Runtime stage
 FROM alpine:3.20
