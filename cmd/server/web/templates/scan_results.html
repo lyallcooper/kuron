@@ -234,17 +234,25 @@
             <span id="selection-count" class="muted">0 selected</span>
             <span class="separator"></span>
             <label class="form-checkbox">
-                <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox" form="action-form">
+                <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
                 Dry run
             </label>
             <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                <button type="submit" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled form="action-form">
+                <button type="button" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled
+                        hx-post="/scans/runs/{{.Run.ID}}/action"
+                        hx-include="#action-form, #dry-run-checkbox"
+                        hx-target="body"
+                        hx-swap="beforeend">
                     <span class="btn-text">Hardlink</span>
                     <span class="btn-spinner"><span class="spinner"></span></span>
                 </button>
             </span>
             <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                <button type="submit" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled form="action-form">
+                <button type="button" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled
+                        hx-post="/scans/runs/{{.Run.ID}}/action"
+                        hx-include="#action-form, #dry-run-checkbox"
+                        hx-target="body"
+                        hx-swap="beforeend">
                     <span class="btn-text">Reflink</span>
                     <span class="btn-spinner"><span class="spinner"></span></span>
                 </button>
@@ -252,11 +260,8 @@
         </div>
     </div>
     <div class="card-body">
-        <!-- Action Form (hidden inputs) -->
-        <form id="action-form" method="POST" action="/scans/runs/{{.Run.ID}}/action"
-              hx-post="/scans/runs/{{.Run.ID}}/action"
-              hx-target="body"
-              hx-swap="beforeend">
+        <!-- Hidden inputs for action buttons -->
+        <form id="action-form">
             <input type="hidden" name="group_ids" id="selected-groups" value="">
             <input type="hidden" name="select_all" id="select-all-flag" value="">
             <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
