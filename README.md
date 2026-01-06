@@ -18,6 +18,7 @@ A web interface for finding and removing duplicate files using [fclones](https:/
 services:
   kuron:
     image: ghcr.io/lyallcooper/kuron:latest
+    container_name: kuron
     ports:
       - 8080:8080
     user: 1000:1000 # Must have permission for mounted volumes

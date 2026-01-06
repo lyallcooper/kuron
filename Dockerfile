@@ -29,10 +29,7 @@ COPY --from=builder /app/kuron .
 # Create data directory
 RUN mkdir -p /data
 
-# Environment defaults
-ENV KURON_PORT=8080
 ENV KURON_DB_PATH=/data/kuron.db
-ENV KURON_RETENTION_DAYS=30
 
 EXPOSE 8080
 
