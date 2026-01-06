@@ -32,16 +32,17 @@ type Handler struct {
 func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanner *services.Scanner, webFS embed.FS, version string) (*Handler, error) {
 	// Template functions
 	funcMap := template.FuncMap{
-		"formatBytes":  formatBytes,
-		"formatTime":   formatTime,
-		"timeAgo":      timeAgo,
-		"truncateHash": truncateHash,
-		"joinPatterns": joinPatterns,
-		"joinLines":    joinLines,
-		"derefInt64":   derefInt64,
-		"derefInt":     derefInt,
-		"add":          func(a, b int) int { return a + b },
-		"subtract":     func(a, b int) int { return a - b },
+		"formatBytes":     formatBytes,
+		"formatTime":      formatTime,
+		"timeAgo":         timeAgo,
+		"truncateHash":    truncateHash,
+		"joinPatterns":    joinPatterns,
+		"joinLines":       joinLines,
+		"derefInt64":      derefInt64,
+		"derefInt":        derefInt,
+		"add":             func(a, b int) int { return a + b },
+		"subtract":        func(a, b int) int { return a - b },
+		"formatSizeInput": formatSizeInput,
 		"plural": func(n int, singular, plural string) string {
 			if n == 1 {
 				return singular
@@ -127,6 +128,45 @@ func formatBytes(bytes int64) string {
 		exp++
 	}
 	return formatFloat(float64(bytes)/float64(div)) + " " + []string{"KB", "MB", "GB", "TB", "PB"}[exp]
+}
+
+// formatSizeInput formats bytes for form input fields (e.g., "1 GB", "500 MB")
+// Uses decimal units (SI: 1000-based) for display
+func formatSizeInput(bytes int64) string {
+	if bytes == 0 {
+		return ""
+	}
+
+	units := []struct {
+		suffix string
+		size   int64
+	}{
+		{"PB", 1e15},
+		{"TB", 1e12},
+		{"GB", 1e9},
+		{"MB", 1e6},
+		{"KB", 1e3},
+	}
+
+	for _, u := range units {
+		if bytes >= u.size && bytes%u.size == 0 {
+			return fmt.Sprintf("%d %s", bytes/u.size, u.suffix)
+		}
+	}
+
+	// If not evenly divisible, find best unit and format with decimals
+	for _, u := range units {
+		if bytes >= u.size {
+			val := float64(bytes) / float64(u.size)
+			// Format without trailing zeros
+			s := fmt.Sprintf("%.2f", val)
+			s = strings.TrimRight(s, "0")
+			s = strings.TrimRight(s, ".")
+			return s + " " + u.suffix
+		}
+	}
+
+	return fmt.Sprintf("%d B", bytes)
 }
 
 func formatInt(n int64) string {

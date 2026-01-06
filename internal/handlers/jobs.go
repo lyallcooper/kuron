@@ -165,18 +165,13 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 		}
 	}
 
-	// Parse sizes
-	var minSize int64 = 0
-	if minSizeStr != "" {
-		if v, err := strconv.ParseInt(minSizeStr, 10, 64); err == nil {
-			minSize = v
-		}
-	}
+	// Parse sizes (supports human-readable formats like "1 MB", "500 KB")
+	minSize, _ := parseSizeWithError(minSizeStr)
 
 	var maxSize *int64
 	if maxSizeStr != "" {
-		if v, err := strconv.ParseInt(maxSizeStr, 10, 64); err == nil && v > 0 {
-			maxSize = &v
+		if ms, err := parseSizeWithError(maxSizeStr); err == nil && ms > 0 {
+			maxSize = &ms
 		}
 	}
 

@@ -505,6 +505,7 @@ func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr st
 }
 
 // parseSizeWithError parses a human-readable size string to bytes, returning an error if invalid
+// Supports both decimal (MB, GB) and binary (MiB, GiB) units
 func parseSizeWithError(s string) (int64, error) {
 	s = strings.ToUpper(strings.TrimSpace(s))
 	if s == "" {
@@ -516,16 +517,24 @@ func parseSizeWithError(s string) (int64, error) {
 		s string
 		m int64
 	}{
-		{"PB", 1 << 50},
-		{"TB", 1 << 40},
-		{"GB", 1 << 30},
-		{"MB", 1 << 20},
-		{"KB", 1 << 10},
-		{"P", 1 << 50},
-		{"T", 1 << 40},
-		{"G", 1 << 30},
-		{"M", 1 << 20},
-		{"K", 1 << 10},
+		// Binary units (IEC) - check these first as they're longer
+		{"PIB", 1 << 50},
+		{"TIB", 1 << 40},
+		{"GIB", 1 << 30},
+		{"MIB", 1 << 20},
+		{"KIB", 1 << 10},
+		// Decimal units (SI)
+		{"PB", 1e15},
+		{"TB", 1e12},
+		{"GB", 1e9},
+		{"MB", 1e6},
+		{"KB", 1e3},
+		// Short forms (treat as decimal)
+		{"P", 1e15},
+		{"T", 1e12},
+		{"G", 1e9},
+		{"M", 1e6},
+		{"K", 1e3},
 		{"B", 1},
 	} {
 		if strings.HasSuffix(s, suffix.s) {

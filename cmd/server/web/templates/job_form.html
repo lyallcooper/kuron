@@ -44,7 +44,7 @@
                 <div class="form-group">
                     <label class="form-label" for="min_size">Minimum Size</label>
                     <input type="text" id="min_size" name="min_size" class="form-input"
-                           value="{{if .Job}}{{if gt .Job.MinSize 0}}{{.Job.MinSize}}{{end}}{{end}}"
+                           value="{{if .Job}}{{formatSizeInput .Job.MinSize}}{{end}}"
                            placeholder="e.g., 1MB" autocorrect="off" autocapitalize="off">
                     <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
                 </div>
@@ -52,7 +52,7 @@
                 <div class="form-group">
                     <label class="form-label" for="max_size">Maximum Size</label>
                     <input type="text" id="max_size" name="max_size" class="form-input"
-                           value="{{if .Job}}{{if .Job.MaxSize}}{{derefInt64 .Job.MaxSize}}{{end}}{{end}}"
+                           value="{{if .Job}}{{if .Job.MaxSize}}{{formatSizeInput (derefInt64 .Job.MaxSize)}}{{end}}{{end}}"
                            placeholder="e.g., 10GB" autocorrect="off" autocapitalize="off">
                     <p class="form-help">Leave empty for no limit</p>
                 </div>
