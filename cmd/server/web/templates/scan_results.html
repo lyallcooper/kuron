@@ -36,7 +36,7 @@
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="wasted-bytes">{{if gt .Run.WastedBytes 0}}{{.Run.WastedBytes | formatBytes}}{{else}}-{{end}}</div>
-                <div class="stat-label">Wasted Space</div>
+                <div class="stat-label">Redundant</div>
             </div>
         </div>
         {{if .Run.Paths}}
@@ -198,7 +198,7 @@
     </div>
     <div class="stat-card">
         <div class="stat-value">{{.Run.WastedBytes | formatBytes}}</div>
-        <div class="stat-label">Wasted Space</div>
+        <div class="stat-label">Redundant</div>
     </div>
 </div>
 
@@ -276,7 +276,7 @@
                             Count {{if eq .SortBy "count"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
                         </th>
                         <th class="sortable{{if eq .SortBy "wasted"}} sorted{{end}}" onclick="sortBy('wasted')">
-                            Wasted {{if eq .SortBy "wasted"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                            Redundant {{if eq .SortBy "wasted"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
                         </th>
                         <th class="sortable{{if eq .SortBy "status"}} sorted{{end}}" onclick="sortBy('status')">
                             Status {{if eq .SortBy "status"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
