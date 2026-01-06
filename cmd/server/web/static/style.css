@@ -164,6 +164,7 @@ button.btn {
     vertical-align: middle;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     box-sizing: border-box;
+    position: relative;
 }
 
 .btn:hover, a.btn:hover {
@@ -1282,11 +1283,44 @@ body.modal-open {
 }
 
 .htmx-request .htmx-indicator {
-    display: inline-block;
+    display: inline-flex;
 }
 
 .htmx-request.htmx-indicator {
-    display: inline-block;
+    display: inline-flex;
+}
+
+/* Spinner */
+.spinner {
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.75s linear infinite;
+}
+
+.btn .spinner {
+    width: 0.875em;
+    height: 0.875em;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Hide button text during loading, show spinner */
+.btn.htmx-request .btn-text {
+    visibility: hidden;
+}
+
+.btn .btn-spinner {
+    position: absolute;
+    display: none;
+}
+
+.btn.htmx-request .btn-spinner {
+    display: inline-flex;
 }
 
 /* Confirmation dialog */

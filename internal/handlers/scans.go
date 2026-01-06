@@ -448,7 +448,10 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 			<input type="hidden" name="group_ids" value="` + html.EscapeString(p.GroupIDs) + `">
 			<input type="hidden" name="select_all" value="` + selectAllValue + `">
 			<input type="hidden" name="status_filter" value="` + html.EscapeString(p.StatusFilter) + `">
-			<button type="submit" class="btn btn-primary">Run for Real</button>
+			<button type="submit" class="btn btn-primary">
+				<span class="btn-text">Run for Real</span>
+				<span class="btn-spinner"><span class="spinner"></span></span>
+			</button>
 		</form>`
 	}
 
