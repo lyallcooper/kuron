@@ -73,8 +73,8 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	retentionStr := r.FormValue("retention_days")
 	retention, err := strconv.Atoi(retentionStr)
-	if err != nil || retention < 1 || retention > 365 {
-		http.Redirect(w, r, "/settings?error=Retention+must+be+between+1+and+365+days", http.StatusSeeOther)
+	if err != nil || retention < 1 || retention > 9999 {
+		http.Redirect(w, r, "/settings?error=Retention+must+be+between+1+and+9999+days", http.StatusSeeOther)
 		return
 	}
 

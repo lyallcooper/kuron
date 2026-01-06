@@ -19,7 +19,7 @@
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" for="retention_days">Retention Period</label>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <input type="number" class="form-input" id="retention_days" name="retention_days" value="{{.RetentionDays}}" min="1" max="365" style="width: 6rem;">
+                    <input type="number" class="form-input" id="retention_days" name="retention_days" value="{{.RetentionDays}}" min="1" max="9999" style="width: 6rem;">
                     <span>days</span>
                     <button type="submit" class="btn btn-primary" style="margin-left: 0.5rem;">Save</button>
                 </div>
@@ -49,7 +49,14 @@
                 </tr>
                 <tr>
                     <td>Allowed Paths</td>
-                    <td>{{if .AllowedPaths}}{{range $i, $p := .AllowedPaths}}{{if $i}}, {{end}}{{$p}}{{end}}{{else}}<em>Unrestricted</em>{{end}}</td>
+                    <td>
+                        {{if .AllowedPaths}}
+                            {{range $i, $p := .AllowedPaths}}{{if $i}}, {{end}}{{$p}}{{end}}
+                        {{else}}
+                            <em>Unrestricted</em>
+                            <p class="form-help" style="margin: 0.25rem 0 0 0;">Limit with <code>KURON_ALLOWED_PATHS</code> env var (comma-separated).</p>
+                        {{end}}
+                    </td>
                 </tr>
             </table>
         </div>
