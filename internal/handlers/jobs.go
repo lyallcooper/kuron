@@ -3,11 +3,11 @@ package handlers
 import (
 	"fmt"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/lyallcooper/kuron/internal/config"
 	"github.com/lyallcooper/kuron/internal/db"
 	"github.com/lyallcooper/kuron/internal/services"
 	"github.com/robfig/cron/v3"
@@ -161,7 +161,7 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 	for _, p := range r.Form["paths"] {
 		p = strings.TrimSpace(p)
 		if p != "" {
-			paths = append(paths, filepath.Clean(p))
+			paths = append(paths, config.ExpandPath(p))
 		}
 	}
 

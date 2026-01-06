@@ -69,10 +69,32 @@ func getEnvPaths(key string) []string {
 	for _, p := range strings.Split(val, ",") {
 		p = strings.TrimSpace(p)
 		if p != "" {
-			paths = append(paths, filepath.Clean(p))
+			paths = append(paths, ExpandPath(p))
 		}
 	}
 	return paths
+}
+
+// ExpandPath expands ~ to the user's home directory and cleans the path.
+func ExpandPath(path string) string {
+	if path == "" {
+		return path
+	}
+
+	// Expand ~ to home directory
+	if path == "~" {
+		if home, err := os.UserHomeDir(); err == nil {
+			return home
+		}
+		return path
+	}
+	if strings.HasPrefix(path, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(home, path[2:])
+		}
+	}
+
+	return filepath.Clean(path)
 }
 
 // IsPathAllowed checks if a path is within the allowed paths.

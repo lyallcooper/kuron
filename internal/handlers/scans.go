@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"html"
 	"net/http"
-	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/lyallcooper/kuron/internal/config"
 	"github.com/lyallcooper/kuron/internal/db"
 	"github.com/lyallcooper/kuron/internal/services"
 )
@@ -75,7 +75,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	for _, p := range r.Form["paths"] {
 		p = strings.TrimSpace(p)
 		if p != "" {
-			paths = append(paths, filepath.Clean(p))
+			paths = append(paths, config.ExpandPath(p))
 		}
 	}
 
