@@ -213,10 +213,31 @@ func timeAgo(t any) string {
 		return fmt.Sprintf("%d hr ago", hours)
 	}
 	days := int(duration.Hours() / 24)
-	if days == 1 {
-		return "1 day ago"
+	if days < 7 {
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
 	}
-	return fmt.Sprintf("%d days ago", days)
+	if days < 30 {
+		weeks := days / 7
+		if weeks == 1 {
+			return "1 wk ago"
+		}
+		return fmt.Sprintf("%d wk ago", weeks)
+	}
+	if days < 365 {
+		months := days / 30
+		if months == 1 {
+			return "1 mo ago"
+		}
+		return fmt.Sprintf("%d mo ago", months)
+	}
+	years := days / 365
+	if years == 1 {
+		return "1 yr ago"
+	}
+	return fmt.Sprintf("%d yr ago", years)
 }
 
 func truncateHash(hash string) string {
