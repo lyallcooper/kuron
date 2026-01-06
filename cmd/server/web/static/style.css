@@ -885,6 +885,24 @@ th.sorted {
     }
 }
 
+/* Paths being scanned */
+.paths-scanning {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.paths-scanning code {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.125rem 0.375rem;
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    font-size: 0.8rem;
+}
+
 /* Empty state */
 .empty-state {
     text-align: center;

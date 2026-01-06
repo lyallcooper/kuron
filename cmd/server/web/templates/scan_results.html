@@ -39,6 +39,14 @@
                 <div class="stat-label">Wasted Space</div>
             </div>
         </div>
+        {{if .Run.Paths}}
+        <div class="paths-scanning">
+            <strong>Scanning:</strong>
+            {{range .Run.Paths}}
+            <code>{{.}}</code>
+            {{end}}
+        </div>
+        {{end}}
     </div>
 </div>
 <script>
