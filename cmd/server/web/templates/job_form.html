@@ -320,6 +320,7 @@
     var btnSave = document.getElementById('btn-save');
     var btnSaveRun = document.getElementById('btn-save-run');
     var initialState = serializeForm(form);
+    var pendingInputIds = ['new-path', 'new-include', 'new-exclude'];
 
     function serializeForm(f) {
         var data = new FormData(f);
@@ -332,9 +333,16 @@
         return result.sort().join('&');
     }
 
+    function hasPendingText() {
+        return pendingInputIds.some(function(id) {
+            var el = document.getElementById(id);
+            return el && el.value.trim() !== '';
+        });
+    }
+
     function checkChanges() {
         var currentState = serializeForm(form);
-        var hasChanges = currentState !== initialState;
+        var hasChanges = currentState !== initialState || hasPendingText();
 
         if (hasChanges) {
             btnSave.disabled = false;
@@ -352,5 +360,29 @@
     checkChanges();
 })();
 {{end}}
+
+// Auto-add pending list items on form submit
+(function() {
+    var form = document.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', function() {
+        // Add any pending path
+        var pathInput = document.getElementById('new-path');
+        if (pathInput && pathInput.value.trim()) {
+            addPath();
+        }
+        // Add any pending include pattern
+        var includeInput = document.getElementById('new-include');
+        if (includeInput && includeInput.value.trim()) {
+            addPattern('include');
+        }
+        // Add any pending exclude pattern
+        var excludeInput = document.getElementById('new-exclude');
+        if (excludeInput && excludeInput.value.trim()) {
+            addPattern('exclude');
+        }
+    });
+})();
 </script>
 {{end}}

@@ -175,4 +175,30 @@
     </div>
 </div>
 
+<script>
+// Auto-add pending list items on form submit
+(function() {
+    var form = document.querySelector('form');
+    if (!form) return;
+
+    form.addEventListener('submit', function() {
+        // Add any pending path
+        var pathInput = document.getElementById('new-path');
+        if (pathInput && pathInput.value.trim()) {
+            addPath();
+        }
+        // Add any pending include pattern
+        var includeInput = document.getElementById('new-include');
+        if (includeInput && includeInput.value.trim()) {
+            addPattern('include');
+        }
+        // Add any pending exclude pattern
+        var excludeInput = document.getElementById('new-exclude');
+        if (excludeInput && excludeInput.value.trim()) {
+            addPattern('exclude');
+        }
+    });
+})();
+</script>
+
 {{end}}
