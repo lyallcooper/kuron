@@ -57,7 +57,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
 		data := QuickScanData{
 			Title:     "Quick Scan",
-			ActiveNav: "history",
+			ActiveNav: "jobs",
 		}
 
 		h.render(w, "quick_scan.html", data)
@@ -116,7 +116,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	renderError := func(errMsg string) {
 		data := QuickScanData{
 			Title:           "Quick Scan",
-			ActiveNav:       "history",
+			ActiveNav:       "jobs",
 			Paths:           paths,
 			MinSize:         minSizeStr,
 			MaxSize:         maxSizeStr,

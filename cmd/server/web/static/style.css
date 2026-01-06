@@ -15,10 +15,10 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #000000;
-        --fg: #ffffff;
-        --bg-secondary: #111111;
-        --border: #333333;
+        --bg: #0c0c0c;
+        --fg: #ebebeb;
+        --bg-secondary: #161616;
+        --border: #2d2d2d;
         --accent: #58a6ff;
         --accent-hover: #79b8ff;
         --success: #3fb950;
@@ -111,7 +111,7 @@ body {
 
 .nav-link.active {
     color: var(--fg);
-    border-bottom-color: var(--accent);
+    border-bottom-color: var(--fg);
 }
 
 /* Typography */
@@ -129,11 +129,12 @@ p {
 }
 
 a {
-    color: var(--accent);
+    color: var(--fg);
+    text-decoration: underline;
 }
 
 a:hover {
-    color: var(--accent-hover);
+    color: var(--muted);
 }
 
 /* Buttons */
@@ -142,7 +143,7 @@ button.btn {
     appearance: none;
 }
 
-.btn {
+.btn, a.btn, a.btn:visited {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -158,13 +159,24 @@ button.btn {
     cursor: pointer;
     text-decoration: none;
     vertical-align: middle;
-    transition: background 0.15s, border-color 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
     box-sizing: border-box;
 }
 
-.btn:hover {
+.btn:hover, a.btn:hover {
     background: var(--bg-secondary);
     border-color: var(--fg);
+    color: var(--fg);
+}
+
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--muted);
+}
+
+.btn:active {
+    background: var(--bg-secondary);
+    transform: translateY(1px);
 }
 
 .btn-primary {
@@ -179,6 +191,14 @@ button.btn {
     color: var(--bg);
 }
 
+.btn-primary:focus {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg);
+}
+
+.btn-primary:active {
+    background: var(--muted);
+}
+
 .btn-danger {
     background: var(--error);
     border-color: var(--error);
@@ -188,6 +208,14 @@ button.btn {
 .btn-danger:hover {
     background: #d73a49;
     border-color: #d73a49;
+}
+
+.btn-danger:focus {
+    box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--error);
+}
+
+.btn-danger:active {
+    background: #d73a49;
 }
 
 .btn-sm {
@@ -585,41 +613,60 @@ tr:hover td {
 /* Status badges */
 .badge {
     display: inline-block;
-    padding: 0.125rem 0.5rem;
-    font-size: 0.75rem;
-    border-radius: 2px;
+    padding: 0.2rem 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 3px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.03em;
 }
 
 .badge-running {
-    background: var(--accent);
-    color: #ffffff;
+    background: #dbeafe;
+    color: #1e40af;
 }
 
-.badge-completed {
-    background: var(--success);
-    color: #ffffff;
+.badge-completed, .badge-processed {
+    background: #dcfce7;
+    color: #166534;
 }
 
 .badge-failed {
-    background: var(--error);
-    color: #ffffff;
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 .badge-pending {
-    background: var(--warning);
-    color: #000000;
+    background: #fef3c7;
+    color: #92400e;
 }
 
-.badge-cancelled {
-    background: var(--muted);
-    color: #ffffff;
+.badge-cancelled, .badge-ignored {
+    background: #f3f4f6;
+    color: #4b5563;
 }
 
-.badge-processed {
-    background: var(--success);
-    color: #ffffff;
+@media (prefers-color-scheme: dark) {
+    .badge-running {
+        background: #1e3a5f;
+        color: #93c5fd;
+    }
+    .badge-completed, .badge-processed {
+        background: #14532d;
+        color: #86efac;
+    }
+    .badge-failed {
+        background: #450a0a;
+        color: #fca5a5;
+    }
+    .badge-pending {
+        background: #451a03;
+        color: #fcd34d;
+    }
+    .badge-cancelled, .badge-ignored {
+        background: #27272a;
+        color: #a1a1aa;
+    }
 }
 
 /* Progress bar */
