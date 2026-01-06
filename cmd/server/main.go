@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -74,12 +75,15 @@ func main() {
 	defer sched.Stop()
 
 	// Build version string
+	// For tagged versions (v*), use as-is
+	// For branch builds (main, dev, etc.), append short commit hash
 	versionStr := version
-	if version == "dev" {
-		versionStr = "dev-" + commit
-		if len(commit) > 7 {
-			versionStr = "dev-" + commit[:7]
+	if !strings.HasPrefix(version, "v") {
+		shortCommit := commit
+		if len(shortCommit) > 7 {
+			shortCommit = shortCommit[:7]
 		}
+		versionStr = version + "-" + shortCommit
 	}
 
 	// Initialize handlers

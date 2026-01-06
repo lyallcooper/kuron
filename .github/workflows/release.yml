@@ -48,6 +48,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -89,11 +92,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: ${{ matrix.cgo }}
+          VERSION: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
         run: |
           if [ "$GOOS" = "linux" ] && [ "$GOARCH" = "arm64" ]; then
             export CC=aarch64-linux-gnu-gcc
           fi
-          go build -ldflags="-w -s" -o kuron-$GOOS-$GOARCH ./cmd/server
+          go build -ldflags="-w -s -X main.version=${VERSION} -X main.commit=${COMMIT}" -o kuron-$GOOS-$GOARCH ./cmd/server
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
