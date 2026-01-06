@@ -283,9 +283,15 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	nextRun := schedule.Next(time.Now())
 	job.NextRunAt = &nextRun
 
-	_, err = h.db.CreateScheduledJob(job)
+	created, err := h.db.CreateScheduledJob(job)
 	if err != nil {
 		renderError("Failed to create job: " + err.Error())
+		return
+	}
+
+	// Check if we should run immediately after saving
+	if r.FormValue("run_after_save") == "1" {
+		h.runJobByID(w, r, created.ID)
 		return
 	}
 
@@ -367,6 +373,12 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
+	// Check if we should run immediately after saving
+	if r.FormValue("run_after_save") == "1" {
+		h.runJobByID(w, r, id)
+		return
+	}
+
 	http.Redirect(w, r, "/jobs", http.StatusSeeOther)
 }
 
@@ -388,6 +400,11 @@ func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
 
 // RunJob handles POST /jobs/{id}/run
 func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request, id int64) {
+	h.runJobByID(w, r, id)
+}
+
+// runJobByID starts a scan for the given job and redirects to the scan page
+func (h *Handler) runJobByID(w http.ResponseWriter, r *http.Request, id int64) {
 	job, err := h.db.GetScheduledJob(id)
 	if err != nil {
 		http.NotFound(w, r)

@@ -205,9 +205,13 @@
                 </label>
             </div>
 
+            <input type="hidden" name="run_after_save" id="run_after_save" value="">
             <div class="actions-bar">
-                <button type="submit" class="btn btn-primary">
-                    {{if .Job}}Save Changes{{else}}Create Job{{end}}
+                <button type="submit" class="btn btn-primary" id="btn-save">
+                    {{if .Job}}Save{{else}}Create{{end}}
+                </button>
+                <button type="submit" class="btn btn-primary" id="btn-save-run" onclick="document.getElementById('run_after_save').value='1'">
+                    {{if .Job}}Run{{else}}Create and Run{{end}}
                 </button>
                 <a href="/jobs" class="btn">Cancel</a>
                 {{if .Job}}
@@ -305,5 +309,45 @@
     document.getElementById('cron_expression').addEventListener('input', updateDescription);
     updateDescription();
 })();
+
+{{if .Job}}
+// Form change detection for existing jobs
+(function() {
+    var form = document.querySelector('form');
+    var btnSave = document.getElementById('btn-save');
+    var btnSaveRun = document.getElementById('btn-save-run');
+    var initialState = serializeForm(form);
+
+    function serializeForm(f) {
+        var data = new FormData(f);
+        var result = [];
+        data.forEach(function(value, key) {
+            if (key !== 'run_after_save') {
+                result.push(key + '=' + value);
+            }
+        });
+        return result.sort().join('&');
+    }
+
+    function checkChanges() {
+        var currentState = serializeForm(form);
+        var hasChanges = currentState !== initialState;
+
+        if (hasChanges) {
+            btnSave.disabled = false;
+            btnSaveRun.textContent = 'Save and Run';
+        } else {
+            btnSave.disabled = true;
+            btnSaveRun.textContent = 'Run';
+        }
+    }
+
+    form.addEventListener('input', checkChanges);
+    form.addEventListener('change', checkChanges);
+
+    // Initial check
+    checkChanges();
+})();
+{{end}}
 </script>
 {{end}}
