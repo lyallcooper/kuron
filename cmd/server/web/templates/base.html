@@ -188,7 +188,11 @@
         btn.type = 'button';
         btn.className = 'list-item-remove';
         btn.textContent = '×';
-        btn.onclick = function() { item.remove(); };
+        btn.onclick = function() {
+            var form = item.closest('form');
+            item.remove();
+            if (form) form.dispatchEvent(new Event('change'));
+        };
 
         item.appendChild(hidden);
         item.appendChild(span);
@@ -196,11 +200,23 @@
         list.appendChild(item);
         input.value = '';
         input.focus();
+
+        // Trigger form change detection
+        var form = list.closest('form');
+        if (form) form.dispatchEvent(new Event('change'));
     }
 
     // Common form helpers for path/pattern list inputs
     function addPath() { addListItem('paths-list', 'new-path', 'paths'); }
     function addPattern(type) { addListItem(type + '-list', 'new-' + type, type + '_patterns'); }
+
+    // Remove list item and trigger form change detection
+    function removeListItem(btn) {
+        var item = btn.parentElement;
+        var form = item.closest('form');
+        item.remove();
+        if (form) form.dispatchEvent(new Event('change'));
+    }
 
     // Initialize Enter key handlers for list inputs
     function initListInputEnterHandlers() {

@@ -20,7 +20,7 @@
                         <div class="list-item">
                             <input type="hidden" name="paths" value="{{.}}">
                             <span class="list-item-text">{{.}}</span>
-                            <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                            <button type="button" class="list-item-remove" onclick="removeListItem(this)">&times;</button>
                         </div>
                         {{end}}
                     </div>
@@ -61,7 +61,7 @@
                             <div class="list-item">
                                 <input type="hidden" name="include_patterns" value="{{.}}">
                                 <span class="list-item-text">{{.}}</span>
-                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                                <button type="button" class="list-item-remove" onclick="removeListItem(this)">&times;</button>
                             </div>
                             {{end}}
                         </div>
@@ -82,7 +82,7 @@
                             <div class="list-item">
                                 <input type="hidden" name="exclude_patterns" value="{{.}}">
                                 <span class="list-item-text">{{.}}</span>
-                                <button type="button" class="list-item-remove" onclick="this.parentElement.remove()">&times;</button>
+                                <button type="button" class="list-item-remove" onclick="removeListItem(this)">&times;</button>
                             </div>
                             {{end}}
                         </div>
