@@ -128,12 +128,16 @@
                 <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox" form="action-form">
                 Dry run
             </label>
-            <button type="submit" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled form="action-form">
-                Hardlink
-            </button>
-            <button type="submit" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled form="action-form">
-                Reflink
-            </button>
+            <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
+                <button type="submit" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled form="action-form">
+                    Hardlink
+                </button>
+            </span>
+            <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
+                <button type="submit" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled form="action-form">
+                    Reflink
+                </button>
+            </span>
         </div>
     </div>
     <div class="card-body">
@@ -346,6 +350,36 @@ function sortBy(field) {
     }
 
     window.location.href = '?sort=' + field + '&order=' + newOrder;
+}
+
+// Handle clicks on disabled action buttons via wrapper
+document.querySelectorAll('.btn-wrapper').forEach(function(wrapper) {
+    wrapper.addEventListener('click', function(e) {
+        var btn = wrapper.querySelector('button');
+        if (btn && btn.disabled) {
+            e.preventDefault();
+            e.stopPropagation();
+            showToast(wrapper.dataset.disabledHint || 'Button is disabled', 'error');
+        }
+    });
+});
+
+function showToast(message, type) {
+    var container = document.querySelector('.toasts');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'toasts';
+        document.body.appendChild(container);
+    }
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+    toast.onclick = function() { toast.remove(); };
+    container.appendChild(toast);
+    setTimeout(function() {
+        toast.classList.add('toast-fade');
+        setTimeout(function() { toast.remove(); }, 300);
+    }, 3000);
 }
 
 // Initialize on page load
