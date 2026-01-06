@@ -1,6 +1,6 @@
 # Binaries
 kuron
-server
+/server
 *.exe
 *.dll
 *.so
