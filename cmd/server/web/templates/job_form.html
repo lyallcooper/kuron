@@ -59,7 +59,7 @@
 
             <div class="form-row-wide">
                 <div class="form-group">
-                    <label class="form-label">Include Patterns</label>
+                    <label class="form-label">Include Paths</label>
                     <div class="list-input" id="include-container">
                         <div class="list-items" id="include-list">
                             {{if .Job}}{{range .Job.IncludePatterns}}
@@ -71,15 +71,15 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-include" class="form-input" placeholder="*.jpg">
+                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg">
                             <button type="button" class="btn" onclick="addPattern('include')">Add</button>
                         </div>
                     </div>
-                    <p class="form-help">Glob patterns to include (leave empty for all)</p>
+                    <p class="form-help">Glob patterns to match paths (leave empty for all)</p>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Exclude Patterns</label>
+                    <label class="form-label">Exclude Paths</label>
                     <div class="list-input" id="exclude-container">
                         <div class="list-items" id="exclude-list">
                             {{if .Job}}{{range .Job.ExcludePatterns}}
@@ -91,11 +91,11 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-exclude" class="form-input" placeholder="*.xmp">
+                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp">
                             <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
                         </div>
                     </div>
-                    <p class="form-help">Glob patterns to exclude</p>
+                    <p class="form-help">Glob patterns to exclude paths</p>
                 </div>
             </div>
 

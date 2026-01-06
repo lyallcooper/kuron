@@ -72,9 +72,9 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 		args = append(args, "--max-size", strconv.FormatInt(*opts.MaxSize, 10))
 	}
 
-	// Add include patterns
+	// Add include patterns (match on full path)
 	for _, pattern := range opts.IncludePatterns {
-		args = append(args, "--name", pattern)
+		args = append(args, "--path", pattern)
 	}
 
 	// Add exclude patterns
