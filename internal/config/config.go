@@ -3,6 +3,7 @@ package config
 import (
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -68,7 +69,7 @@ func getEnvPaths(key string) []string {
 	for _, p := range strings.Split(val, ",") {
 		p = strings.TrimSpace(p)
 		if p != "" {
-			paths = append(paths, p)
+			paths = append(paths, filepath.Clean(p))
 		}
 	}
 	return paths
@@ -81,8 +82,12 @@ func (c *Config) IsPathAllowed(path string) bool {
 		return true
 	}
 
+	// Normalize the input path for consistent comparison
+	path = filepath.Clean(path)
+
 	for _, allowed := range c.AllowedPaths {
-		if path == allowed || strings.HasPrefix(path, allowed+"/") {
+		// allowed paths are already normalized in getEnvPaths
+		if path == allowed || strings.HasPrefix(path, allowed+string(filepath.Separator)) {
 			return true
 		}
 	}

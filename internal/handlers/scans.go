@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -74,7 +75,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	for _, p := range r.Form["paths"] {
 		p = strings.TrimSpace(p)
 		if p != "" {
-			paths = append(paths, p)
+			paths = append(paths, filepath.Clean(p))
 		}
 	}
 
