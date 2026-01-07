@@ -85,16 +85,20 @@ func (s *Scanner) Unsubscribe(runID int64, ch chan *types.ScanProgress) {
 	subs := s.subscribers[runID]
 	for i, sub := range subs {
 		if sub.ch == ch {
-			// Remove from slice first, then close safely
-			s.subscribers[runID] = append(subs[:i], subs[i+1:]...)
+			// Close the subscriber first
 			sub.close()
-			break
+			// Remove from slice by replacing map entry with new slice
+			// This avoids issues with slice modification during iteration
+			newSubs := make([]*subscriber, 0, len(subs)-1)
+			newSubs = append(newSubs, subs[:i]...)
+			newSubs = append(newSubs, subs[i+1:]...)
+			if len(newSubs) == 0 {
+				delete(s.subscribers, runID)
+			} else {
+				s.subscribers[runID] = newSubs
+			}
+			return
 		}
-	}
-
-	// Clean up if no more subscribers
-	if len(s.subscribers[runID]) == 0 {
-		delete(s.subscribers, runID)
 	}
 }
 
