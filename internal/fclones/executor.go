@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -284,7 +285,11 @@ func (e *Executor) GroupToInput(groups []Group) string {
 		Groups: validGroups,
 	}
 
-	data, _ := json.Marshal(output)
+	data, err := json.Marshal(output)
+	if err != nil {
+		log.Printf("fclones: failed to marshal groups to JSON: %v", err)
+		return ""
+	}
 	return string(data)
 }
 

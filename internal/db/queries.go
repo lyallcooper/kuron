@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -39,8 +40,14 @@ func (db *DB) CreateScanRun(configID *int64, jobID *int64, paths []string, opts 
 		opts = &ScanRunOptions{}
 	}
 
-	includePatternsJSON, _ := json.Marshal(opts.IncludePatterns)
-	excludePatternsJSON, _ := json.Marshal(opts.ExcludePatterns)
+	includePatternsJSON, err := json.Marshal(opts.IncludePatterns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal include patterns: %w", err)
+	}
+	excludePatternsJSON, err := json.Marshal(opts.ExcludePatterns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal exclude patterns: %w", err)
+	}
 
 	result, err := db.Exec(`
 		INSERT INTO scan_runs (scan_config_id, scheduled_job_id, paths, status, started_at,
@@ -454,9 +461,18 @@ func scanDuplicateGroupRow(rows *sql.Rows) (*DuplicateGroup, error) {
 
 // CreateScheduledJob creates a new scheduled job
 func (db *DB) CreateScheduledJob(job *ScheduledJob) (*ScheduledJob, error) {
-	pathsJSON, _ := json.Marshal(job.Paths)
-	includeJSON, _ := json.Marshal(job.IncludePatterns)
-	excludeJSON, _ := json.Marshal(job.ExcludePatterns)
+	pathsJSON, err := json.Marshal(job.Paths)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal paths: %w", err)
+	}
+	includeJSON, err := json.Marshal(job.IncludePatterns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal include patterns: %w", err)
+	}
+	excludeJSON, err := json.Marshal(job.ExcludePatterns)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal exclude patterns: %w", err)
+	}
 
 	result, err := db.Exec(`
 		INSERT INTO scheduled_jobs (name, paths, min_size, max_size, include_patterns, exclude_patterns,
@@ -537,11 +553,20 @@ func (db *DB) GetEnabledJobs() ([]*ScheduledJob, error) {
 
 // UpdateScheduledJob updates a scheduled job
 func (db *DB) UpdateScheduledJob(job *ScheduledJob) error {
-	pathsJSON, _ := json.Marshal(job.Paths)
-	includeJSON, _ := json.Marshal(job.IncludePatterns)
-	excludeJSON, _ := json.Marshal(job.ExcludePatterns)
+	pathsJSON, err := json.Marshal(job.Paths)
+	if err != nil {
+		return fmt.Errorf("failed to marshal paths: %w", err)
+	}
+	includeJSON, err := json.Marshal(job.IncludePatterns)
+	if err != nil {
+		return fmt.Errorf("failed to marshal include patterns: %w", err)
+	}
+	excludeJSON, err := json.Marshal(job.ExcludePatterns)
+	if err != nil {
+		return fmt.Errorf("failed to marshal exclude patterns: %w", err)
+	}
 
-	_, err := db.Exec(`
+	_, err = db.Exec(`
 		UPDATE scheduled_jobs SET
 			name = ?, paths = ?, min_size = ?, max_size = ?, include_patterns = ?, exclude_patterns = ?,
 			cron_expression = ?, action = ?, enabled = ?, next_run_at = ?,
