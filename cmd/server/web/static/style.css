@@ -337,6 +337,7 @@ button.btn {
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .form-checkbox input[type="checkbox"] {
@@ -348,6 +349,7 @@ button.btn {
 
 .checkbox-spacer {
     width: 1rem;
+    height: 1rem;
     flex-shrink: 0;
 }
 
@@ -632,35 +634,18 @@ button.btn {
 }
 
 .advanced-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 0.5rem 1.5rem;
     padding: 0.75rem 1rem;
 }
 
 .advanced-content .form-row {
-    display: flex;
-    gap: 1.5rem;
-    margin-bottom: 0.5rem;
+    display: contents;
 }
 
 .advanced-content .form-row > .form-group {
-    flex: 1;
-    min-width: 200px;
-    max-width: 50%;
     margin-bottom: 0;
-}
-
-.advanced-content .form-row:last-child {
-    margin-bottom: 0;
-}
-
-@media (max-width: 600px) {
-    .advanced-content .form-row {
-        flex-direction: column;
-        gap: 0.5rem;
-    }
-
-    .advanced-content .form-row > .form-group {
-        max-width: none;
-    }
 }
 
 .form-group-narrow {
