@@ -94,6 +94,7 @@
 
         var closeBtn = document.createElement('button');
         closeBtn.className = 'modal-close';
+        closeBtn.setAttribute('aria-label', 'Close');
         closeBtn.textContent = '×';
         closeBtn.onclick = closeConfirmModal;
 
@@ -189,6 +190,7 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'list-item-remove';
+        btn.setAttribute('aria-label', 'Remove');
         btn.textContent = '×';
         btn.onclick = function() {
             var form = item.closest('form');
@@ -411,7 +413,7 @@
         popup.innerHTML =
             '<div class="help-popup-header">' +
                 '<strong>' + title + '</strong>' +
-                '<button type="button" class="help-popup-close" onclick="this.parentElement.parentElement.remove()">&times;</button>' +
+                '<button type="button" class="help-popup-close" aria-label="Close" onclick="this.parentElement.parentElement.remove()">&times;</button>' +
             '</div>' +
             '<div class="help-popup-body">' + content + '</div>';
 
