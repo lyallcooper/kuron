@@ -182,13 +182,15 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 			progressMu.Lock()
 			lastProgress = progress
 			progressMu.Unlock()
-			s.db.UpdateScanRunProgress(runID,
+			if err := s.db.UpdateScanRunProgress(runID,
 				progress.FilesScanned,
 				progress.BytesScanned,
 				progress.GroupsFound,
 				progress.FilesMatched,
 				progress.WastedBytes,
-			)
+			); err != nil {
+				log.Printf("scan %d: failed to update progress: %v", runID, err)
+			}
 			s.broadcast(runID, &types.ScanProgress{
 				FilesScanned: progress.FilesScanned,
 				BytesScanned: progress.BytesScanned,
@@ -271,13 +273,15 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	// Note: stats.TotalFileCount/TotalFileSize are files IN duplicate groups, not total scanned
 	// We use filesScanned and bytesScanned from progress parsing for the actual values
 	stats := result.Header.Stats
-	s.db.UpdateScanRunProgress(runID,
+	if err := s.db.UpdateScanRunProgress(runID,
 		filesScanned,
 		bytesScanned,
 		stats.GroupCount,
 		stats.RedundantFileCount,
 		stats.RedundantFileSize,
-	)
+	); err != nil {
+		log.Printf("scan %d: failed to update final progress: %v", runID, err)
+	}
 
 	// Mark complete
 	s.db.CompleteScanRun(runID, db.ScanRunStatusCompleted, nil)
