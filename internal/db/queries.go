@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -408,7 +409,7 @@ func (db *DB) UpdateDuplicateGroupStatus(ids []int64, status DuplicateGroupStatu
 		return nil
 	}
 
-	query := "UPDATE duplicate_groups SET status = ? WHERE id IN (?" + repeatString(",?", len(ids)-1) + ")"
+	query := "UPDATE duplicate_groups SET status = ? WHERE id IN (?" + strings.Repeat(",?", len(ids)-1) + ")"
 	args := make([]any, len(ids)+1)
 	args[0] = status
 	for i, id := range ids {
@@ -417,14 +418,6 @@ func (db *DB) UpdateDuplicateGroupStatus(ids []int64, status DuplicateGroupStatu
 
 	_, err := db.Exec(query, args...)
 	return err
-}
-
-func repeatString(s string, n int) string {
-	result := ""
-	for i := 0; i < n; i++ {
-		result += s
-	}
-	return result
 }
 
 func scanDuplicateGroup(row *sql.Row) (*DuplicateGroup, error) {
