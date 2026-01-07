@@ -264,25 +264,28 @@
                 <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
                 Dry run
             </label>
-            <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                <button type="button" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled
-                        hx-post="/scans/runs/{{.Run.ID}}/action"
-                        hx-include="#action-form, #dry-run-checkbox"
-                        hx-target="body"
-                        hx-swap="beforeend">
-                    <span class="btn-text">Hardlink</span>
-                    <span class="btn-spinner"><span class="spinner"></span></span>
-                </button>
-            </span>
-            <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                <button type="button" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled
-                        hx-post="/scans/runs/{{.Run.ID}}/action"
-                        hx-include="#action-form, #dry-run-checkbox"
-                        hx-target="body"
-                        hx-swap="beforeend">
-                    <span class="btn-text">Reflink</span>
-                    <span class="btn-spinner"><span class="spinner"></span></span>
-                </button>
+            <span class="btn-group">
+                <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
+                    <button type="button" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled
+                            hx-post="/scans/runs/{{.Run.ID}}/action"
+                            hx-include="#action-form, #dry-run-checkbox"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        <span class="btn-text">Hardlink</span>
+                        <span class="btn-spinner"><span class="spinner"></span></span>
+                    </button>
+                </span>
+                <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
+                    <button type="button" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled
+                            hx-post="/scans/runs/{{.Run.ID}}/action"
+                            hx-include="#action-form, #dry-run-checkbox"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        <span class="btn-text">Reflink</span>
+                        <span class="btn-spinner"><span class="spinner"></span></span>
+                    </button>
+                </span>
+                <button type="button" class="help-icon" onclick="toggleLinkHelp(this)">?</button>
             </span>
         </div>
     </div>

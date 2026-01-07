@@ -483,11 +483,17 @@
         }, 0);
     }
 
+    // Name help popup
+    function toggleNameHelp(btn) {
+        showHelpPopup(btn, 'name-help-popup', 'Job Name',
+            '<p>A descriptive name to identify this job in the list and logs.</p>');
+    }
+
     // Paths help popup
     function togglePathsHelp(btn, restricted) {
         var content = '<p>Directories to scan for duplicate files. Subdirectories are included recursively.</p>';
         if (restricted) {
-            content += '<p><strong>Note:</strong> Scanning is restricted to specific paths configured by your administrator via <code>KURON_ALLOWED_PATHS</code>.</p>';
+            content += '<p><strong>Note:</strong> Scanning is currently restricted to specific paths via the <code>KURON_ALLOWED_PATHS</code> environment variable.</p>';
         } else {
             content += '<p>Any accessible path on the system can be scanned.</p>';
         }
@@ -497,7 +503,7 @@
     // Cron schedule help popup
     function toggleCronHelp(btn) {
         showHelpPopup(btn, 'cron-help-popup', 'Cron Schedule',
-            '<p>Standard cron format: <code>min hour day month weekday</code></p>' +
+            '<p>Standard cron format:<br><code>min hour day month weekday</code></p>' +
             '<table class="help-table">' +
                 '<tr><td><code>*</code></td><td>Any value</td></tr>' +
                 '<tr><td><code>*/n</code></td><td>Every n units</td></tr>' +
@@ -505,9 +511,25 @@
                 '<tr><td><code>1-5</code></td><td>Range of values</td></tr>' +
             '</table>' +
             '<p class="help-examples"><strong>Examples:</strong><br>' +
-                '<code>30 2 * * *</code> daily at 02:30<br>' +
-                '<code>0 */6 * * *</code> every 6 hours<br>' +
-                '<code>0 9 * * 1</code> Mondays at 09:00</p>'
+                '<code>30 2 * * *</code> &nbsp;Daily at 02:30<br>' +
+                '<code>0 */6 * * *</code> Every 6 hours<br>' +
+                '<code>0 9 * * 1</code> &nbsp;&nbsp;Mondays at 09:00</p>'
+        );
+    }
+
+    // Hardlink/Reflink help popup
+    function toggleLinkHelp(btn) {
+        showHelpPopup(btn, 'link-help-popup', 'Hardlink vs Reflink',
+            '<p><strong>Hardlink</strong> (via <code>fclones link</code>)</p>' +
+            '<p>Multiple directory entries pointing to the same file data. Editing any copy changes all of them.</p>' +
+            '<p class="help-examples">+ Works on most filesystems<br>' +
+            '− Edits affect all copies<br>' +
+            '− Same filesystem only</p>' +
+            '<p><strong>Reflink</strong> (copy-on-write, via <code>fclones dedupe</code>)</p>' +
+            '<p>Files share storage until modified. Edits only affect that copy.</p>' +
+            '<p class="help-examples">+ Safer: copies are independent<br>' +
+            '− Requires filesystem support: Btrfs, APFS, ZFS, etc.<br>' +
+            '− Files still appear duplicated on subsequent scans</p>'
         );
     }
 
@@ -548,7 +570,7 @@
     // Glob pattern help popup
     function toggleGlobHelp(btn) {
         showHelpPopup(btn, 'glob-help-popup', 'Include/Exclude Patterns',
-            '<p>Glob patterns to filter which files are scanned. Leave empty to include all files.</p>' +
+            '<p>Glob patterns to filter which files are scanned. Matches against entire path. Leave empty to include all files.</p>' +
             '<table class="help-table">' +
                 '<tr><td><code>?</code></td><td>Any single character (except /)</td></tr>' +
                 '<tr><td><code>*</code></td><td>Any sequence (except /)</td></tr>' +
@@ -586,7 +608,7 @@
             '<p>What to do with duplicate files after scanning.</p>' +
             '<p><strong>Scan Only</strong><br>Find duplicates but don\'t modify files. Review results manually.</p>' +
             '<p><strong>Hardlink</strong><br>Replace duplicates with hard links. All files point to the same data on disk, saving space. Changes to one file affect all linked copies. Cannot span filesystems.</p>' +
-            '<p><strong>Reflink</strong><br>Replace duplicates with copy-on-write links. Saves space like hardlinks, but changes create independent copies. Requires filesystem support (Btrfs, XFS, APFS).</p>'
+            '<p><strong>Reflink</strong><br>Replace duplicates with copy-on-write links. Saves space like hardlinks, but changes create independent copies. Requires filesystem support (Btrfs, XFS, APFS, etc.).<br><strong>NB</strong>: fclones is unable to distinguish reflinked files from actual duplicates. So files deduped by reflinking will show up again in subsequent scans.</p>'
         );
     }
 
@@ -648,6 +670,48 @@
         });
 
         document.body.addEventListener('htmx:afterSwap', fitStatValues);
+    })();
+
+    // Disabled button tooltip with viewport clamping
+    (function() {
+        var tooltip = null;
+
+        document.addEventListener('mouseenter', function(e) {
+            var wrapper = e.target.closest('.btn-wrapper[data-disabled-hint]');
+            if (!wrapper || !wrapper.querySelector('button:disabled')) return;
+
+            var hint = wrapper.getAttribute('data-disabled-hint');
+            if (!hint) return;
+
+            tooltip = document.createElement('div');
+            tooltip.className = 'disabled-tooltip';
+            tooltip.textContent = hint;
+            document.body.appendChild(tooltip);
+
+            var rect = wrapper.getBoundingClientRect();
+            var tooltipRect = tooltip.getBoundingClientRect();
+            var margin = 8;
+
+            // Center above button, then clamp to viewport
+            var left = rect.left + rect.width / 2 - tooltipRect.width / 2;
+            left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+
+            // Position arrow to point at button center
+            var arrowLeft = rect.left + rect.width / 2 - left;
+            arrowLeft = Math.max(10, Math.min(arrowLeft, tooltipRect.width - 10));
+
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = (rect.top - tooltipRect.height - 8) + 'px';
+            tooltip.style.setProperty('--arrow-left', arrowLeft + 'px');
+        }, true);
+
+        document.addEventListener('mouseleave', function(e) {
+            var wrapper = e.target.closest('.btn-wrapper[data-disabled-hint]');
+            if (wrapper && tooltip) {
+                tooltip.remove();
+                tooltip = null;
+            }
+        }, true);
     })();
     </script>
 </body>

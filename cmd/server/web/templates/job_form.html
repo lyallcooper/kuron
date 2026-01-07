@@ -12,11 +12,10 @@
         <form method="POST" action="{{if .Job}}/jobs/{{.Job.ID}}{{else}}/jobs{{end}}">
             {{csrfField .CSRFToken}}
             <div class="form-group form-group-narrow">
-                <label class="form-label" for="name">Name</label>
+                <label class="form-label" for="name">Name <button type="button" class="help-icon" onclick="toggleNameHelp(this)">?</button></label>
                 <input type="text" id="name" name="name" class="form-input"
                        value="{{if .Job}}{{.Job.Name}}{{end}}" required
                        placeholder="Photos" autocomplete="off">
-                <p class="form-help">A descriptive name for this job</p>
             </div>
 
             <div class="form-group form-group-narrow">
@@ -70,7 +69,7 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-include" class="form-input" placeholder="**.jpg"
+                            <input type="text" id="new-include" class="form-input" placeholder="**.jpg or **/include/*.png"
                                    autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('include')">Add</button>
                         </div>
@@ -90,7 +89,7 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-exclude" class="form-input" placeholder="**.xmp"
+                            <input type="text" id="new-exclude" class="form-input" placeholder="**.xmp or /dev/**"
                                    autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
                         </div>

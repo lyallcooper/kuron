@@ -252,32 +252,26 @@ button.btn {
     display: inline-block;
 }
 
-.btn-wrapper:has(button:disabled):hover::after {
-    content: attr(data-disabled-hint);
-    position: absolute;
-    bottom: 100%;
-    left: 50%;
-    transform: translateX(-50%);
+.disabled-tooltip {
+    position: fixed;
     padding: 0.375rem 0.625rem;
     background: var(--fg);
     color: var(--bg);
     font-size: 0.75rem;
     white-space: nowrap;
     border-radius: 4px;
-    margin-bottom: 0.375rem;
-    z-index: 10;
+    z-index: 1000;
+    pointer-events: none;
 }
 
-.btn-wrapper:has(button:disabled):hover::before {
+.disabled-tooltip::after {
     content: '';
     position: absolute;
-    bottom: 100%;
-    left: 50%;
+    top: 100%;
+    left: var(--arrow-left, 50%);
     transform: translateX(-50%);
     border: 5px solid transparent;
     border-top-color: var(--fg);
-    margin-bottom: -5px;
-    z-index: 10;
 }
 
 
@@ -562,13 +556,6 @@ button.btn {
     color: var(--muted);
 }
 
-.help-table code {
-    background: var(--bg-secondary);
-    padding: 0.125rem 0.25rem;
-    border-radius: 2px;
-    font-size: 0.7rem;
-}
-
 .help-popup-body p {
     margin: 0 0 0.75rem;
     font-size: 0.75rem;
@@ -579,16 +566,17 @@ button.btn {
     margin-bottom: 0;
 }
 
+.help-popup-body code {
+    background: var(--bg-secondary);
+    padding: 0.125rem 0.25rem;
+    border-radius: 2px;
+    font-size: 0.7rem;
+}
+
 .help-examples {
     margin: 0;
     font-size: 0.7rem;
     color: var(--muted);
-}
-
-.help-examples code {
-    background: var(--bg-secondary);
-    padding: 0.125rem 0.25rem;
-    border-radius: 2px;
 }
 
 .form-divider {
@@ -1628,6 +1616,12 @@ body.modal-open {
     height: 1rem;
     background: var(--border);
     margin: 0 0.25rem;
+}
+
+.btn-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 @media (max-width: 768px) {
