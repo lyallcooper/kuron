@@ -110,17 +110,10 @@ jobs:
           name: kuron-server-${{ matrix.goos }}-${{ matrix.goarch }}
           path: kuron-server-${{ matrix.goos }}-${{ matrix.goarch }}
 
-  # Build desktop app for macOS (requires Cargo for fclones)
+  # Build desktop app for macOS (ARM64 only)
   desktop-macos:
     if: startsWith(github.ref, 'refs/tags/v')
-    strategy:
-      matrix:
-        include:
-          - runner: macos-latest
-            arch: arm64
-          - runner: macos-13
-            arch: amd64
-    runs-on: ${{ matrix.runner }}
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -133,13 +126,13 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
       - name: Set up Rust (for fclones)
-        uses: dtolnay/rust-action@stable
+        uses: dtolnay/rust-toolchain@stable
 
       - name: Build fclones from source
         run: |
           cargo install fclones --version ${{ env.FCLONES_VERSION }} --root ./fclones-build
-          mkdir -p build/fclones/darwin-${{ matrix.arch }}
-          mv ./fclones-build/bin/fclones build/fclones/darwin-${{ matrix.arch }}/
+          mkdir -p build/fclones/darwin-arm64
+          mv ./fclones-build/bin/fclones build/fclones/darwin-arm64/
 
       - name: Build Wails app
         working-directory: cmd/desktop
@@ -147,12 +140,12 @@ jobs:
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
         run: |
-          wails build -platform darwin/${{ matrix.arch }} \
+          wails build -platform darwin/arm64 \
             -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}"
 
       - name: Copy fclones into app bundle
         run: |
-          cp build/fclones/darwin-${{ matrix.arch }}/fclones \
+          cp build/fclones/darwin-arm64/fclones \
              cmd/desktop/build/bin/Kuron.app/Contents/Resources/
 
       - name: Ad-hoc code sign
@@ -164,13 +157,13 @@ jobs:
           hdiutil create -volname "Kuron" \
             -srcfolder cmd/desktop/build/bin/Kuron.app \
             -ov -format UDZO \
-            Kuron-macos-${{ matrix.arch }}.dmg
+            Kuron-macos-arm64.dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Kuron-macos-${{ matrix.arch }}.dmg
-          path: Kuron-macos-${{ matrix.arch }}.dmg
+          name: Kuron-macos-arm64.dmg
+          path: Kuron-macos-arm64.dmg
 
   # Build desktop app for Linux
   desktop-linux:
@@ -187,7 +180,7 @@ jobs:
       - name: Install Wails dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
