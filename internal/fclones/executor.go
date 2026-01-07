@@ -168,7 +168,13 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 
 // readProgress reads progress output from fclones stderr and sends updates
 func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) {
+	const maxLineLen = 64 * 1024 // 64KB max line length for safety
+
 	scanner := bufio.NewScanner(r)
+	// Set buffer to limit memory usage
+	buf := make([]byte, 4096)
+	scanner.Buffer(buf, maxLineLen)
+
 	// Use custom split function that splits on both \r and \n for progress bar updates
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
@@ -178,6 +184,11 @@ func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan ch
 			if b == '\n' || b == '\r' {
 				return i + 1, data[0:i], nil
 			}
+		}
+		// If we've accumulated more than maxLineLen without finding a delimiter,
+		// just return what we have to prevent unbounded memory growth
+		if len(data) >= maxLineLen {
+			return len(data), data, nil
 		}
 		if atEOF {
 			return len(data), data, nil
