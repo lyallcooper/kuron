@@ -323,13 +323,7 @@
                                 var item = document.createElement('div');
                                 item.className = 'autocomplete-item';
                                 item.textContent = path;
-                                item.onclick = function() {
-                                    input.value = path + '/';
-                                    dropdown.style.display = 'none';
-                                    input.focus();
-                                    // Trigger another search for subdirectories
-                                    input.dispatchEvent(new Event('input'));
-                                };
+                                item.dataset.path = path;
                                 dropdown.appendChild(item);
                             });
                             dropdown.style.display = 'block';
@@ -355,13 +349,13 @@
                     updateSelection(items);
                 } else if (e.key === 'Enter' && selectedIndex >= 0) {
                     e.preventDefault();
-                    items[selectedIndex].click();
+                    selectItem(input, dropdown, items[selectedIndex]);
                 } else if (e.key === 'Escape') {
                     dropdown.style.display = 'none';
                     selectedIndex = -1;
                 } else if (e.key === 'Tab' && selectedIndex >= 0) {
                     e.preventDefault();
-                    items[selectedIndex].click();
+                    selectItem(input, dropdown, items[selectedIndex]);
                 }
             });
 
@@ -373,15 +367,42 @@
                     items[selectedIndex].scrollIntoView({ block: 'nearest' });
                 }
             }
+        }
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!wrapper.contains(e.target)) {
+        // Select an autocomplete item
+        function selectItem(input, dropdown, item) {
+            var path = item.dataset.path;
+            input.value = path + '/';
+            dropdown.style.display = 'none';
+            selectedIndex = -1;
+            input.focus();
+            // Trigger another search for subdirectories
+            input.dispatchEvent(new Event('input'));
+        }
+
+        // Event delegation for autocomplete item clicks (single listener)
+        document.addEventListener('click', function(e) {
+            // Handle autocomplete item selection
+            var item = e.target.closest('.autocomplete-item');
+            if (item) {
+                var dropdown = item.closest('.autocomplete-dropdown');
+                var wrapper = dropdown.closest('.autocomplete-wrapper');
+                var input = wrapper.querySelector('input[data-path-autocomplete]');
+                if (input) {
+                    selectItem(input, dropdown, item);
+                }
+                return;
+            }
+
+            // Close any open dropdowns when clicking outside
+            var wrapper = e.target.closest('.autocomplete-wrapper');
+            document.querySelectorAll('.autocomplete-dropdown').forEach(function(dropdown) {
+                if (!wrapper || !wrapper.contains(dropdown)) {
                     dropdown.style.display = 'none';
-                    selectedIndex = -1;
                 }
             });
-        }
+            selectedIndex = -1;
+        });
 
         // Initialize on existing inputs
         function initAll() {
