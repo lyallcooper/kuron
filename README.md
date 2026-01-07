@@ -1,11 +1,11 @@
 # kuron
 
-A web interface for finding and removing duplicate files using [fclones](https://github.com/pkolaczk/fclones).
+An easy to use web interface for deduplicating files, powered by [fclones](https://github.com/pkolaczk/fclones).
 
 ## Features
 
 - **Duplicate Detection** - Scan directories to find duplicate files by content hash
-- **Deduplication Actions** - Hardlink or reflink duplicates to reclaim disk space
+- **Deduplication** - Hardlink or reflink duplicates to reclaim disk space
 - **Scheduled Scans** - Create jobs to run scans automatically on a cron schedule
 - **Scan History** - View past scans, results, and actions taken
 
@@ -24,21 +24,42 @@ services:
     user: 1000:1000 # Must have permission for mounted volumes
     volumes:
       - ./kuron-data:/data
-      - /path/to/media:/mnt/media:ro       # Read-only for scanning only
-      - /path/to/downloads:/mnt/downloads  # Read-write for deduplication
+      - /path/to/media:/mnt/media          # A directory containing files to dedupe
+      - /path/to/downloads:/mnt/downloads  # Another directory to dedupe
     environment:
-      - KURON_ALLOWED_PATHS=/mnt/media,/mnt/downloads
+      - KURON_ALLOWED_PATHS=/mnt/media,/mnt/downloads # Optional
     restart: unless-stopped
 ```
 
 Access at http://localhost:8080.
 
-### From Source
+### Pre-built Binaries
 
-Requires Go 1.24+ and [fclones](https://github.com/pkolaczk/fclones).
+Download the latest binary for your platform from [GitHub Releases](https://github.com/lyallcooper/kuron/releases).
+
+Available platforms:
+- Linux (amd64, arm64)
+- macOS (amd64, arm64)
+
+Requires [fclones](https://github.com/pkolaczk/fclones) 0.35.0 or newer.
 
 ```bash
-# Install fclones
+# Install fclones (>= 0.35.0)
+# macOS: brew install fclones
+# Linux: See https://github.com/pkolaczk/fclones#installation
+
+# Download and run (example for macOS arm64)
+curl -LO https://github.com/lyallcooper/kuron/releases/latest/download/kuron-darwin-arm64
+chmod +x kuron-darwin-arm64
+./kuron-darwin-arm64
+```
+
+### From Source
+
+Requires Go 1.24+ and [fclones](https://github.com/pkolaczk/fclones) 0.35.0 or newer.
+
+```bash
+# Install fclones (>= 0.35.0)
 # macOS: brew install fclones
 # Linux: See https://github.com/pkolaczk/fclones#installation
 
@@ -52,7 +73,7 @@ go build -o kuron ./cmd/server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `KURON_PORT` | `8080` | HTTP server port |
-| `KURON_DB_PATH` | `./data/kuron.db` | SQLite database path |
+| `KURON_DB_PATH` | `./data/kuron.db` or `/data/kuron.db` for docker | SQLite database path |
 | `KURON_RETENTION_DAYS` | `30` | Days to keep scan history (1-9999) |
 | `KURON_SCAN_TIMEOUT` | `30m` | Maximum duration for a scan |
 | `KURON_ALLOWED_PATHS` | *(unrestricted)* | Comma-separated paths to restrict scanning |
@@ -69,7 +90,3 @@ go build -o kuron ./cmd/server
 
 - **Hardlink** - Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
 - **Reflink** - Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.).
-
-## License
-
-MIT
