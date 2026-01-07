@@ -404,8 +404,8 @@ button.btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1rem;
-    height: 1rem;
+    width: 1.125rem;
+    height: 1.125rem;
     padding: 0;
     margin-left: 0.25rem;
     font-size: 0.625rem;
@@ -417,9 +417,12 @@ button.btn {
     border-radius: 50%;
     cursor: pointer;
     vertical-align: middle;
+    /* Larger tap target on touch devices */
+    -webkit-tap-highlight-color: transparent;
 }
 
-.help-icon:hover {
+.help-icon:hover,
+.help-icon:active {
     color: var(--fg);
     border-color: var(--fg);
 }
@@ -431,7 +434,7 @@ button.btn {
     border-radius: 4px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 1000;
-    max-width: 320px;
+    max-width: min(320px, calc(100vw - 16px));
     font-size: 0.8rem;
 }
 
@@ -439,6 +442,7 @@ button.btn {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     border-bottom: 1px solid var(--border);
     background: var(--bg-secondary);
@@ -447,15 +451,25 @@ button.btn {
 .help-popup-close {
     background: none;
     border: none;
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     line-height: 1;
     color: var(--muted);
     cursor: pointer;
-    padding: 0;
+    padding: 0.25rem;
+    margin: -0.25rem;
+    min-width: 2rem;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.help-popup-close:hover {
+.help-popup-close:hover,
+.help-popup-close:active {
     color: var(--fg);
+    background: var(--border);
 }
 
 .help-popup-body {

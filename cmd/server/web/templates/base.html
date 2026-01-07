@@ -413,13 +413,39 @@
             '</div>' +
             '<div class="help-popup-body">' + content + '</div>';
 
-        // Position near the button
-        var rect = btn.getBoundingClientRect();
-        popup.style.position = 'fixed';
-        popup.style.top = (rect.bottom + 8) + 'px';
-        popup.style.left = Math.max(8, rect.left - 100) + 'px';
-
         document.body.appendChild(popup);
+
+        // Position near the button, keeping within viewport
+        var rect = btn.getBoundingClientRect();
+        var popupRect = popup.getBoundingClientRect();
+        var viewportWidth = window.innerWidth;
+        var viewportHeight = window.innerHeight;
+        var margin = 8;
+
+        // Calculate horizontal position
+        var left = rect.left - 100;
+        // Clamp to viewport bounds
+        left = Math.max(margin, Math.min(left, viewportWidth - popupRect.width - margin));
+
+        // Calculate vertical position - prefer below, but show above if no room
+        var top;
+        var spaceBelow = viewportHeight - rect.bottom - margin;
+        var spaceAbove = rect.top - margin;
+
+        if (spaceBelow >= popupRect.height || spaceBelow >= spaceAbove) {
+            // Show below
+            top = rect.bottom + margin;
+        } else {
+            // Show above
+            top = rect.top - popupRect.height - margin;
+        }
+
+        // Final clamp to ensure it stays in viewport
+        top = Math.max(margin, Math.min(top, viewportHeight - popupRect.height - margin));
+
+        popup.style.position = 'fixed';
+        popup.style.top = top + 'px';
+        popup.style.left = left + 'px';
 
         // Close when clicking outside
         setTimeout(function() {
