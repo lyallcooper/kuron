@@ -747,6 +747,50 @@ tr:hover td {
     border-bottom: none;
 }
 
+/* Scan configuration display */
+.scan-config-section {
+    margin-bottom: 1rem;
+}
+
+.scan-config-section:last-child {
+    margin-bottom: 0;
+}
+
+.scan-config-section strong {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.config-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0;
+}
+
+.config-list li {
+    font-size: 0.875rem;
+    padding: 0 0.75rem;
+    border-left: 1px solid var(--border);
+}
+
+.config-list li:first-child {
+    padding-left: 0;
+    border-left: none;
+}
+
+.scan-config-divider {
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+
 /* Expandable rows */
 .expandable-row {
     cursor: pointer;

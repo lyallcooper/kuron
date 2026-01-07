@@ -124,8 +124,20 @@ func (s *Scanner) closeSubscribers(runID int64) {
 
 // StartScan starts a new scan with full configuration
 func (s *Scanner) StartScan(ctx context.Context, cfg *ScanConfig, jobID *int64) (*db.ScanRun, error) {
-	// Create scan run record with paths
-	run, err := s.db.CreateScanRun(nil, jobID, cfg.Paths)
+	// Create scan run record with paths and options
+	opts := &db.ScanRunOptions{
+		MinSize:         cfg.MinSize,
+		MaxSize:         cfg.MaxSize,
+		IncludePatterns: cfg.IncludePatterns,
+		ExcludePatterns: cfg.ExcludePatterns,
+		IncludeHidden:   cfg.IncludeHidden,
+		FollowLinks:     cfg.FollowLinks,
+		OneFileSystem:   cfg.OneFileSystem,
+		NoIgnore:        cfg.NoIgnore,
+		IgnoreCase:      cfg.IgnoreCase,
+		MaxDepth:        cfg.MaxDepth,
+	}
+	run, err := s.db.CreateScanRun(nil, jobID, cfg.Paths, opts)
 	if err != nil {
 		return nil, err
 	}

@@ -55,6 +55,18 @@ type ScanRun struct {
 	DuplicateFiles  int64
 	WastedBytes     int64
 	ErrorMessage    *string
+
+	// Scan options (recorded at scan time)
+	MinSize         int64
+	MaxSize         *int64
+	IncludePatterns []string
+	ExcludePatterns []string
+	IncludeHidden   bool
+	FollowLinks     bool
+	OneFileSystem   bool
+	NoIgnore        bool
+	IgnoreCase      bool
+	MaxDepth        *int
 }
 
 // DuplicateGroupStatus represents the status of a duplicate group

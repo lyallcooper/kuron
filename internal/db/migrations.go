@@ -34,6 +34,7 @@ func (db *DB) Migrate() error {
 		{3, migration003},
 		{4, migration004},
 		{5, migration005},
+		{6, migration006},
 	}
 
 	for _, m := range migrations {
@@ -216,4 +217,18 @@ ALTER TABLE scheduled_jobs ADD COLUMN one_file_system BOOLEAN NOT NULL DEFAULT 0
 ALTER TABLE scheduled_jobs ADD COLUMN no_ignore BOOLEAN NOT NULL DEFAULT 0;
 ALTER TABLE scheduled_jobs ADD COLUMN ignore_case BOOLEAN NOT NULL DEFAULT 0;
 ALTER TABLE scheduled_jobs ADD COLUMN max_depth INTEGER;
+`
+
+const migration006 = `
+-- Add scan options to scan_runs to record what options each scan was run with
+ALTER TABLE scan_runs ADD COLUMN min_size INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN max_size INTEGER;
+ALTER TABLE scan_runs ADD COLUMN include_patterns TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE scan_runs ADD COLUMN exclude_patterns TEXT NOT NULL DEFAULT '[]';
+ALTER TABLE scan_runs ADD COLUMN include_hidden BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN follow_links BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN one_file_system BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN no_ignore BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN ignore_case BOOLEAN NOT NULL DEFAULT 0;
+ALTER TABLE scan_runs ADD COLUMN max_depth INTEGER;
 `

@@ -1,3 +1,38 @@
+{{define "scan-config-content"}}
+{{if .Run.Paths}}
+<div class="scan-config-section">
+    <strong>Paths:</strong>
+    <ul class="config-list">
+        {{range .Run.Paths}}<li><code>{{.}}</code></li>{{end}}
+    </ul>
+</div>
+{{end}}
+{{if or (gt .Run.MinSize 0) .Run.MaxSize .Run.IncludePatterns .Run.ExcludePatterns}}
+<div class="scan-config-section">
+    <strong>Filters:</strong>
+    <ul class="config-list">
+        {{if gt .Run.MinSize 0}}<li>Min size: {{.Run.MinSize | formatSizeInput}}</li>{{end}}
+        {{if .Run.MaxSize}}<li>Max size: {{derefInt64 .Run.MaxSize | formatSizeInput}}</li>{{end}}
+        {{if .Run.IncludePatterns}}<li>Include: {{joinPatterns .Run.IncludePatterns}}</li>{{end}}
+        {{if .Run.ExcludePatterns}}<li>Exclude: {{joinPatterns .Run.ExcludePatterns}}</li>{{end}}
+    </ul>
+</div>
+{{end}}
+{{if or .Run.IncludeHidden .Run.FollowLinks .Run.OneFileSystem .Run.NoIgnore .Run.IgnoreCase .Run.MaxDepth}}
+<div class="scan-config-section">
+    <strong>Options:</strong>
+    <ul class="config-list">
+        {{if .Run.IncludeHidden}}<li>Include hidden files</li>{{end}}
+        {{if .Run.FollowLinks}}<li>Follow symbolic links</li>{{end}}
+        {{if .Run.OneFileSystem}}<li>Same filesystem only</li>{{end}}
+        {{if .Run.NoIgnore}}<li>Ignore .gitignore</li>{{end}}
+        {{if .Run.IgnoreCase}}<li>Case-insensitive patterns</li>{{end}}
+        {{if .Run.MaxDepth}}<li>Max depth: {{derefInt .Run.MaxDepth}}</li>{{end}}
+    </ul>
+</div>
+{{end}}
+{{end}}
+
 {{define "content"}}
 <div class="page-header">
     <h1>Scan Results</h1>
@@ -39,14 +74,9 @@
                 <div class="stat-label">Redundant</div>
             </div>
         </div>
-        {{if .Run.Paths}}
-        <div class="paths-scanning">
-            <strong>Scanning:</strong>
-            {{range .Run.Paths}}
-            <code>{{.}}</code>
-            {{end}}
+        <div class="scan-config-divider">
+            {{template "scan-config-content" .}}
         </div>
-        {{end}}
     </div>
 </div>
 <script>
@@ -205,14 +235,10 @@
 {{if .Run.Paths}}
 <div class="card">
     <div class="card-header">
-        <span>Paths Scanned</span>
+        <span>Scan Configuration</span>
     </div>
     <div class="card-body">
-        <ul class="file-list">
-            {{range .Run.Paths}}
-            <li>{{.}}</li>
-            {{end}}
-        </ul>
+        {{template "scan-config-content" .}}
     </div>
 </div>
 {{end}}

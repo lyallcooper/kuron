@@ -12,17 +12,43 @@ import (
 
 // ScanRun queries
 
+// ScanRunOptions contains scan options to record with a scan run
+type ScanRunOptions struct {
+	MinSize         int64
+	MaxSize         *int64
+	IncludePatterns []string
+	ExcludePatterns []string
+	IncludeHidden   bool
+	FollowLinks     bool
+	OneFileSystem   bool
+	NoIgnore        bool
+	IgnoreCase      bool
+	MaxDepth        *int
+}
+
 // CreateScanRun creates a new scan run
-func (db *DB) CreateScanRun(configID *int64, jobID *int64, paths []string) (*ScanRun, error) {
+func (db *DB) CreateScanRun(configID *int64, jobID *int64, paths []string, opts *ScanRunOptions) (*ScanRun, error) {
 	pathsJSON, err := json.Marshal(paths)
 	if err != nil {
 		return nil, err
 	}
 
+	// Default options if not provided
+	if opts == nil {
+		opts = &ScanRunOptions{}
+	}
+
+	includePatternsJSON, _ := json.Marshal(opts.IncludePatterns)
+	excludePatternsJSON, _ := json.Marshal(opts.ExcludePatterns)
+
 	result, err := db.Exec(`
-		INSERT INTO scan_runs (scan_config_id, scheduled_job_id, paths, status, started_at)
-		VALUES (?, ?, ?, ?, ?)`,
+		INSERT INTO scan_runs (scan_config_id, scheduled_job_id, paths, status, started_at,
+			min_size, max_size, include_patterns, exclude_patterns,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		configID, jobID, string(pathsJSON), ScanRunStatusRunning, time.Now(),
+		opts.MinSize, opts.MaxSize, string(includePatternsJSON), string(excludePatternsJSON),
+		opts.IncludeHidden, opts.FollowLinks, opts.OneFileSystem, opts.NoIgnore, opts.IgnoreCase, opts.MaxDepth,
 	)
 	if err != nil {
 		return nil, err
@@ -40,7 +66,9 @@ func (db *DB) CreateScanRun(configID *int64, jobID *int64, paths []string) (*Sca
 func (db *DB) GetScanRun(id int64) (*ScanRun, error) {
 	row := db.QueryRow(`
 		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
-			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
+			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message,
+			min_size, max_size, include_patterns, exclude_patterns,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scan_runs WHERE id = ?`, id)
 	return scanScanRun(row)
 }
@@ -49,7 +77,9 @@ func (db *DB) GetScanRun(id int64) (*ScanRun, error) {
 func (db *DB) ListScanRuns(limit, offset int) ([]*ScanRun, error) {
 	rows, err := db.Query(`
 		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
-			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
+			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message,
+			min_size, max_size, include_patterns, exclude_patterns,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scan_runs ORDER BY started_at DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -76,7 +106,9 @@ func (db *DB) GetRecentScanRuns(limit int) ([]*ScanRun, error) {
 func (db *DB) GetLastRunForJob(jobID int64) (*ScanRun, error) {
 	row := db.QueryRow(`
 		SELECT id, scan_config_id, scheduled_job_id, paths, status, started_at, completed_at,
-			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message
+			files_scanned, bytes_scanned, duplicate_groups, duplicate_files, wasted_bytes, error_message,
+			min_size, max_size, include_patterns, exclude_patterns,
+			include_hidden, follow_links, one_file_system, no_ignore, ignore_case, max_depth
 		FROM scan_runs WHERE scheduled_job_id = ? ORDER BY started_at DESC LIMIT 1`, jobID)
 	return scanScanRun(row)
 }
@@ -109,10 +141,15 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	var pathsJSON string
 	var completedAt sql.NullTime
 	var errorMsg sql.NullString
+	var maxSize sql.NullInt64
+	var includePatternsJSON, excludePatternsJSON string
+	var maxDepth sql.NullInt64
 
 	err := row.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
 		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
-		&r.WastedBytes, &errorMsg)
+		&r.WastedBytes, &errorMsg,
+		&r.MinSize, &maxSize, &includePatternsJSON, &excludePatternsJSON,
+		&r.IncludeHidden, &r.FollowLinks, &r.OneFileSystem, &r.NoIgnore, &r.IgnoreCase, &maxDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +168,19 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	}
 	if errorMsg.Valid {
 		r.ErrorMessage = &errorMsg.String
+	}
+	if maxSize.Valid {
+		r.MaxSize = &maxSize.Int64
+	}
+	if err := json.Unmarshal([]byte(includePatternsJSON), &r.IncludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal include_patterns JSON for scan run %d: %v", r.ID, err)
+	}
+	if err := json.Unmarshal([]byte(excludePatternsJSON), &r.ExcludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal exclude_patterns JSON for scan run %d: %v", r.ID, err)
+	}
+	if maxDepth.Valid {
+		d := int(maxDepth.Int64)
+		r.MaxDepth = &d
 	}
 
 	return &r, nil
@@ -142,10 +192,15 @@ func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
 	var pathsJSON string
 	var completedAt sql.NullTime
 	var errorMsg sql.NullString
+	var maxSize sql.NullInt64
+	var includePatternsJSON, excludePatternsJSON string
+	var maxDepth sql.NullInt64
 
 	err := rows.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
 		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
-		&r.WastedBytes, &errorMsg)
+		&r.WastedBytes, &errorMsg,
+		&r.MinSize, &maxSize, &includePatternsJSON, &excludePatternsJSON,
+		&r.IncludeHidden, &r.FollowLinks, &r.OneFileSystem, &r.NoIgnore, &r.IgnoreCase, &maxDepth)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +219,19 @@ func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
 	}
 	if errorMsg.Valid {
 		r.ErrorMessage = &errorMsg.String
+	}
+	if maxSize.Valid {
+		r.MaxSize = &maxSize.Int64
+	}
+	if err := json.Unmarshal([]byte(includePatternsJSON), &r.IncludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal include_patterns JSON for scan run %d: %v", r.ID, err)
+	}
+	if err := json.Unmarshal([]byte(excludePatternsJSON), &r.ExcludePatterns); err != nil {
+		log.Printf("db: failed to unmarshal exclude_patterns JSON for scan run %d: %v", r.ID, err)
+	}
+	if maxDepth.Valid {
+		d := int(maxDepth.Int64)
+		r.MaxDepth = &d
 	}
 
 	return &r, nil
