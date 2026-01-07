@@ -128,30 +128,38 @@ func main() {
 		}
 	}()
 
-	// Graceful shutdown
+	// Set up signal handling for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start server in goroutine
+	serverErr := make(chan error, 1)
 	go func() {
-		sigChan := make(chan os.Signal, 1)
-		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		<-sigChan
-
-		log.Println("Shutting down...")
-
-		// Cancel cleanup goroutine
-		cleanupCancel()
-		<-cleanupDone
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		if err := server.Shutdown(ctx); err != nil {
-			log.Printf("Shutdown error: %v", err)
+		log.Printf("Server listening on http://localhost:%d", cfg.Port)
+		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+			serverErr <- err
 		}
+		close(serverErr)
 	}()
 
-	// Start server
-	log.Printf("Server listening on http://localhost:%d", cfg.Port)
-	if err := server.ListenAndServe(); err != http.ErrServerClosed {
+	// Wait for signal or server error
+	select {
+	case err := <-serverErr:
 		log.Fatalf("Server error: %v", err)
+	case <-sigChan:
+		log.Println("Shutting down...")
+	}
+
+	// Cancel cleanup goroutine and wait for it
+	cleanupCancel()
+	<-cleanupDone
+
+	// Shutdown server with timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer shutdownCancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Shutdown error: %v", err)
 	}
 
 	log.Println("Server stopped")
