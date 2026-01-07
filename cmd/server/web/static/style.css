@@ -9,6 +9,7 @@
     --success: #22863a;
     --warning: #d49f00;
     --error: #cb2431;
+    --error-hover: #b21f2d;
     --muted: #666666;
     --mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
 }
@@ -24,6 +25,7 @@
         --success: #3fb950;
         --warning: #d29922;
         --error: #f85149;
+        --error-hover: #da3633;
         --muted: #8b949e;
     }
 }
@@ -210,8 +212,8 @@ button.btn {
 }
 
 .btn-danger:hover {
-    background: #d73a49;
-    border-color: #d73a49;
+    background: var(--error-hover);
+    border-color: var(--error-hover);
 }
 
 .btn-danger:focus {
@@ -219,7 +221,7 @@ button.btn {
 }
 
 .btn-danger:active {
-    background: #d73a49;
+    background: var(--error-hover);
 }
 
 .btn-sm, a.btn-sm, button.btn-sm {
