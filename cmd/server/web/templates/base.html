@@ -394,6 +394,54 @@
         // Re-initialize after HTMX swaps
         document.body.addEventListener('htmx:afterSwap', initAll);
     })();
+
+    // Glob pattern help popup
+    function toggleGlobHelp(btn) {
+        var existing = document.getElementById('glob-help-popup');
+        if (existing) {
+            existing.remove();
+            return;
+        }
+
+        var popup = document.createElement('div');
+        popup.id = 'glob-help-popup';
+        popup.className = 'help-popup';
+        popup.innerHTML =
+            '<div class="help-popup-header">' +
+                '<strong>Glob Pattern Syntax</strong>' +
+                '<button type="button" class="help-popup-close" onclick="this.parentElement.parentElement.remove()">&times;</button>' +
+            '</div>' +
+            '<div class="help-popup-body">' +
+                '<table class="help-table">' +
+                    '<tr><td><code>?</code></td><td>Any single character (except /)</td></tr>' +
+                    '<tr><td><code>*</code></td><td>Any sequence (except /)</td></tr>' +
+                    '<tr><td><code>**</code></td><td>Any sequence including /</td></tr>' +
+                    '<tr><td><code>[a-z]</code></td><td>Character range</td></tr>' +
+                    '<tr><td><code>[!a-z]</code></td><td>Negated range</td></tr>' +
+                    '<tr><td><code>{a,b}</code></td><td>Either pattern</td></tr>' +
+                    '<tr><td><code>\\</code></td><td>Escape wildcard</td></tr>' +
+                '</table>' +
+                '<p class="help-examples"><strong>Examples:</strong> <code>**.jpg</code>, <code>**/movies/*.mp4</code>, <code>/tmp/**</code></p>' +
+            '</div>';
+
+        // Position near the button
+        var rect = btn.getBoundingClientRect();
+        popup.style.position = 'fixed';
+        popup.style.top = (rect.bottom + 8) + 'px';
+        popup.style.left = Math.max(8, rect.left - 100) + 'px';
+
+        document.body.appendChild(popup);
+
+        // Close when clicking outside
+        setTimeout(function() {
+            document.addEventListener('click', function closePopup(e) {
+                if (!popup.contains(e.target) && e.target !== btn) {
+                    popup.remove();
+                    document.removeEventListener('click', closePopup);
+                }
+            });
+        }, 0);
+    }
     </script>
 </body>
 </html>
