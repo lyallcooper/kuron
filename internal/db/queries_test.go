@@ -968,3 +968,316 @@ func TestScheduledJob_RowAndRowsConsistency(t *testing.T) {
 		t.Error("MaxDepth value mismatch")
 	}
 }
+
+// ============================================================================
+// Additional Database Tests
+// ============================================================================
+
+func TestGetEnabledJobs(t *testing.T) {
+	db := testDB(t)
+
+	// Create enabled job with next run time
+	nextRun := time.Now().Add(-time.Hour) // Past time (should trigger)
+	enabledJob := &ScheduledJob{
+		Name:           "Enabled",
+		Paths:          []string{"/test"},
+		CronExpression: "0 * * * *",
+		Action:         "scan",
+		Enabled:        true,
+		NextRunAt:      &nextRun,
+	}
+	db.CreateScheduledJob(enabledJob)
+
+	// Create disabled job
+	disabledJob := &ScheduledJob{
+		Name:           "Disabled",
+		Paths:          []string{"/test"},
+		CronExpression: "0 * * * *",
+		Action:         "scan",
+		Enabled:        false,
+		NextRunAt:      &nextRun,
+	}
+	db.CreateScheduledJob(disabledJob)
+
+	// Create enabled job without next run time
+	enabledNoNext := &ScheduledJob{
+		Name:           "Enabled No Next",
+		Paths:          []string{"/test"},
+		CronExpression: "0 * * * *",
+		Action:         "scan",
+		Enabled:        true,
+		NextRunAt:      nil,
+	}
+	db.CreateScheduledJob(enabledNoNext)
+
+	jobs, err := db.GetEnabledJobs()
+	if err != nil {
+		t.Fatalf("GetEnabledJobs failed: %v", err)
+	}
+
+	// Should return only enabled jobs (2 of them)
+	if len(jobs) != 2 {
+		t.Errorf("expected 2 enabled jobs, got %d", len(jobs))
+	}
+
+	// Verify disabled job is not included
+	for _, j := range jobs {
+		if j.Name == "Disabled" {
+			t.Error("disabled job should not be in GetEnabledJobs result")
+		}
+	}
+}
+
+func TestCleanupOldData(t *testing.T) {
+	db := testDB(t)
+
+	// Create old scan run (should be deleted)
+	oldRun, _ := db.CreateScanRun(nil, nil, []string{"/old"}, nil)
+	db.CompleteScanRun(oldRun.ID, ScanRunStatusCompleted, nil)
+
+	// Manually backdate the completed_at using embedded *sql.DB
+	_, err := db.Exec(`UPDATE scan_runs SET completed_at = datetime('now', '-60 days') WHERE id = ?`, oldRun.ID)
+	if err != nil {
+		t.Fatalf("failed to backdate scan run: %v", err)
+	}
+
+	// Create recent scan run (should be kept)
+	recentRun, _ := db.CreateScanRun(nil, nil, []string{"/recent"}, nil)
+	db.CompleteScanRun(recentRun.ID, ScanRunStatusCompleted, nil)
+
+	// Create old action (should be deleted)
+	oldAction := &Action{
+		ScanRunID:  oldRun.ID,
+		ActionType: ActionTypeHardlink,
+	}
+	db.CreateAction(oldAction)
+
+	// Run cleanup with 30 day retention
+	err = db.CleanupOldData(30)
+	if err != nil {
+		t.Fatalf("CleanupOldData failed: %v", err)
+	}
+
+	// Verify old run was deleted
+	_, err = db.GetScanRun(oldRun.ID)
+	if err == nil {
+		t.Error("old scan run should have been deleted")
+	}
+
+	// Verify recent run still exists
+	_, err = db.GetScanRun(recentRun.ID)
+	if err != nil {
+		t.Error("recent scan run should still exist")
+	}
+}
+
+func TestPagination(t *testing.T) {
+	db := testDB(t)
+
+	// Create 5 scan runs
+	for i := 0; i < 5; i++ {
+		db.CreateScanRun(nil, nil, []string{"/test"}, nil)
+		time.Sleep(10 * time.Millisecond) // Ensure different timestamps
+	}
+
+	tests := []struct {
+		name      string
+		limit     int
+		offset    int
+		wantCount int
+	}{
+		{"first page", 2, 0, 2},
+		{"second page", 2, 2, 2},
+		{"last page (partial)", 2, 4, 1},
+		{"offset beyond count", 2, 10, 0},
+		{"large limit", 100, 0, 5},
+		// Note: LIMIT 0 returns 0 rows in SQL, not "all"
+		{"zero limit returns zero", 0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runs, err := db.ListScanRuns(tt.limit, tt.offset)
+			if err != nil {
+				t.Fatalf("ListScanRuns failed: %v", err)
+			}
+			if len(runs) != tt.wantCount {
+				t.Errorf("got %d runs, want %d", len(runs), tt.wantCount)
+			}
+		})
+	}
+}
+
+func TestDuplicateGroupPaginatedSorting(t *testing.T) {
+	db := testDB(t)
+
+	run, _ := db.CreateScanRun(nil, nil, []string{"/test"}, nil)
+
+	// Create groups with different sizes
+	groups := []*DuplicateGroup{
+		{ScanRunID: run.ID, FileHash: "a", FileSize: 1000, FileCount: 2, WastedBytes: 1000, Status: DuplicateGroupStatusPending, Files: []string{"/a", "/b"}},
+		{ScanRunID: run.ID, FileHash: "b", FileSize: 3000, FileCount: 5, WastedBytes: 12000, Status: DuplicateGroupStatusPending, Files: []string{"/c", "/d"}},
+		{ScanRunID: run.ID, FileHash: "c", FileSize: 2000, FileCount: 3, WastedBytes: 4000, Status: DuplicateGroupStatusPending, Files: []string{"/e", "/f"}},
+	}
+
+	for _, g := range groups {
+		db.CreateDuplicateGroup(g)
+	}
+
+	// Test sorting by wasted (default, DESC)
+	result, err := db.ListDuplicateGroupsPaginated(DuplicateGroupQuery{
+		ScanRunID: run.ID,
+		SortBy:    "wasted",
+		SortOrder: "desc",
+	})
+	if err != nil {
+		t.Fatalf("ListDuplicateGroupsPaginated failed: %v", err)
+	}
+
+	if len(result) != 3 {
+		t.Fatalf("expected 3 groups, got %d", len(result))
+	}
+
+	// Highest wasted should be first
+	if result[0].WastedBytes != 12000 {
+		t.Errorf("first group should have WastedBytes=12000, got %d", result[0].WastedBytes)
+	}
+
+	// Test sorting by count
+	result, err = db.ListDuplicateGroupsPaginated(DuplicateGroupQuery{
+		ScanRunID: run.ID,
+		SortBy:    "count",
+		SortOrder: "desc",
+	})
+	if err != nil {
+		t.Fatalf("ListDuplicateGroupsPaginated failed: %v", err)
+	}
+
+	// Highest count should be first
+	if result[0].FileCount != 5 {
+		t.Errorf("first group should have FileCount=5, got %d", result[0].FileCount)
+	}
+}
+
+func TestCountDuplicateGroups(t *testing.T) {
+	db := testDB(t)
+
+	run, _ := db.CreateScanRun(nil, nil, []string{"/test"}, nil)
+
+	// Create groups with different statuses
+	db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "a", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusPending, Files: []string{"/a", "/b"}})
+	db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "b", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusPending, Files: []string{"/c", "/d"}})
+	db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "c", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusProcessed, Files: []string{"/e", "/f"}})
+
+	// Count all
+	count, err := db.CountDuplicateGroups(run.ID, "")
+	if err != nil {
+		t.Fatalf("CountDuplicateGroups failed: %v", err)
+	}
+	if count != 3 {
+		t.Errorf("expected 3 total groups, got %d", count)
+	}
+
+	// Count pending only
+	count, err = db.CountDuplicateGroups(run.ID, "pending")
+	if err != nil {
+		t.Fatalf("CountDuplicateGroups failed: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("expected 2 pending groups, got %d", count)
+	}
+
+	// Count processed only
+	count, err = db.CountDuplicateGroups(run.ID, "processed")
+	if err != nil {
+		t.Fatalf("CountDuplicateGroups failed: %v", err)
+	}
+	if count != 1 {
+		t.Errorf("expected 1 processed group, got %d", count)
+	}
+}
+
+func TestUpdateDuplicateGroupStatus(t *testing.T) {
+	db := testDB(t)
+
+	run, _ := db.CreateScanRun(nil, nil, []string{"/test"}, nil)
+
+	g1, _ := db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "a", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusPending, Files: []string{"/a", "/b"}})
+	g2, _ := db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "b", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusPending, Files: []string{"/c", "/d"}})
+	g3, _ := db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run.ID, FileHash: "c", FileSize: 100, FileCount: 2, WastedBytes: 100, Status: DuplicateGroupStatusPending, Files: []string{"/e", "/f"}})
+
+	// Update status for g1 and g2 only
+	err := db.UpdateDuplicateGroupStatus([]int64{g1.ID, g2.ID}, DuplicateGroupStatusProcessed)
+	if err != nil {
+		t.Fatalf("UpdateDuplicateGroupStatus failed: %v", err)
+	}
+
+	// Verify g1 and g2 are updated
+	got1, _ := db.GetDuplicateGroup(g1.ID)
+	if got1.Status != DuplicateGroupStatusProcessed {
+		t.Errorf("g1 status = %s, want processed", got1.Status)
+	}
+
+	got2, _ := db.GetDuplicateGroup(g2.ID)
+	if got2.Status != DuplicateGroupStatusProcessed {
+		t.Errorf("g2 status = %s, want processed", got2.Status)
+	}
+
+	// Verify g3 is unchanged
+	got3, _ := db.GetDuplicateGroup(g3.ID)
+	if got3.Status != DuplicateGroupStatusPending {
+		t.Errorf("g3 status = %s, want pending (should be unchanged)", got3.Status)
+	}
+}
+
+func TestDeleteScheduledJob(t *testing.T) {
+	db := testDB(t)
+
+	job := &ScheduledJob{
+		Name:           "To Delete",
+		Paths:          []string{"/test"},
+		CronExpression: "0 * * * *",
+		Action:         "scan",
+		Enabled:        true,
+	}
+	created, _ := db.CreateScheduledJob(job)
+
+	err := db.DeleteScheduledJob(created.ID)
+	if err != nil {
+		t.Fatalf("DeleteScheduledJob failed: %v", err)
+	}
+
+	_, err = db.GetScheduledJob(created.ID)
+	if err == nil {
+		t.Error("job should be deleted")
+	}
+}
+
+func TestGetDashboardStats(t *testing.T) {
+	db := testDB(t)
+
+	// Create scan runs with groups
+	run1, _ := db.CreateScanRun(nil, nil, []string{"/test"}, nil)
+	db.CompleteScanRun(run1.ID, ScanRunStatusCompleted, nil)
+	db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run1.ID, FileHash: "a", FileSize: 1000, FileCount: 2, WastedBytes: 1000, Status: DuplicateGroupStatusPending, Files: []string{"/a", "/b"}})
+	db.CreateDuplicateGroup(&DuplicateGroup{ScanRunID: run1.ID, FileHash: "b", FileSize: 2000, FileCount: 3, WastedBytes: 4000, Status: DuplicateGroupStatusProcessed, Files: []string{"/c", "/d", "/e"}})
+
+	// Create action to record saved bytes
+	action, _ := db.CreateAction(&Action{ScanRunID: run1.ID, ActionType: ActionTypeHardlink})
+	db.CompleteAction(action.ID, 1, 2, 4000, ActionStatusCompleted, nil)
+
+	totalSaved, pendingGroups, recentScans, err := db.GetDashboardStats()
+	if err != nil {
+		t.Fatalf("GetDashboardStats failed: %v", err)
+	}
+
+	if totalSaved != 4000 {
+		t.Errorf("totalSaved = %d, want 4000", totalSaved)
+	}
+	if pendingGroups != 1 {
+		t.Errorf("pendingGroups = %d, want 1", pendingGroups)
+	}
+	if recentScans != 1 {
+		t.Errorf("recentScans = %d, want 1", recentScans)
+	}
+}
