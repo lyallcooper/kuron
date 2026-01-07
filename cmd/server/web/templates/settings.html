@@ -16,6 +16,7 @@
     <div class="card-body">
         {{if .RetentionEditable}}
         <form method="POST" action="/settings">
+            {{csrfField .CSRFToken}}
             <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" for="retention_days">Retention Period</label>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">

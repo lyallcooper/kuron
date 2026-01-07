@@ -92,6 +92,9 @@ func main() {
 		log.Fatalf("Failed to initialize handlers: %v", err)
 	}
 
+	// Start CSRF token cleanup
+	handlers.StartCSRFCleanup()
+
 	// Set up HTTP server
 	mux := http.NewServeMux()
 	h.RegisterRoutes(mux)

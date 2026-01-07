@@ -38,12 +38,14 @@
                     </td>
                     <td>
                         <form action="/jobs/{{.ID}}/toggle" method="POST" style="display: inline;">
+                            {{csrfField $.CSRFToken}}
                             <button type="submit" class="btn btn-sm">
                                 {{if .Enabled}}Disable{{else}}Enable{{end}}
                             </button>
                         </form>
                         <a href="/jobs/{{.ID}}/edit" class="btn btn-sm">Edit</a>
                         <form action="/jobs/{{.ID}}/run" method="POST" style="display: inline;">
+                            {{csrfField $.CSRFToken}}
                             <button type="submit" class="btn btn-sm">Run Now</button>
                         </form>
                     </td>

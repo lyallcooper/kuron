@@ -10,6 +10,7 @@
 <div class="card">
     <div class="card-body">
         <form method="POST" action="{{if .Job}}/jobs/{{.Job.ID}}{{else}}/jobs{{end}}">
+            {{csrfField .CSRFToken}}
             <div class="form-group form-group-narrow">
                 <label class="form-label" for="name">Name</label>
                 <input type="text" id="name" name="name" class="form-input"

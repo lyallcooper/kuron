@@ -17,6 +17,7 @@ import (
 type JobsData struct {
 	Title     string
 	ActiveNav string
+	CSRFToken string
 	Jobs      []*JobView
 }
 
@@ -24,6 +25,7 @@ type JobsData struct {
 type JobFormData struct {
 	Title        string
 	ActiveNav    string
+	CSRFToken    string
 	Job          *db.ScheduledJob
 	Error        string
 	AllowedPaths []string
@@ -68,6 +70,7 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 	data := JobsData{
 		Title:     "Jobs",
 		ActiveNav: "jobs",
+		CSRFToken: h.getOrCreateCSRFToken(w, r),
 		Jobs:      views,
 	}
 
@@ -79,6 +82,7 @@ func (h *Handler) JobForm(w http.ResponseWriter, r *http.Request) {
 	data := JobFormData{
 		Title:        "New Job",
 		ActiveNav:    "jobs",
+		CSRFToken:    h.getOrCreateCSRFToken(w, r),
 		AllowedPaths: h.cfg.AllowedPaths,
 	}
 
@@ -230,6 +234,11 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 
 // CreateJob handles POST /jobs
 func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
 	job, err := h.parseJobForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -241,6 +250,7 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		data := JobFormData{
 			Title:        "New Job",
 			ActiveNav:    "jobs",
+			CSRFToken:    h.getOrCreateCSRFToken(w, r),
 			Job:          job,
 			Error:        errMsg,
 			AllowedPaths: h.cfg.AllowedPaths,
@@ -307,6 +317,7 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 	data := JobFormData{
 		Title:        "Edit Job",
 		ActiveNav:    "jobs",
+		CSRFToken:    h.getOrCreateCSRFToken(w, r),
 		Job:          job,
 		AllowedPaths: h.cfg.AllowedPaths,
 	}
@@ -316,6 +327,11 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 
 // UpdateJob handles POST /jobs/{id}
 func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
 	job, err := h.parseJobForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -328,6 +344,7 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 		data := JobFormData{
 			Title:        "Edit Job",
 			ActiveNav:    "jobs",
+			CSRFToken:    h.getOrCreateCSRFToken(w, r),
 			Job:          job,
 			Error:        errMsg,
 			AllowedPaths: h.cfg.AllowedPaths,
@@ -384,6 +401,11 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 
 // ToggleJob handles POST /jobs/{id}/toggle
 func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
 	job, err := h.db.GetScheduledJob(id)
 	if err != nil {
 		http.NotFound(w, r)
@@ -400,6 +422,10 @@ func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
 
 // RunJob handles POST /jobs/{id}/run
 func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request, id int64) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
 	h.runJobByID(w, r, id)
 }
 
@@ -450,6 +476,11 @@ func (h *Handler) runJobByID(w http.ResponseWriter, r *http.Request, id int64) {
 
 // DeleteJob handles DELETE /jobs/{id}
 func (h *Handler) DeleteJob(w http.ResponseWriter, r *http.Request, id int64) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
 	if err := h.db.DeleteScheduledJob(id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

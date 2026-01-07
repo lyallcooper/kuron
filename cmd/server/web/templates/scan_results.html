@@ -39,6 +39,7 @@
     <div class="actions-bar">
         {{if eq .Run.Status "running"}}
         <form action="/scans/runs/{{.Run.ID}}/cancel" method="POST">
+            {{csrfField .CSRFToken}}
             <button type="submit" class="btn btn-danger">Cancel Scan</button>
         </form>
         {{end}}
@@ -288,6 +289,7 @@
     <div class="card-body">
         <!-- Hidden inputs for action buttons -->
         <form id="action-form">
+            {{csrfField .CSRFToken}}
             <input type="hidden" name="group_ids" id="selected-groups" value="">
             <input type="hidden" name="select_all" id="select-all-flag" value="">
             <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">

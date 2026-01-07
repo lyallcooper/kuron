@@ -12,6 +12,7 @@
         <p>Run a one-time scan without creating a scheduled job.</p>
 
         <form method="POST" action="/scans/quick">
+            {{csrfField .CSRFToken}}
             <div class="form-group form-group-narrow">
                 <label class="form-label">Paths to Scan <button type="button" class="help-icon" onclick="togglePathsHelp(this, {{if .AllowedPaths}}true{{else}}false{{end}})">?</button></label>
                 <div class="list-input" id="paths-container">

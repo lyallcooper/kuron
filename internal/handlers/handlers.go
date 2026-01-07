@@ -49,6 +49,9 @@ func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanne
 			}
 			return plural
 		},
+		"csrfField": func(token string) template.HTML {
+			return template.HTML(`<input type="hidden" name="` + csrfFormField + `" value="` + token + `">`)
+		},
 	}
 
 	// Get static files

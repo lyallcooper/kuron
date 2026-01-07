@@ -15,6 +15,7 @@ import (
 type SettingsData struct {
 	Title             string
 	ActiveNav         string
+	CSRFToken         string
 	RetentionDays     int
 	RetentionEditable bool
 	Version           string
@@ -44,6 +45,7 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	data := SettingsData{
 		Title:             "Settings",
 		ActiveNav:         "settings",
+		CSRFToken:         h.getOrCreateCSRFToken(w, r),
 		RetentionDays:     h.cfg.RetentionDays,
 		RetentionEditable: !h.cfg.RetentionDaysFromEnv,
 		Version:           h.version,
@@ -60,8 +62,8 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettings handles POST /settings
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		http.Redirect(w, r, "/settings?error=Invalid+form+data", http.StatusSeeOther)
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
 		return
 	}
 

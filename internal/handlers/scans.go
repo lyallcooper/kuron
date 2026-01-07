@@ -16,6 +16,7 @@ import (
 type ScanResultsData struct {
 	Title     string
 	ActiveNav string
+	CSRFToken string
 	Run       *db.ScanRun
 	Job       *db.ScheduledJob // The job this scan was from, if any
 	Groups    []*db.DuplicateGroup
@@ -35,6 +36,7 @@ type ScanResultsData struct {
 type QuickScanData struct {
 	Title           string
 	ActiveNav       string
+	CSRFToken       string
 	Paths           []string
 	MinSize         string
 	MaxSize         string
@@ -59,6 +61,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		data := QuickScanData{
 			Title:        "Quick Scan",
 			ActiveNav:    "jobs",
+			CSRFToken:    h.getOrCreateCSRFToken(w, r),
 			AllowedPaths: h.cfg.AllowedPaths,
 		}
 
@@ -72,8 +75,8 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
 		return
 	}
 
@@ -119,6 +122,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		data := QuickScanData{
 			Title:           "Quick Scan",
 			ActiveNav:       "jobs",
+			CSRFToken:       h.getOrCreateCSRFToken(w, r),
 			Paths:           paths,
 			MinSize:         minSizeStr,
 			MaxSize:         maxSizeStr,
@@ -308,6 +312,7 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 	data := ScanResultsData{
 		Title:      "Scan Results",
 		ActiveNav:  "history",
+		CSRFToken:  h.getOrCreateCSRFToken(w, r),
 		Run:        run,
 		Job:        job,
 		Groups:     groups,
@@ -325,8 +330,8 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 
 // HandleAction handles POST /scans/runs/{id}/action
 func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr string) {
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
 		return
 	}
 
@@ -388,6 +393,11 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 
 	// For HTMX requests, show modal with results
 	if r.Header.Get("HX-Request") == "true" {
+		// Get CSRF token from cookie for the "Run for Real" form
+		var csrfToken string
+		if cookie, err := r.Cookie(csrfCookieName); err == nil {
+			csrfToken = cookie.Value
+		}
 		h.renderActionResultModal(w, renderActionModalParams{
 			Action:       action,
 			Output:       result.Output,
@@ -397,6 +407,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 			GroupIDs:     groupIDsStr,
 			SelectAll:    selectAll,
 			StatusFilter: statusFilter,
+			CSRFToken:    csrfToken,
 		})
 		return
 	}
@@ -414,6 +425,7 @@ type renderActionModalParams struct {
 	GroupIDs     string
 	SelectAll    bool
 	StatusFilter string
+	CSRFToken    string
 }
 
 // renderActionResultModal renders the action results modal
@@ -446,6 +458,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 			hx-post="/scans/runs/` + p.RunID + `/action"
 			hx-target="#modal-backdrop"
 			hx-swap="outerHTML">
+			<input type="hidden" name="` + csrfFormField + `" value="` + p.CSRFToken + `">
 			<input type="hidden" name="action" value="` + p.Action + `">
 			<input type="hidden" name="group_ids" value="` + html.EscapeString(p.GroupIDs) + `">
 			<input type="hidden" name="select_all" value="` + selectAllValue + `">
@@ -496,6 +509,11 @@ document.addEventListener('keydown', function(e) {
 
 // CancelScan handles POST /scans/runs/{id}/cancel
 func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr string) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
 	runID, err := strconv.ParseInt(runIDStr, 10, 64)
 	if err != nil {
 		http.NotFound(w, r)
