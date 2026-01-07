@@ -40,7 +40,7 @@
                     <input type="text" id="min_size" name="min_size" class="form-input"
                            value="{{.MinSize}}" placeholder="e.g., 1MB"
                            autocorrect="off" autocapitalize="off">
-                    <p class="form-help">e.g., 100KB, 1MB, 1GB</p>
+                    <p class="form-help">e.g., 100KB, 1MB, 1GB <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></p>
                 </div>
 
                 <div class="form-group">
@@ -48,7 +48,7 @@
                     <input type="text" id="max_size" name="max_size" class="form-input"
                            value="{{.MaxSize}}" placeholder="e.g., 10GB"
                            autocorrect="off" autocapitalize="off">
-                    <p class="form-help">Leave empty for no limit</p>
+                    <p class="form-help">Leave empty for no limit <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></p>
                 </div>
             </div>
 

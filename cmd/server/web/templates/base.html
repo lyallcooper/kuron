@@ -395,34 +395,23 @@
         document.body.addEventListener('htmx:afterSwap', initAll);
     })();
 
-    // Glob pattern help popup
-    function toggleGlobHelp(btn) {
-        var existing = document.getElementById('glob-help-popup');
+    // Generic help popup system
+    function showHelpPopup(btn, id, title, content) {
+        var existing = document.getElementById(id);
         if (existing) {
             existing.remove();
             return;
         }
 
         var popup = document.createElement('div');
-        popup.id = 'glob-help-popup';
+        popup.id = id;
         popup.className = 'help-popup';
         popup.innerHTML =
             '<div class="help-popup-header">' +
-                '<strong>Glob Pattern Syntax</strong>' +
+                '<strong>' + title + '</strong>' +
                 '<button type="button" class="help-popup-close" onclick="this.parentElement.parentElement.remove()">&times;</button>' +
             '</div>' +
-            '<div class="help-popup-body">' +
-                '<table class="help-table">' +
-                    '<tr><td><code>?</code></td><td>Any single character (except /)</td></tr>' +
-                    '<tr><td><code>*</code></td><td>Any sequence (except /)</td></tr>' +
-                    '<tr><td><code>**</code></td><td>Any sequence including /</td></tr>' +
-                    '<tr><td><code>[a-z]</code></td><td>Character range</td></tr>' +
-                    '<tr><td><code>[!a-z]</code></td><td>Negated range</td></tr>' +
-                    '<tr><td><code>{a,b}</code></td><td>Either pattern</td></tr>' +
-                    '<tr><td><code>\\</code></td><td>Escape wildcard</td></tr>' +
-                '</table>' +
-                '<p class="help-examples"><strong>Examples:</strong> <code>**.jpg</code>, <code>**/movies/*.mp4</code>, <code>/tmp/**</code></p>' +
-            '</div>';
+            '<div class="help-popup-body">' + content + '</div>';
 
         // Position near the button
         var rect = btn.getBoundingClientRect();
@@ -441,6 +430,48 @@
                 }
             });
         }, 0);
+    }
+
+    // Glob pattern help popup
+    function toggleGlobHelp(btn) {
+        showHelpPopup(btn, 'glob-help-popup', 'Glob Pattern Syntax',
+            '<table class="help-table">' +
+                '<tr><td><code>?</code></td><td>Any single character (except /)</td></tr>' +
+                '<tr><td><code>*</code></td><td>Any sequence (except /)</td></tr>' +
+                '<tr><td><code>**</code></td><td>Any sequence including /</td></tr>' +
+                '<tr><td><code>[a-z]</code></td><td>Character range</td></tr>' +
+                '<tr><td><code>[!a-z]</code></td><td>Negated range</td></tr>' +
+                '<tr><td><code>{a,b}</code></td><td>Either pattern</td></tr>' +
+                '<tr><td><code>\\</code></td><td>Escape wildcard</td></tr>' +
+            '</table>' +
+            '<p class="help-examples"><strong>Examples:</strong> <code>**.jpg</code>, <code>**/movies/*.mp4</code>, <code>/tmp/**</code></p>'
+        );
+    }
+
+    // Size format help popup
+    function toggleSizeHelp(btn) {
+        showHelpPopup(btn, 'size-help-popup', 'Size Format',
+            '<table class="help-table">' +
+                '<tr><td><code>B</code></td><td>Bytes</td></tr>' +
+                '<tr><td><code>KB</code></td><td>Kilobytes (1000)</td></tr>' +
+                '<tr><td><code>KiB</code></td><td>Kibibytes (1024)</td></tr>' +
+                '<tr><td><code>MB</code></td><td>Megabytes (1000²)</td></tr>' +
+                '<tr><td><code>MiB</code></td><td>Mebibytes (1024²)</td></tr>' +
+                '<tr><td><code>GB</code></td><td>Gigabytes (1000³)</td></tr>' +
+                '<tr><td><code>GiB</code></td><td>Gibibytes (1024³)</td></tr>' +
+                '<tr><td><code>TB</code></td><td>Terabytes (1000⁴)</td></tr>' +
+            '</table>' +
+            '<p class="help-examples"><strong>Examples:</strong> <code>100KB</code>, <code>1.5GB</code>, <code>500MiB</code></p>'
+        );
+    }
+
+    // Deduplication action help popup
+    function toggleActionHelp(btn) {
+        showHelpPopup(btn, 'action-help-popup', 'Deduplication Actions',
+            '<p><strong>Scan Only</strong><br>Find duplicates but don\'t modify files. Review results manually.</p>' +
+            '<p><strong>Hardlink</strong><br>Replace duplicates with hard links. All files point to the same data on disk, saving space. Changes to one file affect all linked copies. Cannot span filesystems.</p>' +
+            '<p><strong>Reflink</strong><br>Replace duplicates with copy-on-write links. Saves space like hardlinks, but changes create independent copies. Requires filesystem support (Btrfs, XFS, APFS).</p>'
+        );
     }
     </script>
 </body>

@@ -497,6 +497,16 @@ button.btn {
     font-size: 0.7rem;
 }
 
+.help-popup-body p {
+    margin: 0 0 0.75rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.help-popup-body p:last-child {
+    margin-bottom: 0;
+}
+
 .help-examples {
     margin: 0;
     font-size: 0.7rem;
