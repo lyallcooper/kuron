@@ -1,5 +1,6 @@
 # Binaries
 kuron
+/desktop
 /server
 *.exe
 *.dll
@@ -38,3 +39,5 @@ data/
 # Build
 /dist/
 tmp/server
+build/fclones/
+cmd/desktop/build/bin/

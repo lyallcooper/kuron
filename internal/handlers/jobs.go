@@ -155,7 +155,7 @@ func (h *Handler) JobRoutes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// GET /jobs/{id} = view (redirect to edit for now)
-	http.Redirect(w, r, "/jobs/"+idStr+"/edit", http.StatusSeeOther)
+	h.redirect(w, r, "/jobs/"+idStr+"/edit")
 }
 
 // parseJobForm parses the job form and returns a ScheduledJob
@@ -327,7 +327,7 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/jobs", http.StatusSeeOther)
+	h.redirect(w, r, "/jobs")
 }
 
 // EditJobForm handles GET /jobs/{id}/edit
@@ -421,7 +421,7 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	http.Redirect(w, r, "/jobs", http.StatusSeeOther)
+	h.redirect(w, r, "/jobs")
 }
 
 // ToggleJob handles POST /jobs/{id}/toggle
@@ -442,7 +442,7 @@ func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	http.Redirect(w, r, "/jobs", http.StatusSeeOther)
+	h.redirect(w, r, "/jobs")
 }
 
 // RunJob handles POST /jobs/{id}/run
@@ -496,7 +496,7 @@ func (h *Handler) runJobByID(w http.ResponseWriter, r *http.Request, id int64) {
 	nextRun := schedule.Next(now)
 	h.db.UpdateJobLastRun(id, now, nextRun)
 
-	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
+	h.redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10))
 }
 
 // DeleteJob handles DELETE /jobs/{id}
@@ -511,12 +511,5 @@ func (h *Handler) DeleteJob(w http.ResponseWriter, r *http.Request, id int64) {
 		return
 	}
 
-	// For HTMX requests, return empty response
-	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Redirect", "/jobs")
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	http.Redirect(w, r, "/jobs", http.StatusSeeOther)
+	h.redirect(w, r, "/jobs")
 }

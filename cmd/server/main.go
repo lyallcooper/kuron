@@ -2,23 +2,15 @@ package main
 
 import (
 	"context"
-	"embed"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/lyallcooper/kuron/internal/config"
-	"github.com/lyallcooper/kuron/internal/db"
-	"github.com/lyallcooper/kuron/internal/fclones"
-	"github.com/lyallcooper/kuron/internal/handlers"
-	"github.com/lyallcooper/kuron/internal/scheduler"
-	"github.com/lyallcooper/kuron/internal/services"
+	"github.com/lyallcooper/kuron/internal/app"
+	"github.com/lyallcooper/kuron/internal/webfs"
 )
 
 // Version info - injected at build time via ldflags
@@ -27,106 +19,20 @@ var (
 	commit  = "unknown"
 )
 
-//go:embed all:web
-var webFS embed.FS
-
 func main() {
-	// Load configuration
-	cfg := config.Load()
-
-	log.Printf("kuron starting...")
-	log.Printf("  Database: %s", cfg.DBPath)
-	log.Printf("  Port: %d", cfg.Port)
-
-	// Initialize database
-	database, err := db.Open(cfg.DBPath)
+	// Create server using shared app package
+	server, err := app.CreateServer(app.ServerConfig{
+		Version: version,
+		Commit:  commit,
+		WebFS:   webfs.FS,
+	})
 	if err != nil {
-		log.Fatalf("Failed to open database: %v", err)
+		log.Fatalf("Failed to create server: %v", err)
 	}
-	defer database.Close()
+	defer server.Cleanup()
 
-	// Load retention from DB if not set via env var
-	if !cfg.RetentionDaysFromEnv {
-		if val, err := database.GetSetting("retention_days"); err == nil && val != "" {
-			if days, err := strconv.Atoi(val); err == nil && days >= 1 && days <= 365 {
-				cfg.RetentionDays = days
-			}
-		}
-	}
-	log.Printf("  Retention: %d days", cfg.RetentionDays)
-
-	// Initialize fclones executor
-	executor := fclones.NewExecutor()
-
-	// Check fclones is installed
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	if err := executor.CheckInstalled(ctx); err != nil {
-		log.Printf("Warning: fclones not found: %v", err)
-		log.Printf("  Install fclones to enable scanning: https://github.com/pkolaczk/fclones")
-	}
-	cancel()
-
-	// Initialize scanner service
-	scanner := services.NewScanner(database, executor, cfg.ScanTimeout)
-
-	// Initialize scheduler
-	sched := scheduler.New(database, scanner)
-	sched.Start()
-	defer sched.Stop()
-
-	// Build version string
-	// For tagged versions (v*), use as-is
-	// For branch builds (main, dev, etc.), append short commit hash
-	versionStr := version
-	if !strings.HasPrefix(version, "v") {
-		shortCommit := commit
-		if len(shortCommit) > 7 {
-			shortCommit = shortCommit[:7]
-		}
-		versionStr = version + "-" + shortCommit
-	}
-
-	// Initialize handlers
-	h, err := handlers.New(database, cfg, executor, scanner, webFS, versionStr)
-	if err != nil {
-		log.Fatalf("Failed to initialize handlers: %v", err)
-	}
-
-	// Start CSRF token cleanup
-	handlers.StartCSRFCleanup()
-
-	// Set up HTTP server
-	mux := http.NewServeMux()
-	h.RegisterRoutes(mux)
-
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Port),
-		Handler:      mux,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 0, // No timeout for SSE
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Start cleanup goroutine with shutdown coordination
-	cleanupDone := make(chan struct{})
-	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
-	go func() {
-		defer close(cleanupDone)
-		ticker := time.NewTicker(24 * time.Hour)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-cleanupCtx.Done():
-				return
-			case <-ticker.C:
-				log.Printf("Running cleanup (retention: %d days)", cfg.RetentionDays)
-				if err := database.CleanupOldData(cfg.RetentionDays); err != nil {
-					log.Printf("Cleanup error: %v", err)
-				}
-			}
-		}
-	}()
+	// Start cleanup loop
+	cleanupCancel, cleanupDone := server.StartCleanupLoop()
 
 	// Set up signal handling for graceful shutdown
 	sigChan := make(chan os.Signal, 1)
@@ -135,8 +41,8 @@ func main() {
 	// Start server in goroutine
 	serverErr := make(chan error, 1)
 	go func() {
-		log.Printf("Server listening on http://localhost:%d", cfg.Port)
-		if err := server.ListenAndServe(); err != http.ErrServerClosed {
+		log.Printf("Server listening on http://localhost:%d", server.Config.Port)
+		if err := server.HTTP.ListenAndServe(); err != http.ErrServerClosed {
 			serverErr <- err
 		}
 		close(serverErr)
@@ -158,7 +64,7 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := server.HTTP.Shutdown(shutdownCtx); err != nil {
 		log.Printf("Shutdown error: %v", err)
 	}
 

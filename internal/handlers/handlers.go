@@ -18,18 +18,19 @@ import (
 
 // Handler holds all HTTP handlers
 type Handler struct {
-	db       *db.DB
-	cfg      *config.Config
-	executor fclones.ExecutorInterface
-	scanner  *services.Scanner
-	webFS    embed.FS
-	funcMap  template.FuncMap
-	staticFS fs.FS
-	version  string
+	db          *db.DB
+	cfg         *config.Config
+	executor    fclones.ExecutorInterface
+	scanner     *services.Scanner
+	webFS       embed.FS
+	funcMap     template.FuncMap
+	staticFS    fs.FS
+	version     string
+	disableCSRF bool
 }
 
 // New creates a new Handler
-func New(database *db.DB, cfg *config.Config, executor fclones.ExecutorInterface, scanner *services.Scanner, webFS embed.FS, version string) (*Handler, error) {
+func New(database *db.DB, cfg *config.Config, executor fclones.ExecutorInterface, scanner *services.Scanner, webFS embed.FS, version string, disableCSRF bool) (*Handler, error) {
 	// Template functions
 	funcMap := template.FuncMap{
 		"formatBytes":     formatBytes,
@@ -55,21 +56,48 @@ func New(database *db.DB, cfg *config.Config, executor fclones.ExecutorInterface
 	}
 
 	// Get static files
-	staticFS, err := fs.Sub(webFS, "web/static")
+	staticFS, err := fs.Sub(webFS, "static")
 	if err != nil {
 		return nil, err
 	}
 
 	return &Handler{
-		db:       database,
-		cfg:      cfg,
-		executor: executor,
-		scanner:  scanner,
-		webFS:    webFS,
-		funcMap:  funcMap,
-		staticFS: staticFS,
-		version:  version,
+		db:          database,
+		cfg:         cfg,
+		executor:    executor,
+		scanner:     scanner,
+		webFS:       webFS,
+		funcMap:     funcMap,
+		staticFS:    staticFS,
+		version:     version,
+		disableCSRF: disableCSRF,
 	}, nil
+}
+
+// redirect performs a redirect appropriate for the context:
+// - HTMX requests: HX-Redirect header (client-side navigation)
+// - Desktop mode regular forms: JavaScript redirect (Wails webview compatibility)
+// - Browser mode regular forms: HTTP 303 redirect
+func (h *Handler) redirect(w http.ResponseWriter, r *http.Request, url string) {
+	// HTMX requests use HX-Redirect header
+	if r.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", url)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	// Desktop mode: HTTP redirects don't work reliably through the Wails
+	// webview proxy, so use JavaScript navigation instead
+	if h.disableCSRF {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		// Using a minimal HTML page with immediate redirect
+		fmt.Fprintf(w, `<!DOCTYPE html><html><head><meta charset="utf-8"><script>window.location.replace(%q);</script></head><body></body></html>`, url)
+		return
+	}
+
+	// Regular browser: standard HTTP redirect
+	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
 // RegisterRoutes registers all HTTP routes
@@ -105,7 +133,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 // render executes a page template with the base layout
 func (h *Handler) render(w http.ResponseWriter, pageName string, data any) {
 	// Clone and parse base + specific page template
-	tmpl, err := template.New("base.html").Funcs(h.funcMap).ParseFS(h.webFS, "web/templates/base.html", "web/templates/"+pageName)
+	tmpl, err := template.New("base.html").Funcs(h.funcMap).ParseFS(h.webFS, "templates/base.html", "templates/"+pageName)
 	if err != nil {
 		http.Error(w, "Template error: "+err.Error(), http.StatusInternalServerError)
 		return

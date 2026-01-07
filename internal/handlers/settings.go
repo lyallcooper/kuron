@@ -69,27 +69,27 @@ func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	// Only allow updating if not set via env var
 	if h.cfg.RetentionDaysFromEnv {
-		http.Redirect(w, r, "/settings?error=Retention+is+set+via+environment+variable", http.StatusSeeOther)
+		h.redirect(w, r, "/settings?error=Retention+is+set+via+environment+variable")
 		return
 	}
 
 	retentionStr := r.FormValue("retention_days")
 	retention, err := strconv.Atoi(retentionStr)
 	if err != nil || retention < 1 || retention > 9999 {
-		http.Redirect(w, r, "/settings?error=Retention+must+be+between+1+and+9999+days", http.StatusSeeOther)
+		h.redirect(w, r, "/settings?error=Retention+must+be+between+1+and+9999+days")
 		return
 	}
 
 	// Save to database
 	if err := h.db.SetSetting("retention_days", retentionStr); err != nil {
-		http.Redirect(w, r, "/settings?error=Failed+to+save+setting", http.StatusSeeOther)
+		h.redirect(w, r, "/settings?error=Failed+to+save+setting")
 		return
 	}
 
 	// Update in-memory config
 	h.cfg.RetentionDays = retention
 
-	http.Redirect(w, r, "/settings?success=Settings+saved", http.StatusSeeOther)
+	h.redirect(w, r, "/settings?success=Settings+saved")
 }
 
 // SuggestPaths handles GET /api/paths/suggest?prefix=...

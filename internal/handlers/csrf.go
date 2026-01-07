@@ -100,6 +100,11 @@ func (h *Handler) getOrCreateCSRFToken(w http.ResponseWriter, r *http.Request) s
 
 // validateCSRF checks CSRF token on POST requests
 func (h *Handler) validateCSRF(r *http.Request) bool {
+	// Skip CSRF validation if disabled (desktop mode)
+	if h.disableCSRF {
+		return true
+	}
+
 	// Only validate POST, PUT, DELETE
 	if r.Method == http.MethodGet || r.Method == http.MethodHead || r.Method == http.MethodOptions {
 		return true

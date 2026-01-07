@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Kuron",
+  "outputfilename": "Kuron",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "frontend:dev:serverUrl": "",
+  "wailsjsdir": ".",
+  "author": {
+    "name": "Lyall Cooper"
+  },
+  "info": {
+    "companyName": "",
+    "productName": "Kuron",
+    "productVersion": "0.1.0",
+    "copyright": "",
+    "comments": "Duplicate file finder"
+  }
+}

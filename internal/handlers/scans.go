@@ -209,7 +209,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10), http.StatusSeeOther)
+	h.redirect(w, r, "/scans/runs/"+strconv.FormatInt(run.ID, 10))
 }
 
 const defaultPageSize = 50
@@ -359,7 +359,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 	} else {
 		// Parse individual group IDs
 		if groupIDsStr == "" {
-			http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+			h.redirect(w, r, "/scans/runs/"+runIDStr)
 			return
 		}
 
@@ -373,7 +373,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 	}
 
 	if len(groupIDs) == 0 {
-		http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+		h.redirect(w, r, "/scans/runs/"+runIDStr)
 		return
 	}
 
@@ -412,7 +412,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		return
 	}
 
-	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+	h.redirect(w, r, "/scans/runs/"+runIDStr)
 }
 
 // renderActionModalParams holds parameters for rendering the action result modal
@@ -521,7 +521,7 @@ func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr st
 	}
 
 	h.scanner.CancelScan(runID)
-	http.Redirect(w, r, "/scans/runs/"+runIDStr, http.StatusSeeOther)
+	h.redirect(w, r, "/scans/runs/"+runIDStr)
 }
 
 // parseSizeWithError parses a human-readable size string to bytes, returning an error if invalid
