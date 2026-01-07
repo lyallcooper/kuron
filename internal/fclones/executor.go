@@ -326,7 +326,7 @@ func parseBytes(s string) int64 {
 	}
 
 	num, err := strconv.ParseFloat(numStr, 64)
-	if err != nil {
+	if err != nil || num < 0 {
 		return 0
 	}
 

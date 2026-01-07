@@ -570,5 +570,9 @@ func parseSizeWithError(s string) (int64, error) {
 		return 0, fmt.Errorf("invalid size format")
 	}
 
+	if n < 0 {
+		return 0, fmt.Errorf("size cannot be negative")
+	}
+
 	return int64(n * float64(multiplier)), nil
 }

@@ -108,7 +108,8 @@ func (c *Config) IsPathAllowed(path string) bool {
 	path = filepath.Clean(path)
 
 	for _, allowed := range c.AllowedPaths {
-		// allowed paths are already normalized in getEnvPaths
+		// Normalize allowed path for consistent comparison
+		allowed = filepath.Clean(allowed)
 		if path == allowed || strings.HasPrefix(path, allowed+string(filepath.Separator)) {
 			return true
 		}
