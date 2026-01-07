@@ -41,6 +41,7 @@ type QuickScanData struct {
 	IncludePatterns []string
 	ExcludePatterns []string
 	Error           string
+	AllowedPaths    []string
 
 	// Advanced options
 	IncludeHidden bool
@@ -56,8 +57,9 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	// GET - show form
 	if r.Method == http.MethodGet {
 		data := QuickScanData{
-			Title:     "Quick Scan",
-			ActiveNav: "jobs",
+			Title:        "Quick Scan",
+			ActiveNav:    "jobs",
+			AllowedPaths: h.cfg.AllowedPaths,
 		}
 
 		h.render(w, "quick_scan.html", data)

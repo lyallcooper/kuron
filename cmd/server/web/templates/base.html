@@ -458,9 +458,72 @@
         }, 0);
     }
 
+    // Paths help popup
+    function togglePathsHelp(btn, restricted) {
+        var content = '<p>Directories to scan for duplicate files. Subdirectories are included recursively.</p>';
+        if (restricted) {
+            content += '<p><strong>Note:</strong> Scanning is restricted to specific paths configured by your administrator via <code>KURON_ALLOWED_PATHS</code>.</p>';
+        } else {
+            content += '<p>Any accessible path on the system can be scanned.</p>';
+        }
+        showHelpPopup(btn, 'paths-help-popup', 'Paths to Scan', content);
+    }
+
+    // Cron schedule help popup
+    function toggleCronHelp(btn) {
+        showHelpPopup(btn, 'cron-help-popup', 'Cron Schedule',
+            '<p>Standard cron format: <code>min hour day month weekday</code></p>' +
+            '<table class="help-table">' +
+                '<tr><td><code>*</code></td><td>Any value</td></tr>' +
+                '<tr><td><code>*/n</code></td><td>Every n units</td></tr>' +
+                '<tr><td><code>1,15</code></td><td>Specific values</td></tr>' +
+                '<tr><td><code>1-5</code></td><td>Range of values</td></tr>' +
+            '</table>' +
+            '<p class="help-examples"><strong>Examples:</strong><br>' +
+                '<code>30 2 * * *</code> daily at 02:30<br>' +
+                '<code>0 */6 * * *</code> every 6 hours<br>' +
+                '<code>0 9 * * 1</code> Mondays at 09:00</p>'
+        );
+    }
+
+    // Advanced options help popup
+    function toggleAdvancedHelp(btn, option) {
+        var help = {
+            hidden: {
+                title: 'Include Hidden Files',
+                content: '<p>Scan files and directories that start with a dot (e.g., <code>.config</code>, <code>.cache</code>).</p><p>By default, hidden files are skipped.</p>'
+            },
+            symlinks: {
+                title: 'Follow Symbolic Links',
+                content: '<p>Follow symbolic links when scanning directories.</p><p><strong>Warning:</strong> This may cause files to be scanned multiple times or create infinite loops if symlinks form cycles.</p>'
+            },
+            filesystem: {
+                title: 'Same Filesystem Only',
+                content: '<p>Don\'t cross filesystem boundaries or mount points during scanning.</p><p>Useful when scanning from root to avoid network mounts, external drives, or special filesystems like <code>/proc</code>.</p>'
+            },
+            gitignore: {
+                title: 'Ignore .gitignore',
+                content: '<p>Don\'t respect <code>.gitignore</code> and <code>.fdignore</code> files.</p><p>By default, files matching patterns in these files are skipped.</p>'
+            },
+            'case': {
+                title: 'Case-Insensitive Patterns',
+                content: '<p>Make include/exclude pattern matching case-insensitive.</p><p>For example, <code>*.JPG</code> would also match <code>photo.jpg</code>.</p>'
+            },
+            depth: {
+                title: 'Max Depth',
+                content: '<p>Limit how deep to recurse into subdirectories.</p><p><code>0</code> = scan only the specified directories, no subdirectories.<br><code>1</code> = scan one level of subdirectories.<br>Empty = unlimited depth.</p>'
+            }
+        };
+        var h = help[option];
+        if (h) {
+            showHelpPopup(btn, 'advanced-help-popup', h.title, h.content);
+        }
+    }
+
     // Glob pattern help popup
     function toggleGlobHelp(btn) {
-        showHelpPopup(btn, 'glob-help-popup', 'Glob Pattern Syntax',
+        showHelpPopup(btn, 'glob-help-popup', 'Include/Exclude Patterns',
+            '<p>Glob patterns to filter which files are scanned. Leave empty to include all files.</p>' +
             '<table class="help-table">' +
                 '<tr><td><code>?</code></td><td>Any single character (except /)</td></tr>' +
                 '<tr><td><code>*</code></td><td>Any sequence (except /)</td></tr>' +
@@ -476,7 +539,8 @@
 
     // Size format help popup
     function toggleSizeHelp(btn) {
-        showHelpPopup(btn, 'size-help-popup', 'Size Format',
+        showHelpPopup(btn, 'size-help-popup', 'File Size Filter',
+            '<p>Filter files by size. Leave empty for no limit.</p>' +
             '<table class="help-table">' +
                 '<tr><td><code>B</code></td><td>Bytes</td></tr>' +
                 '<tr><td><code>KB</code></td><td>Kilobytes (1000)</td></tr>' +
@@ -487,13 +551,14 @@
                 '<tr><td><code>GiB</code></td><td>Gibibytes (1024³)</td></tr>' +
                 '<tr><td><code>TB</code></td><td>Terabytes (1000⁴)</td></tr>' +
             '</table>' +
-            '<p class="help-examples"><strong>Examples:</strong> <code>100KB</code>, <code>1.5GB</code>, <code>500MiB</code></p>'
+            '<p class="help-examples"><strong>Examples:</strong> <code>100 KB</code>, <code>1.5 GB</code>, <code>500 MiB</code></p>'
         );
     }
 
     // Deduplication action help popup
     function toggleActionHelp(btn) {
-        showHelpPopup(btn, 'action-help-popup', 'Deduplication Actions',
+        showHelpPopup(btn, 'action-help-popup', 'Action After Scan',
+            '<p>What to do with duplicate files after scanning.</p>' +
             '<p><strong>Scan Only</strong><br>Find duplicates but don\'t modify files. Review results manually.</p>' +
             '<p><strong>Hardlink</strong><br>Replace duplicates with hard links. All files point to the same data on disk, saving space. Changes to one file affect all linked copies. Cannot span filesystems.</p>' +
             '<p><strong>Reflink</strong><br>Replace duplicates with copy-on-write links. Saves space like hardlinks, but changes create independent copies. Requires filesystem support (Btrfs, XFS, APFS).</p>'

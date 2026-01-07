@@ -19,7 +19,7 @@
             </div>
 
             <div class="form-group form-group-narrow">
-                <label class="form-label">Paths to Scan</label>
+                <label class="form-label">Paths to Scan <button type="button" class="help-icon" onclick="togglePathsHelp(this, {{if .AllowedPaths}}true{{else}}false{{end}})">?</button></label>
                 <div class="list-input" id="paths-container">
                     <div class="list-items" id="paths-list">
                         {{if .Job}}{{range .Job.Paths}}
@@ -37,30 +37,27 @@
                         <button type="button" class="btn" onclick="addPath()">Add</button>
                     </div>
                 </div>
-                <p class="form-help">Add paths to scan for duplicates</p>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
-                    <label class="form-label" for="min_size">Minimum Size</label>
+                    <label class="form-label" for="min_size">Minimum Size <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></label>
                     <input type="text" id="min_size" name="min_size" class="form-input"
                            value="{{if .Job}}{{formatSizeInput .Job.MinSize}}{{end}}"
-                           placeholder="e.g., 1MB" autocorrect="off" autocapitalize="off">
-                    <p class="form-help">e.g., 100KB, 1MB, 1GB <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></p>
+                           placeholder="1 MB" autocorrect="off" autocapitalize="off">
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="max_size">Maximum Size</label>
+                    <label class="form-label" for="max_size">Maximum Size <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></label>
                     <input type="text" id="max_size" name="max_size" class="form-input"
                            value="{{if .Job}}{{if .Job.MaxSize}}{{formatSizeInput (derefInt64 .Job.MaxSize)}}{{end}}{{end}}"
-                           placeholder="e.g., 10GB" autocorrect="off" autocapitalize="off">
-                    <p class="form-help">Leave empty for no limit <button type="button" class="help-icon" onclick="toggleSizeHelp(this)">?</button></p>
+                           placeholder="10 GB" autocorrect="off" autocapitalize="off">
                 </div>
             </div>
 
             <div class="form-row-wide">
                 <div class="form-group">
-                    <label class="form-label">Include Paths</label>
+                    <label class="form-label">Include Patterns <button type="button" class="help-icon" onclick="toggleGlobHelp(this)">?</button></label>
                     <div class="list-input" id="include-container">
                         <div class="list-items" id="include-list">
                             {{if .Job}}{{range .Job.IncludePatterns}}
@@ -72,16 +69,15 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-include" class="form-input" placeholder="E.g. **/movies/*.mp4 or **.jpg"
+                            <input type="text" id="new-include" class="form-input" placeholder="**.jpg"
                                    autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('include')">Add</button>
                         </div>
                     </div>
-                    <p class="form-help">Glob patterns to match paths (leave empty for all) <button type="button" class="help-icon" onclick="toggleGlobHelp(this)">?</button></p>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Exclude Paths</label>
+                    <label class="form-label">Exclude Patterns <button type="button" class="help-icon" onclick="toggleGlobHelp(this)">?</button></label>
                     <div class="list-input" id="exclude-container">
                         <div class="list-items" id="exclude-list">
                             {{if .Job}}{{range .Job.ExcludePatterns}}
@@ -93,12 +89,11 @@
                             {{end}}{{end}}
                         </div>
                         <div class="list-add">
-                            <input type="text" id="new-exclude" class="form-input" placeholder="E.g. /dev/** or **.xmp"
+                            <input type="text" id="new-exclude" class="form-input" placeholder="**.xmp"
                                    autocorrect="off" autocapitalize="off" spellcheck="false">
                             <button type="button" class="btn" onclick="addPattern('exclude')">Add</button>
                         </div>
                     </div>
-                    <p class="form-help">Glob patterns to exclude paths <button type="button" class="help-icon" onclick="toggleGlobHelp(this)">?</button></p>
                 </div>
             </div>
 
@@ -107,60 +102,72 @@
                 <div class="advanced-content">
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-checkbox">
-                                <input type="checkbox" name="include_hidden" value="1"
-                                       {{if .Job}}{{if .Job.IncludeHidden}}checked{{end}}{{end}}>
-                                Include hidden files
-                            </label>
-                            <p class="form-help">Scan files and directories starting with a dot</p>
+                            <div class="advanced-option">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" name="include_hidden" value="1"
+                                           {{if .Job}}{{if .Job.IncludeHidden}}checked{{end}}{{end}}>
+                                    <span>Include hidden files</span>
+                                </label>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'hidden')">?</button>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-checkbox">
-                                <input type="checkbox" name="follow_links" value="1"
-                                       {{if .Job}}{{if .Job.FollowLinks}}checked{{end}}{{end}}>
-                                Follow symbolic links
-                            </label>
-                            <p class="form-help">Follow symlinks when scanning directories</p>
+                            <div class="advanced-option">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" name="follow_links" value="1"
+                                           {{if .Job}}{{if .Job.FollowLinks}}checked{{end}}{{end}}>
+                                    <span>Follow symbolic links</span>
+                                </label>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'symlinks')">?</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-checkbox">
-                                <input type="checkbox" name="one_file_system" value="1"
-                                       {{if .Job}}{{if .Job.OneFileSystem}}checked{{end}}{{end}}>
-                                Same filesystem only
-                            </label>
-                            <p class="form-help">Don't cross filesystem boundaries or mount points</p>
+                            <div class="advanced-option">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" name="one_file_system" value="1"
+                                           {{if .Job}}{{if .Job.OneFileSystem}}checked{{end}}{{end}}>
+                                    <span>Same filesystem only</span>
+                                </label>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'filesystem')">?</button>
+                            </div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-checkbox">
-                                <input type="checkbox" name="no_ignore" value="1"
-                                       {{if .Job}}{{if .Job.NoIgnore}}checked{{end}}{{end}}>
-                                Ignore .gitignore
-                            </label>
-                            <p class="form-help">Don't respect .gitignore and .fdignore files</p>
+                            <div class="advanced-option">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" name="no_ignore" value="1"
+                                           {{if .Job}}{{if .Job.NoIgnore}}checked{{end}}{{end}}>
+                                    <span>Ignore .gitignore</span>
+                                </label>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'gitignore')">?</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-checkbox">
-                                <input type="checkbox" name="ignore_case" value="1"
-                                       {{if .Job}}{{if .Job.IgnoreCase}}checked{{end}}{{end}}>
-                                Case-insensitive patterns
-                            </label>
-                            <p class="form-help">Make include/exclude pattern matching case-insensitive</p>
+                            <div class="advanced-option">
+                                <label class="form-checkbox">
+                                    <input type="checkbox" name="ignore_case" value="1"
+                                           {{if .Job}}{{if .Job.IgnoreCase}}checked{{end}}{{end}}>
+                                    <span>Case-insensitive patterns</span>
+                                </label>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'case')">?</button>
+                            </div>
                         </div>
 
-                        <div class="form-group form-group-narrow-input">
-                            <label class="form-label" for="max_depth">Max Depth</label>
-                            <input type="number" id="max_depth" name="max_depth" class="form-input"
-                                   value="{{if .Job}}{{if .Job.MaxDepth}}{{derefInt .Job.MaxDepth}}{{end}}{{end}}"
-                                   placeholder="Unlimited" min="0" style="max-width: 120px;">
-                            <p class="form-help">Limit recursion depth (0 = no descent)</p>
+                        <div class="form-group">
+                            <div class="advanced-option">
+                                <span class="advanced-option-label">Max Depth</span>
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'depth')">?</button>
+                                <input type="number" id="max_depth" name="max_depth" class="form-input-compact"
+                                       value="{{if .Job}}{{if .Job.MaxDepth}}{{derefInt .Job.MaxDepth}}{{end}}{{end}}"
+                                       placeholder="Unlimited" min="0">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -170,19 +177,15 @@
 
             <div class="form-row-wide">
                 <div class="form-group">
-                    <label class="form-label" for="cron_expression">Schedule (Cron)</label>
+                    <label class="form-label" for="cron_expression">Schedule <button type="button" class="help-icon" onclick="toggleCronHelp(this)">?</button></label>
                     <input type="text" id="cron_expression" name="cron_expression" class="form-input"
                            value="{{if .Job}}{{.Job.CronExpression}}{{else}}30 2 * * *{{end}}" required
                            placeholder="30 2 * * *" autocorrect="off" autocapitalize="off" spellcheck="false">
                     <p class="cron-description" id="cron-description"></p>
-                    <p class="form-help">
-                        e.g., <code>30 2 * * *</code> (daily at 02:30),
-                        <code>0 */6 * * *</code> (every 6h)
-                    </p>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="action">Action After Scan</label>
+                    <label class="form-label" for="action">Action After Scan <button type="button" class="help-icon" onclick="toggleActionHelp(this)">?</button></label>
                     <select id="action" name="action" class="form-select" required>
                         <option value="scan" {{if .Job}}{{if eq .Job.Action "scan"}}selected{{end}}{{end}}>
                             Scan Only
@@ -194,9 +197,6 @@
                             Scan + Reflink
                         </option>
                     </select>
-                    <p class="form-help">
-                        What to do with duplicates <button type="button" class="help-icon" onclick="toggleActionHelp(this)">?</button>
-                    </p>
                 </div>
             </div>
 

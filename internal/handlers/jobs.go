@@ -22,10 +22,11 @@ type JobsData struct {
 
 // JobFormData holds data for the job form template
 type JobFormData struct {
-	Title     string
-	ActiveNav string
-	Job       *db.ScheduledJob
-	Error     string
+	Title        string
+	ActiveNav    string
+	Job          *db.ScheduledJob
+	Error        string
+	AllowedPaths []string
 }
 
 // Jobs handles GET /jobs
@@ -76,8 +77,9 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 // JobForm handles GET /jobs/new
 func (h *Handler) JobForm(w http.ResponseWriter, r *http.Request) {
 	data := JobFormData{
-		Title:     "New Job",
-		ActiveNav: "jobs",
+		Title:        "New Job",
+		ActiveNav:    "jobs",
+		AllowedPaths: h.cfg.AllowedPaths,
 	}
 
 	h.render(w, "job_form.html", data)
@@ -237,10 +239,11 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	// Helper to render form with error
 	renderError := func(errMsg string) {
 		data := JobFormData{
-			Title:     "New Job",
-			ActiveNav: "jobs",
-			Job:       job,
-			Error:     errMsg,
+			Title:        "New Job",
+			ActiveNav:    "jobs",
+			Job:          job,
+			Error:        errMsg,
+			AllowedPaths: h.cfg.AllowedPaths,
 		}
 		h.render(w, "job_form.html", data)
 	}
@@ -302,9 +305,10 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 	}
 
 	data := JobFormData{
-		Title:     "Edit Job",
-		ActiveNav: "jobs",
-		Job:       job,
+		Title:        "Edit Job",
+		ActiveNav:    "jobs",
+		Job:          job,
+		AllowedPaths: h.cfg.AllowedPaths,
 	}
 
 	h.render(w, "job_form.html", data)
@@ -322,10 +326,11 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 	// Helper to render form with error
 	renderError := func(errMsg string) {
 		data := JobFormData{
-			Title:     "Edit Job",
-			ActiveNav: "jobs",
-			Job:       job,
-			Error:     errMsg,
+			Title:        "Edit Job",
+			ActiveNav:    "jobs",
+			Job:          job,
+			Error:        errMsg,
+			AllowedPaths: h.cfg.AllowedPaths,
 		}
 		h.render(w, "job_form.html", data)
 	}
