@@ -342,7 +342,13 @@ button.btn {
 .form-checkbox input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
+    margin: 0;
     cursor: pointer;
+}
+
+.checkbox-spacer {
+    width: 1rem;
+    flex-shrink: 0;
 }
 
 .form-input-compact {

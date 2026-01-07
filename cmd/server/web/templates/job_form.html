@@ -163,11 +163,12 @@
 
                         <div class="form-group">
                             <div class="advanced-option">
+                                <span class="checkbox-spacer"></span>
                                 <span class="advanced-option-label">Max Depth</span>
-                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'depth')">?</button>
                                 <input type="number" id="max_depth" name="max_depth" class="form-input-compact"
                                        value="{{if .Job}}{{if .Job.MaxDepth}}{{derefInt .Job.MaxDepth}}{{end}}{{end}}"
-                                       placeholder="Unlimited" min="0">
+                                       placeholder="None" min="0">
+                                <button type="button" class="help-icon" onclick="toggleAdvancedHelp(this, 'depth')">?</button>
                             </div>
                         </div>
                     </div>
