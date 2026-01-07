@@ -140,7 +140,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
         run: |
-          wails build -platform darwin/arm64 \
+          wails build -platform darwin/arm64 -s \
             -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}"
 
       - name: Copy fclones into app bundle
@@ -165,10 +165,10 @@ jobs:
           name: Kuron-macos-arm64.dmg
           path: Kuron-macos-arm64.dmg
 
-  # Build desktop app for Linux
+  # Build desktop app for Linux (Ubuntu 22.04 for webkit2gtk-4.0)
   desktop-linux:
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
@@ -180,7 +180,7 @@ jobs:
       - name: Install Wails dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
@@ -194,7 +194,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
         run: |
-          wails build -platform linux/amd64 \
+          wails build -platform linux/amd64 -s \
             -ldflags "-X main.version=${VERSION} -X main.commit=${COMMIT}"
 
       - name: Package Linux archive
@@ -236,7 +236,7 @@ jobs:
           VERSION: ${{ github.ref_name }}
           COMMIT: ${{ github.sha }}
         run: |
-          wails build -platform windows/amd64 `
+          wails build -platform windows/amd64 -s `
             -ldflags "-X main.version=$env:VERSION -X main.commit=$env:COMMIT"
 
       - name: Package Windows archive
