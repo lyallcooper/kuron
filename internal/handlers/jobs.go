@@ -159,6 +159,8 @@ func (h *Handler) JobRoutes(w http.ResponseWriter, r *http.Request) {
 }
 
 // parseJobForm parses the job form and returns a ScheduledJob
+// Returns the job (possibly partial) and any validation error
+// The job is always returned so forms can be re-rendered with user input preserved
 func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
@@ -181,11 +183,23 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 	}
 
 	// Parse sizes (supports human-readable formats like "1 MB", "500 KB")
-	minSize, _ := parseSizeWithError(minSizeStr)
+	var minSize int64
+	var validationErr error
+	if minSizeStr != "" {
+		ms, err := parseSizeWithError(minSizeStr)
+		if err != nil {
+			validationErr = fmt.Errorf("Invalid min size: %s", minSizeStr)
+		} else {
+			minSize = ms
+		}
+	}
 
 	var maxSize *int64
-	if maxSizeStr != "" {
-		if ms, err := parseSizeWithError(maxSizeStr); err == nil && ms > 0 {
+	if maxSizeStr != "" && validationErr == nil {
+		ms, err := parseSizeWithError(maxSizeStr)
+		if err != nil {
+			validationErr = fmt.Errorf("Invalid max size: %s", maxSizeStr)
+		} else if ms > 0 {
 			maxSize = &ms
 		}
 	}
@@ -238,7 +252,7 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 		NoIgnore:        noIgnore,
 		IgnoreCase:      ignoreCase,
 		MaxDepth:        maxDepth,
-	}, nil
+	}, validationErr
 }
 
 // CreateJob handles POST /jobs
@@ -249,10 +263,6 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	job, err := h.parseJobForm(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 
 	// Helper to render form with error
 	renderError := func(errMsg string) {
@@ -265,6 +275,11 @@ func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
 			AllowedPaths: h.cfg.AllowedPaths,
 		}
 		h.render(w, "job_form.html", data)
+	}
+
+	if err != nil {
+		renderError(err.Error())
+		return
 	}
 
 	// Validate name
@@ -342,10 +357,6 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 	}
 
 	job, err := h.parseJobForm(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	job.ID = id
 
 	// Helper to render form with error
@@ -359,6 +370,11 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 			AllowedPaths: h.cfg.AllowedPaths,
 		}
 		h.render(w, "job_form.html", data)
+	}
+
+	if err != nil {
+		renderError(err.Error())
+		return
 	}
 
 	// Validate name

@@ -56,6 +56,41 @@ The project supports two SQLite drivers:
 
 See `internal/db/driver_cgo.go` and `internal/db/driver_nocgo.go` for the build tag configuration.
 
+## Error Handling in Handlers
+
+**Never use `http.Error()` for user-facing validation errors.** This displays a plain text error page which is poor UX.
+
+Instead, re-render the form template with an error message and preserve user input:
+
+```go
+// Good: Re-render form with error banner
+renderError := func(errMsg string) {
+    data := FormData{
+        Job:   job,  // Preserve user input
+        Error: errMsg,
+    }
+    h.render(w, "form.html", data)
+}
+
+if err != nil {
+    renderError(err.Error())
+    return
+}
+```
+
+```go
+// Bad: Plain text error page
+if err != nil {
+    http.Error(w, err.Error(), http.StatusBadRequest)
+    return
+}
+```
+
+Reserve `http.Error()` only for:
+- CSRF failures (security, not user error)
+- Internal server errors that can't be recovered
+- API endpoints returning JSON errors
+
 ## Configuration
 
 Environment variables (see README.md for full list):
