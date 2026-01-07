@@ -10,6 +10,12 @@ import (
 	"time"
 )
 
+// Scanner abstracts sql.Row and sql.Rows for shared scanning logic.
+// Both types have an identical Scan method signature.
+type Scanner interface {
+	Scan(dest ...any) error
+}
+
 // ScheduledJob queries
 
 // ScanRun queries
@@ -190,7 +196,8 @@ func (db *DB) CompleteScanRun(id int64, status ScanRunStatus, errorMsg *string) 
 	return err
 }
 
-func scanScanRun(row *sql.Row) (*ScanRun, error) {
+// scanScanRunFrom scans a ScanRun from any Scanner (sql.Row or sql.Rows)
+func scanScanRunFrom(s Scanner) (*ScanRun, error) {
 	var r ScanRun
 	var configID, jobID sql.NullInt64
 	var pathsJSON string
@@ -200,7 +207,7 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	var includePatternsJSON, excludePatternsJSON string
 	var maxDepth sql.NullInt64
 
-	err := row.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
+	err := s.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
 		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
 		&r.WastedBytes, &errorMsg,
 		&r.MinSize, &maxSize, &includePatternsJSON, &excludePatternsJSON,
@@ -241,55 +248,12 @@ func scanScanRun(row *sql.Row) (*ScanRun, error) {
 	return &r, nil
 }
 
+func scanScanRun(row *sql.Row) (*ScanRun, error) {
+	return scanScanRunFrom(row)
+}
+
 func scanScanRunRow(rows *sql.Rows) (*ScanRun, error) {
-	var r ScanRun
-	var configID, jobID sql.NullInt64
-	var pathsJSON string
-	var completedAt sql.NullTime
-	var errorMsg sql.NullString
-	var maxSize sql.NullInt64
-	var includePatternsJSON, excludePatternsJSON string
-	var maxDepth sql.NullInt64
-
-	err := rows.Scan(&r.ID, &configID, &jobID, &pathsJSON, &r.Status, &r.StartedAt, &completedAt,
-		&r.FilesScanned, &r.BytesScanned, &r.DuplicateGroups, &r.DuplicateFiles,
-		&r.WastedBytes, &errorMsg,
-		&r.MinSize, &maxSize, &includePatternsJSON, &excludePatternsJSON,
-		&r.IncludeHidden, &r.FollowLinks, &r.OneFileSystem, &r.NoIgnore, &r.IgnoreCase, &maxDepth)
-	if err != nil {
-		return nil, err
-	}
-
-	if configID.Valid {
-		r.ScanConfigID = &configID.Int64
-	}
-	if jobID.Valid {
-		r.ScheduledJobID = &jobID.Int64
-	}
-	if err := json.Unmarshal([]byte(pathsJSON), &r.Paths); err != nil {
-		log.Printf("db: failed to unmarshal paths JSON for scan run %d: %v", r.ID, err)
-	}
-	if completedAt.Valid {
-		r.CompletedAt = &completedAt.Time
-	}
-	if errorMsg.Valid {
-		r.ErrorMessage = &errorMsg.String
-	}
-	if maxSize.Valid {
-		r.MaxSize = &maxSize.Int64
-	}
-	if err := json.Unmarshal([]byte(includePatternsJSON), &r.IncludePatterns); err != nil {
-		log.Printf("db: failed to unmarshal include_patterns JSON for scan run %d: %v", r.ID, err)
-	}
-	if err := json.Unmarshal([]byte(excludePatternsJSON), &r.ExcludePatterns); err != nil {
-		log.Printf("db: failed to unmarshal exclude_patterns JSON for scan run %d: %v", r.ID, err)
-	}
-	if maxDepth.Valid {
-		d := int(maxDepth.Int64)
-		r.MaxDepth = &d
-	}
-
-	return &r, nil
+	return scanScanRunFrom(rows)
 }
 
 // DuplicateGroup queries
@@ -474,11 +438,12 @@ func (db *DB) UpdateDuplicateGroupStatus(ids []int64, status DuplicateGroupStatu
 	return err
 }
 
-func scanDuplicateGroup(row *sql.Row) (*DuplicateGroup, error) {
+// scanDuplicateGroupFrom scans a DuplicateGroup from any Scanner (sql.Row or sql.Rows)
+func scanDuplicateGroupFrom(s Scanner) (*DuplicateGroup, error) {
 	var g DuplicateGroup
 	var filesJSON string
 
-	err := row.Scan(&g.ID, &g.ScanRunID, &g.FileHash, &g.FileSize, &g.FileCount,
+	err := s.Scan(&g.ID, &g.ScanRunID, &g.FileHash, &g.FileSize, &g.FileCount,
 		&g.WastedBytes, &g.Status, &filesJSON)
 	if err != nil {
 		return nil, err
@@ -490,20 +455,12 @@ func scanDuplicateGroup(row *sql.Row) (*DuplicateGroup, error) {
 	return &g, nil
 }
 
+func scanDuplicateGroup(row *sql.Row) (*DuplicateGroup, error) {
+	return scanDuplicateGroupFrom(row)
+}
+
 func scanDuplicateGroupRow(rows *sql.Rows) (*DuplicateGroup, error) {
-	var g DuplicateGroup
-	var filesJSON string
-
-	err := rows.Scan(&g.ID, &g.ScanRunID, &g.FileHash, &g.FileSize, &g.FileCount,
-		&g.WastedBytes, &g.Status, &filesJSON)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal([]byte(filesJSON), &g.Files); err != nil {
-		log.Printf("db: failed to unmarshal files JSON for group %d: %v", g.ID, err)
-	}
-	return &g, nil
+	return scanDuplicateGroupFrom(rows)
 }
 
 // CreateScheduledJob creates a new scheduled job
@@ -649,13 +606,14 @@ func (db *DB) DeleteScheduledJob(id int64) error {
 	return err
 }
 
-func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
+// scanScheduledJobFrom scans a ScheduledJob from any Scanner (sql.Row or sql.Rows)
+func scanScheduledJobFrom(s Scanner) (*ScheduledJob, error) {
 	var j ScheduledJob
 	var pathsJSON, includeJSON, excludeJSON string
 	var maxSize, maxDepth sql.NullInt64
 	var lastRun, nextRun sql.NullTime
 
-	err := row.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
+	err := s.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
 		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt,
 		&j.IncludeHidden, &j.FollowLinks, &j.OneFileSystem, &j.NoIgnore, &j.IgnoreCase, &maxDepth)
 	if err != nil {
@@ -688,43 +646,12 @@ func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
 	return &j, nil
 }
 
+func scanScheduledJob(row *sql.Row) (*ScheduledJob, error) {
+	return scanScheduledJobFrom(row)
+}
+
 func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
-	var j ScheduledJob
-	var pathsJSON, includeJSON, excludeJSON string
-	var maxSize, maxDepth sql.NullInt64
-	var lastRun, nextRun sql.NullTime
-
-	err := rows.Scan(&j.ID, &j.Name, &pathsJSON, &j.MinSize, &maxSize, &includeJSON, &excludeJSON,
-		&j.CronExpression, &j.Action, &j.Enabled, &lastRun, &nextRun, &j.CreatedAt,
-		&j.IncludeHidden, &j.FollowLinks, &j.OneFileSystem, &j.NoIgnore, &j.IgnoreCase, &maxDepth)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := json.Unmarshal([]byte(pathsJSON), &j.Paths); err != nil {
-		log.Printf("db: failed to unmarshal paths JSON for job %d: %v", j.ID, err)
-	}
-	if err := json.Unmarshal([]byte(includeJSON), &j.IncludePatterns); err != nil {
-		log.Printf("db: failed to unmarshal include patterns JSON for job %d: %v", j.ID, err)
-	}
-	if err := json.Unmarshal([]byte(excludeJSON), &j.ExcludePatterns); err != nil {
-		log.Printf("db: failed to unmarshal exclude patterns JSON for job %d: %v", j.ID, err)
-	}
-	if maxSize.Valid {
-		j.MaxSize = &maxSize.Int64
-	}
-	if lastRun.Valid {
-		j.LastRunAt = &lastRun.Time
-	}
-	if nextRun.Valid {
-		j.NextRunAt = &nextRun.Time
-	}
-	if maxDepth.Valid {
-		depth := int(maxDepth.Int64)
-		j.MaxDepth = &depth
-	}
-
-	return &j, nil
+	return scanScheduledJobFrom(rows)
 }
 
 // Action queries

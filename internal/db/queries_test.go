@@ -1,7 +1,6 @@
 package db
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -19,7 +18,6 @@ func testDB(t *testing.T) *DB {
 	}
 	t.Cleanup(func() {
 		db.Close()
-		os.RemoveAll(tmpDir)
 	})
 	return db
 }
