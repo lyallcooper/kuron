@@ -44,6 +44,15 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get all job IDs for batch query
+	jobIDs := make([]int64, len(jobs))
+	for i, job := range jobs {
+		jobIDs[i] = job.ID
+	}
+
+	// Batch fetch last run IDs (single query instead of N queries)
+	lastRunIDs, _ := h.db.GetLastRunIDsForJobs(jobIDs)
+
 	// Build view models
 	var views []*JobView
 	for _, job := range jobs {
@@ -61,8 +70,8 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 		if job.LastRunAt != nil {
 			view.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
 		}
-		if lastRun, err := h.db.GetLastRunForJob(job.ID); err == nil {
-			view.LastRunID = lastRun.ID
+		if runID, ok := lastRunIDs[job.ID]; ok {
+			view.LastRunID = runID
 		}
 		views = append(views, view)
 	}

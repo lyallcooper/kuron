@@ -121,6 +121,53 @@ func (db *DB) GetLastRunForJob(jobID int64) (*ScanRun, error) {
 	return scanScanRun(row)
 }
 
+// GetLastRunIDsForJobs returns a map of job IDs to their most recent scan run IDs.
+// This is more efficient than calling GetLastRunForJob for each job.
+func (db *DB) GetLastRunIDsForJobs(jobIDs []int64) (map[int64]int64, error) {
+	if len(jobIDs) == 0 {
+		return make(map[int64]int64), nil
+	}
+
+	// Build query with placeholders
+	placeholders := strings.Repeat("?,", len(jobIDs))
+	placeholders = placeholders[:len(placeholders)-1] // remove trailing comma
+
+	query := `
+		SELECT scheduled_job_id, id FROM scan_runs
+		WHERE scheduled_job_id IN (` + placeholders + `)
+		AND id IN (
+			SELECT MAX(id) FROM scan_runs
+			WHERE scheduled_job_id IN (` + placeholders + `)
+			GROUP BY scheduled_job_id
+		)`
+
+	// Build args slice (need to pass jobIDs twice for both IN clauses)
+	args := make([]interface{}, 0, len(jobIDs)*2)
+	for _, id := range jobIDs {
+		args = append(args, id)
+	}
+	for _, id := range jobIDs {
+		args = append(args, id)
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int64]int64)
+	for rows.Next() {
+		var jobID, runID int64
+		if err := rows.Scan(&jobID, &runID); err != nil {
+			return nil, err
+		}
+		result[jobID] = runID
+	}
+
+	return result, rows.Err()
+}
+
 // UpdateScanRunProgress updates scan progress
 func (db *DB) UpdateScanRunProgress(id int64, filesScanned, bytesScanned, groups, files, wasted int64) error {
 	_, err := db.Exec(`
