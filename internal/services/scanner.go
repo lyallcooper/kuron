@@ -42,7 +42,7 @@ func (sub *subscriber) send(progress *types.ScanProgress) bool {
 // Scanner orchestrates scan operations
 type Scanner struct {
 	db          *db.DB
-	executor    *fclones.Executor
+	executor    fclones.ExecutorInterface
 	scanTimeout time.Duration
 
 	// Active scans and their cancellation functions
@@ -55,7 +55,7 @@ type Scanner struct {
 }
 
 // NewScanner creates a new scanner service
-func NewScanner(database *db.DB, executor *fclones.Executor, scanTimeout time.Duration) *Scanner {
+func NewScanner(database *db.DB, executor fclones.ExecutorInterface, scanTimeout time.Duration) *Scanner {
 	return &Scanner{
 		db:          database,
 		executor:    executor,

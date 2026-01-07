@@ -20,7 +20,7 @@ import (
 type Handler struct {
 	db       *db.DB
 	cfg      *config.Config
-	executor *fclones.Executor
+	executor fclones.ExecutorInterface
 	scanner  *services.Scanner
 	webFS    embed.FS
 	funcMap  template.FuncMap
@@ -29,7 +29,7 @@ type Handler struct {
 }
 
 // New creates a new Handler
-func New(database *db.DB, cfg *config.Config, executor *fclones.Executor, scanner *services.Scanner, webFS embed.FS, version string) (*Handler, error) {
+func New(database *db.DB, cfg *config.Config, executor fclones.ExecutorInterface, scanner *services.Scanner, webFS embed.FS, version string) (*Handler, error) {
 	// Template functions
 	funcMap := template.FuncMap{
 		"formatBytes":     formatBytes,
@@ -151,24 +151,26 @@ func formatSizeInput(bytes int64) string {
 		{"KB", 1e3},
 	}
 
-	for _, u := range units {
-		if bytes >= u.size && bytes%u.size == 0 {
-			return fmt.Sprintf("%d %s", bytes/u.size, u.suffix)
-		}
-	}
-
-	// If not evenly divisible, find best unit and format with decimals
+	// Find the largest unit where the value is < 1000 (max 3 digits)
 	for _, u := range units {
 		if bytes >= u.size {
 			val := float64(bytes) / float64(u.size)
-			// Format without trailing zeros
-			s := fmt.Sprintf("%.2f", val)
-			s = strings.TrimRight(s, "0")
-			s = strings.TrimRight(s, ".")
-			return s + " " + u.suffix
+			if val < 1000 {
+				// Format with up to 2 decimal places, trimming trailing zeros
+				s := fmt.Sprintf("%.2f", val)
+				s = strings.TrimRight(s, "0")
+				s = strings.TrimRight(s, ".")
+				return s + " " + u.suffix
+			}
 		}
 	}
 
+	// For values < 1000 bytes, just show bytes
+	if bytes < 1000 {
+		return fmt.Sprintf("%d B", bytes)
+	}
+
+	// Fallback (shouldn't normally reach here)
 	return fmt.Sprintf("%d B", bytes)
 }
 
