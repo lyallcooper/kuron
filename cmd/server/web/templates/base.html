@@ -564,6 +564,66 @@
             '<p><strong>Reflink</strong><br>Replace duplicates with copy-on-write links. Saves space like hardlinks, but changes create independent copies. Requires filesystem support (Btrfs, XFS, APFS).</p>'
         );
     }
+
+    // Shrink stat-value text only if a word would break
+    (function() {
+        function fitStatValues() {
+            var measure = document.createElement('span');
+            measure.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;';
+            document.body.appendChild(measure);
+
+            document.querySelectorAll('.stat-value').forEach(function(el) {
+                el.style.fontSize = '';
+                var container = el.closest('.stat-card');
+                if (!container) return;
+
+                var containerStyle = getComputedStyle(container);
+                var elStyle = getComputedStyle(el);
+                var availableWidth = container.clientWidth -
+                    parseFloat(containerStyle.paddingLeft) -
+                    parseFloat(containerStyle.paddingRight);
+
+                measure.style.font = elStyle.font;
+
+                // Find the longest word
+                var text = el.textContent || '';
+                var words = text.split(/\s+/);
+                var maxWordWidth = 0;
+                words.forEach(function(word) {
+                    measure.textContent = word;
+                    maxWordWidth = Math.max(maxWordWidth, measure.offsetWidth);
+                });
+
+                // Only shrink if a single word is too wide
+                if (maxWordWidth > availableWidth) {
+                    var currentSize = parseFloat(elStyle.fontSize);
+                    var newSize = Math.max(currentSize * (availableWidth / maxWordWidth), 12);
+                    el.style.fontSize = newSize + 'px';
+                }
+            });
+
+            measure.remove();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fitStatValues);
+        } else {
+            fitStatValues();
+        }
+
+        var resizeScheduled = false;
+        window.addEventListener('resize', function() {
+            if (!resizeScheduled) {
+                resizeScheduled = true;
+                requestAnimationFrame(function() {
+                    fitStatValues();
+                    resizeScheduled = false;
+                });
+            }
+        });
+
+        document.body.addEventListener('htmx:afterSwap', fitStatValues);
+    })();
     </script>
 </body>
 </html>
