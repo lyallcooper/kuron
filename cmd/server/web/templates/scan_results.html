@@ -506,24 +506,6 @@ document.querySelectorAll('.btn-wrapper').forEach(function(wrapper) {
     });
 });
 
-function showToast(message, type) {
-    var container = document.querySelector('.toasts');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'toasts';
-        document.body.appendChild(container);
-    }
-    var toast = document.createElement('div');
-    toast.className = 'toast toast-' + type;
-    toast.textContent = message;
-    toast.onclick = function() { toast.remove(); };
-    container.appendChild(toast);
-    setTimeout(function() {
-        toast.classList.add('toast-fade');
-        setTimeout(function() { toast.remove(); }, 300);
-    }, 3000);
-}
-
 // Initialize on page load
 updateSelectionDisplay();
 </script>
