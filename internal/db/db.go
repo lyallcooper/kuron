@@ -32,6 +32,10 @@ func Open(dbPath string) (*DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
+	// Configure connection pool
+	db.SetMaxOpenConns(25)
+	db.SetMaxIdleConns(5)
+
 	wrapper := &DB{db}
 
 	// Run migrations
