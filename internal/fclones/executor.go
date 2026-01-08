@@ -70,7 +70,7 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 		args = append(args, "-s", strconv.FormatInt(opts.MinSize, 10))
 	}
 	if opts.MaxSize != nil {
-		args = append(args, "--max-size", strconv.FormatInt(*opts.MaxSize, 10))
+		args = append(args, "--max", strconv.FormatInt(*opts.MaxSize, 10))
 	}
 
 	// Add include patterns (match on full path)
