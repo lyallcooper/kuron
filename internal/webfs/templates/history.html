@@ -5,7 +5,7 @@
 
 <div class="card">
     <div class="card-header">
-        <span>Scan Runs</span>
+        <span>Scans</span>
         <div class="actions-bar" style="margin: 0;">
             <label for="status-filter" class="visually-hidden">Filter by status</label>
             <select id="status-filter" class="form-select" style="width: auto;"
@@ -26,8 +26,8 @@
                     <th>Started</th>
                     <th>Duration</th>
                     <th>Status</th>
-                    <th>Files</th>
-                    <th>Groups</th>
+                    <th>Files Scanned</th>
+                    <th>Duplicate Groups</th>
                     <th>Redundant</th>
                 </tr>
             </thead>
@@ -54,7 +54,7 @@
     {{end}}
     {{else}}
     <div class="card-body">
-        <div class="table-empty">No scan runs found</div>
+        <div class="table-empty">No scans found</div>
     </div>
     {{end}}
 </div>
@@ -69,8 +69,8 @@
                     <th>Time</th>
                     <th>Type</th>
                     <th>Status</th>
-                    <th>Groups</th>
-                    <th>Files</th>
+                    <th>Duplicate Files</th>
+                    <th>Duplicate Groups</th>
                     <th>Saved</th>
                 </tr>
             </thead>
@@ -80,8 +80,8 @@
                     <td class="timestamp">{{.StartedAt | formatTime}}</td>
                     <td>{{.ActionType}}</td>
                     <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
-                    <td>{{.GroupsProcessed}}</td>
                     <td>{{.FilesProcessed}}</td>
+                    <td>{{.GroupsProcessed}}</td>
                     <td class="size">{{.BytesSaved | formatBytes}}</td>
                 </tr>
                 {{end}}
