@@ -659,9 +659,9 @@ func scanScheduledJobRow(rows *sql.Rows) (*ScheduledJob, error) {
 // CreateAction creates a new action record
 func (db *DB) CreateAction(a *Action) (*Action, error) {
 	result, err := db.Exec(`
-		INSERT INTO actions (scan_run_id, action_type, dry_run, started_at, status)
-		VALUES (?, ?, ?, ?, ?)`,
-		a.ScanRunID, a.ActionType, a.DryRun, time.Now(), ActionStatusRunning,
+		INSERT INTO actions (scan_run_id, action_type, started_at, status)
+		VALUES (?, ?, ?, ?)`,
+		a.ScanRunID, a.ActionType, time.Now(), ActionStatusRunning,
 	)
 	if err != nil {
 		return nil, err
@@ -679,7 +679,7 @@ func (db *DB) CreateAction(a *Action) (*Action, error) {
 func (db *DB) GetAction(id int64) (*Action, error) {
 	row := db.QueryRow(`
 		SELECT id, scan_run_id, action_type, groups_processed, files_processed, bytes_saved,
-			dry_run, started_at, completed_at, status, error_message
+			started_at, completed_at, status, error_message
 		FROM actions WHERE id = ?`, id)
 	return scanAction(row)
 }
@@ -688,7 +688,7 @@ func (db *DB) GetAction(id int64) (*Action, error) {
 func (db *DB) ListActions(limit, offset int) ([]*Action, error) {
 	rows, err := db.Query(`
 		SELECT id, scan_run_id, action_type, groups_processed, files_processed, bytes_saved,
-			dry_run, started_at, completed_at, status, error_message
+			started_at, completed_at, status, error_message
 		FROM actions ORDER BY started_at DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -724,7 +724,7 @@ func scanAction(row *sql.Row) (*Action, error) {
 	var errorMsg sql.NullString
 
 	err := row.Scan(&a.ID, &a.ScanRunID, &a.ActionType, &a.GroupsProcessed, &a.FilesProcessed,
-		&a.BytesSaved, &a.DryRun, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
+		&a.BytesSaved, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
 	if err != nil {
 		return nil, err
 	}
@@ -745,7 +745,7 @@ func scanActionRow(rows *sql.Rows) (*Action, error) {
 	var errorMsg sql.NullString
 
 	err := rows.Scan(&a.ID, &a.ScanRunID, &a.ActionType, &a.GroupsProcessed, &a.FilesProcessed,
-		&a.BytesSaved, &a.DryRun, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
+		&a.BytesSaved, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
 	if err != nil {
 		return nil, err
 	}

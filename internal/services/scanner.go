@@ -326,7 +326,6 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 		action = &db.Action{
 			ScanRunID:  runID,
 			ActionType: actionType,
-			DryRun:     false,
 		}
 		action, err = s.db.CreateAction(action)
 		if err != nil {

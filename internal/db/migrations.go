@@ -35,6 +35,7 @@ func (db *DB) Migrate() error {
 		{4, migration004},
 		{5, migration005},
 		{6, migration006},
+		{7, migration007},
 	}
 
 	for _, m := range migrations {
@@ -231,4 +232,9 @@ ALTER TABLE scan_runs ADD COLUMN one_file_system BOOLEAN NOT NULL DEFAULT 0;
 ALTER TABLE scan_runs ADD COLUMN no_ignore BOOLEAN NOT NULL DEFAULT 0;
 ALTER TABLE scan_runs ADD COLUMN ignore_case BOOLEAN NOT NULL DEFAULT 0;
 ALTER TABLE scan_runs ADD COLUMN max_depth INTEGER;
+`
+
+const migration007 = `
+-- Remove dry_run column from actions table (no longer used - all recorded actions are real executions)
+ALTER TABLE actions DROP COLUMN dry_run;
 `

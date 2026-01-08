@@ -116,7 +116,6 @@ type Action struct {
 	GroupsProcessed int
 	FilesProcessed  int
 	BytesSaved      int64
-	DryRun          bool
 	StartedAt       time.Time
 	CompletedAt     *time.Time
 	Status          ActionStatus
