@@ -318,7 +318,7 @@ type ActionResult struct {
 }
 
 // ExecuteAction executes a dedupe action on selected groups
-func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int64, actionType db.ActionType, dryRun bool) (*ActionResult, error) {
+func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int64, actionType db.ActionType, dryRun bool, priority string) (*ActionResult, error) {
 	// Create action record
 	action := &db.Action{
 		ScanRunID:  runID,
@@ -349,10 +349,13 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 	input := s.executor.GroupToInput(groups)
 
 	var output string
-	if actionType == db.ActionTypeHardlink {
+	switch actionType {
+	case db.ActionTypeHardlink:
 		output, err = s.executor.Link(ctx, input, fclones.LinkOptions{DryRun: dryRun})
-	} else {
+	case db.ActionTypeReflink:
 		output, err = s.executor.Dedupe(ctx, input, fclones.DedupeOptions{DryRun: dryRun})
+	case db.ActionTypeRemove:
+		output, err = s.executor.Remove(ctx, input, fclones.RemoveOptions{DryRun: dryRun, Priority: priority})
 	}
 
 	if err != nil {

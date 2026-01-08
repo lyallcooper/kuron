@@ -92,6 +92,12 @@ type DedupeOptions struct {
 	DryRun bool
 }
 
+// RemoveOptions configures the fclones remove command
+type RemoveOptions struct {
+	DryRun   bool
+	Priority string // Priority for removal: "most-recently-modified", "least-recently-modified", "most-nested", "least-nested", etc.
+}
+
 // Progress represents scan progress
 type Progress struct {
 	Phase        string // "scanning", "filtering", "grouping", "hashing"

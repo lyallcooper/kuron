@@ -105,6 +105,7 @@ type ActionType string
 const (
 	ActionTypeHardlink ActionType = "hardlink"
 	ActionTypeReflink  ActionType = "reflink"
+	ActionTypeRemove   ActionType = "remove"
 )
 
 // Action represents a deduplication action taken

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -235,6 +236,12 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Handle delete-files POST
+	if len(parts) >= 5 && parts[4] == "delete-files" && r.Method == http.MethodPost {
+		h.HandleDeleteFiles(w, r, parts[3])
+		return
+	}
+
 	id, err := strconv.ParseInt(parts[3], 10, 64)
 	if err != nil {
 		http.NotFound(w, r)
@@ -341,11 +348,20 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		return
 	}
 
-	action := r.FormValue("action")
-	dryRun := r.FormValue("dry_run") == "1"
+	// Action comes from query param (from button hx-post URL) or form
+	action := r.URL.Query().Get("action")
+	if action == "" {
+		action = r.FormValue("action")
+	}
+
+	// Always preview first unless explicitly confirming
+	confirm := r.FormValue("confirm") == "1"
+	dryRun := !confirm
+
 	selectAll := r.FormValue("select_all") == "1"
 	statusFilter := r.FormValue("status_filter")
 	groupIDsStr := r.FormValue("group_ids")
+	priority := r.FormValue("remove-priority") // For remove action
 
 	var groupIDs []int64
 
@@ -377,15 +393,21 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		return
 	}
 
-	// Execute action
+	// Determine action type
 	var actionType db.ActionType
-	if action == "hardlink" {
+	switch action {
+	case "hardlink":
 		actionType = db.ActionTypeHardlink
-	} else {
+	case "reflink":
 		actionType = db.ActionTypeReflink
+	case "remove":
+		actionType = db.ActionTypeRemove
+	default:
+		http.Error(w, "Invalid action", http.StatusBadRequest)
+		return
 	}
 
-	result, err := h.scanner.ExecuteAction(r.Context(), runID, groupIDs, actionType, dryRun)
+	result, err := h.scanner.ExecuteAction(r.Context(), runID, groupIDs, actionType, dryRun, priority)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -393,7 +415,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 
 	// For HTMX requests, show modal with results
 	if r.Header.Get("HX-Request") == "true" {
-		// Get CSRF token from cookie for the "Run for Real" form
+		// Get CSRF token from cookie for the confirm form
 		var csrfToken string
 		if cookie, err := r.Cookie(csrfCookieName); err == nil {
 			csrfToken = cookie.Value
@@ -408,6 +430,7 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 			SelectAll:    selectAll,
 			StatusFilter: statusFilter,
 			CSRFToken:    csrfToken,
+			Priority:     priority,
 		})
 		return
 	}
@@ -426,18 +449,34 @@ type renderActionModalParams struct {
 	SelectAll    bool
 	StatusFilter string
 	CSRFToken    string
+	Priority     string // For remove action
 }
 
 // renderActionResultModal renders the action results modal
 func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionModalParams) {
-	actionName := "Hardlink"
-	if p.Action == "reflink" {
+	var actionName, confirmBtnText, confirmBtnClass string
+	switch p.Action {
+	case "hardlink":
+		actionName = "Hardlink"
+		confirmBtnText = "Apply Hardlinks"
+		confirmBtnClass = "btn btn-primary"
+	case "reflink":
 		actionName = "Reflink"
+		confirmBtnText = "Apply Reflinks"
+		confirmBtnClass = "btn btn-primary"
+	case "remove":
+		actionName = "Remove"
+		confirmBtnText = "Remove Files"
+		confirmBtnClass = "btn btn-danger"
+	default:
+		actionName = "Action"
+		confirmBtnText = "Apply"
+		confirmBtnClass = "btn btn-primary"
 	}
 
 	var title, description string
 	if p.DryRun {
-		title = actionName + " Preview (Dry Run)"
+		title = actionName + " Preview"
 		description = "The following operations would be performed:"
 	} else {
 		title = actionName + " Complete"
@@ -447,14 +486,14 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	// Escape output to prevent XSS
 	escapedOutput := html.EscapeString(p.Output)
 
-	// Build the "Run for Real" form for dry runs
-	var runForRealForm string
+	// Build the confirm form for previews
+	var confirmForm string
 	if p.DryRun {
 		selectAllValue := ""
 		if p.SelectAll {
 			selectAllValue = "1"
 		}
-		runForRealForm = `<form method="POST" action="/scans/runs/` + p.RunID + `/action" style="display:inline;"
+		confirmForm = `<form method="POST" action="/scans/runs/` + p.RunID + `/action" style="display:inline;"
 			hx-post="/scans/runs/` + p.RunID + `/action"
 			hx-target="#modal-backdrop"
 			hx-swap="outerHTML">
@@ -463,17 +502,22 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 			<input type="hidden" name="group_ids" value="` + html.EscapeString(p.GroupIDs) + `">
 			<input type="hidden" name="select_all" value="` + selectAllValue + `">
 			<input type="hidden" name="status_filter" value="` + html.EscapeString(p.StatusFilter) + `">
-			<button type="submit" class="btn btn-primary">
-				<span class="btn-text">Run for Real</span>
+			<input type="hidden" name="remove-priority" value="` + html.EscapeString(p.Priority) + `">
+			<input type="hidden" name="confirm" value="1">
+			<button type="submit" class="` + confirmBtnClass + `">
+				<span class="btn-text">` + confirmBtnText + `</span>
 				<span class="btn-spinner"><span class="spinner"></span></span>
 			</button>
 		</form>`
 	}
 
-	// Build footer buttons
-	var footerButtons string
+	// Build footer buttons and warning
+	var footerButtons, warningHTML string
 	if p.DryRun {
-		footerButtons = `<button class="btn" onclick="closeModal()">Cancel</button>` + runForRealForm
+		footerButtons = `<button class="btn" onclick="closeModal()">Cancel</button>` + confirmForm
+		if p.Action == "remove" {
+			warningHTML = `<p class="muted" style="margin:0.75rem 0 0;">Warning: this cannot be undone</p>`
+		}
 	} else {
 		footerButtons = `<button class="btn" onclick="window.location.href='` + p.RedirectURL + `'">Done</button>`
 	}
@@ -487,7 +531,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 		</div>
 		<div class="modal-body">
 			<p>` + description + `</p>
-			<pre class="output">` + escapedOutput + `</pre>
+			<pre class="output">` + escapedOutput + `</pre>` + warningHTML + `
 		</div>
 		<div class="modal-footer">
 			` + footerButtons + `
@@ -522,6 +566,147 @@ func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr st
 
 	h.scanner.CancelScan(runID)
 	h.redirect(w, r, "/scans/runs/"+runIDStr)
+}
+
+// HandleDeleteFiles handles POST /scans/runs/{id}/delete-files for manual file deletion
+func (h *Handler) HandleDeleteFiles(w http.ResponseWriter, r *http.Request, runIDStr string) {
+	if !h.validateCSRF(r) {
+		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+		return
+	}
+
+	// Always preview first unless explicitly confirming
+	confirm := r.FormValue("confirm") == "1"
+	dryRun := !confirm
+
+	filePathsStr := r.FormValue("file_paths")
+	filePaths := strings.Split(filePathsStr, "\n")
+
+	var results []string
+	var deletedCount, errorCount int
+
+	for _, path := range filePaths {
+		path = strings.TrimSpace(path)
+		if path == "" {
+			continue
+		}
+
+		// Validate path is within allowed directories
+		if len(h.cfg.AllowedPaths) > 0 && !h.cfg.IsPathAllowed(path) {
+			results = append(results, fmt.Sprintf("Not allowed: %s", path))
+			errorCount++
+			continue
+		}
+
+		if dryRun {
+			results = append(results, path)
+		} else {
+			if err := os.Remove(path); err != nil {
+				results = append(results, fmt.Sprintf("Error: %s - %v", path, err))
+				errorCount++
+			} else {
+				results = append(results, fmt.Sprintf("Deleted: %s", path))
+				deletedCount++
+			}
+		}
+	}
+
+	// Get CSRF token for confirm form
+	var csrfToken string
+	if cookie, err := r.Cookie(csrfCookieName); err == nil {
+		csrfToken = cookie.Value
+	}
+
+	h.renderDeleteFilesModal(w, deleteFilesModalParams{
+		Output:      strings.Join(results, "\n"),
+		DryRun:      dryRun,
+		FilePaths:   filePathsStr,
+		RunID:       runIDStr,
+		CSRFToken:   csrfToken,
+		DeleteCount: deletedCount,
+		ErrorCount:  errorCount,
+	})
+}
+
+// deleteFilesModalParams holds parameters for rendering the delete files modal
+type deleteFilesModalParams struct {
+	Output      string
+	DryRun      bool
+	FilePaths   string
+	RunID       string
+	CSRFToken   string
+	DeleteCount int
+	ErrorCount  int
+}
+
+// renderDeleteFilesModal renders the delete files result modal
+func (h *Handler) renderDeleteFilesModal(w http.ResponseWriter, p deleteFilesModalParams) {
+	var title, description string
+	if p.DryRun {
+		title = "Delete Files Preview"
+		description = "The following files will be deleted:"
+	} else {
+		title = "Delete Files Complete"
+		if p.ErrorCount > 0 {
+			description = fmt.Sprintf("Deleted %d files with %d errors:", p.DeleteCount, p.ErrorCount)
+		} else {
+			description = fmt.Sprintf("Successfully deleted %d files:", p.DeleteCount)
+		}
+	}
+
+	escapedOutput := html.EscapeString(p.Output)
+
+	var confirmForm string
+	if p.DryRun {
+		confirmForm = `<form method="POST" action="/scans/runs/` + p.RunID + `/delete-files" style="display:inline;"
+			hx-post="/scans/runs/` + p.RunID + `/delete-files"
+			hx-target="#modal-backdrop"
+			hx-swap="outerHTML">
+			<input type="hidden" name="` + csrfFormField + `" value="` + p.CSRFToken + `">
+			<input type="hidden" name="file_paths" value="` + html.EscapeString(p.FilePaths) + `">
+			<input type="hidden" name="confirm" value="1">
+			<button type="submit" class="btn btn-danger">
+				<span class="btn-text">Delete Files</span>
+				<span class="btn-spinner"><span class="spinner"></span></span>
+			</button>
+		</form>`
+	}
+
+	var footerButtons, warningHTML string
+	if p.DryRun {
+		footerButtons = `<button class="btn" onclick="closeModal()">Cancel</button>` + confirmForm
+		warningHTML = `<p class="muted" style="margin:0.75rem 0 0;">Warning: this cannot be undone</p>`
+	} else {
+		footerButtons = `<button class="btn" onclick="window.location.reload()">Done</button>`
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+	<div class="modal" onclick="event.stopPropagation()">
+		<div class="modal-header">
+			<h3>` + title + `</h3>
+			<button class="modal-close" onclick="closeModal()">&times;</button>
+		</div>
+		<div class="modal-body">
+			<p>` + description + `</p>
+			<pre class="output">` + escapedOutput + `</pre>` + warningHTML + `
+		</div>
+		<div class="modal-footer">
+			` + footerButtons + `
+		</div>
+	</div>
+</div>
+<script>
+document.body.classList.add('modal-open');
+function closeModal() {
+	document.getElementById('modal-backdrop').remove();
+	document.body.classList.remove('modal-open');
+}
+document.addEventListener('keydown', function(e) {
+	if (e.key === 'Escape') closeModal();
+});
+</script>`
+	w.Write([]byte(modalHTML))
 }
 
 // parseSizeWithError parses a human-readable size string to bytes, returning an error if invalid

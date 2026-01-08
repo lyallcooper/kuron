@@ -45,6 +45,10 @@ func (m *mockExecutor) Dedupe(ctx context.Context, input string, opts fclones.De
 	return "", nil
 }
 
+func (m *mockExecutor) Remove(ctx context.Context, input string, opts fclones.RemoveOptions) (string, error) {
+	return "", nil
+}
+
 func testDB(t *testing.T) *db.DB {
 	t.Helper()
 	database, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
@@ -373,5 +377,9 @@ func (m *blockingExecutor) Link(ctx context.Context, input string, opts fclones.
 }
 
 func (m *blockingExecutor) Dedupe(ctx context.Context, input string, opts fclones.DedupeOptions) (string, error) {
+	return "", nil
+}
+
+func (m *blockingExecutor) Remove(ctx context.Context, input string, opts fclones.RemoveOptions) (string, error) {
 	return "", nil
 }

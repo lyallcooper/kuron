@@ -87,6 +87,10 @@ func (m *mockExecutor) Dedupe(ctx context.Context, input string, opts fclones.De
 	return m.dedupeOut, m.dedupeErr
 }
 
+func (m *mockExecutor) Remove(ctx context.Context, input string, opts fclones.RemoveOptions) (string, error) {
+	return "", nil
+}
+
 // testDB creates a test database in a temp directory
 func testDB(t *testing.T) *db.DB {
 	t.Helper()
@@ -409,6 +413,10 @@ func (m *blockingMockExecutor) Dedupe(ctx context.Context, input string, opts fc
 	return "", nil
 }
 
+func (m *blockingMockExecutor) Remove(ctx context.Context, input string, opts fclones.RemoveOptions) (string, error) {
+	return "", nil
+}
+
 func TestExecuteAction(t *testing.T) {
 	database := testDB(t)
 	executor := &mockExecutor{
@@ -441,7 +449,7 @@ func TestExecuteAction(t *testing.T) {
 	groupIDs := []int64{groups[0].ID}
 
 	// Execute hardlink action
-	result, err := scanner.ExecuteAction(context.Background(), run.ID, groupIDs, db.ActionTypeHardlink, false)
+	result, err := scanner.ExecuteAction(context.Background(), run.ID, groupIDs, db.ActionTypeHardlink, false, "")
 	if err != nil {
 		t.Fatalf("ExecuteAction failed: %v", err)
 	}
@@ -490,7 +498,7 @@ func TestExecuteActionDedupe(t *testing.T) {
 	}
 
 	// Execute reflink/dedupe action
-	result, err := scanner.ExecuteAction(context.Background(), run.ID, []int64{groups[0].ID}, db.ActionTypeReflink, false)
+	result, err := scanner.ExecuteAction(context.Background(), run.ID, []int64{groups[0].ID}, db.ActionTypeReflink, false, "")
 	if err != nil {
 		t.Fatalf("ExecuteAction failed: %v", err)
 	}
@@ -531,7 +539,7 @@ func TestExecuteActionDryRun(t *testing.T) {
 	}
 
 	// Execute dry run
-	_, err := scanner.ExecuteAction(context.Background(), run.ID, []int64{groups[0].ID}, db.ActionTypeHardlink, true)
+	_, err := scanner.ExecuteAction(context.Background(), run.ID, []int64{groups[0].ID}, db.ActionTypeHardlink, true, "")
 	if err != nil {
 		t.Fatalf("ExecuteAction failed: %v", err)
 	}

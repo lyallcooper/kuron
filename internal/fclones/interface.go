@@ -22,6 +22,9 @@ type ExecutorInterface interface {
 
 	// Dedupe runs fclones dedupe to reflink duplicate files
 	Dedupe(ctx context.Context, input string, opts DedupeOptions) (string, error)
+
+	// Remove runs fclones remove to delete duplicate files
+	Remove(ctx context.Context, input string, opts RemoveOptions) (string, error)
 }
 
 // Ensure Executor implements ExecutorInterface

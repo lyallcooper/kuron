@@ -246,6 +246,28 @@ func (e *Executor) Dedupe(ctx context.Context, input string, opts DedupeOptions)
 	return string(output), nil
 }
 
+// Remove runs fclones remove to delete duplicate files
+func (e *Executor) Remove(ctx context.Context, input string, opts RemoveOptions) (string, error) {
+	args := []string{"remove"}
+
+	if opts.DryRun {
+		args = append(args, "--dry-run")
+	}
+	if opts.Priority != "" {
+		args = append(args, "--priority", opts.Priority)
+	}
+
+	cmd := exec.CommandContext(ctx, e.binaryPath, args...)
+	cmd.Stdin = strings.NewReader(input)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(output), fmt.Errorf("fclones remove failed: %w", err)
+	}
+
+	return string(output), nil
+}
+
 // GroupToInput converts groups to JSON format for link/dedupe commands
 func (e *Executor) GroupToInput(groups []Group) string {
 	// Filter out groups with less than 2 files and calculate stats

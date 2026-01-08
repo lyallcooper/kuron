@@ -9,7 +9,7 @@
     --success: #22863a;
     --warning: #d49f00;
     --error: #cb2431;
-    --error-hover: #b21f2d;
+    --error-hover: #e05555;
     --muted: #666666;
     --mono: ui-monospace, 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
 }
@@ -174,6 +174,7 @@ button.btn {
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     box-sizing: border-box;
     position: relative;
+    white-space: nowrap;
 }
 
 .btn:hover, a.btn:hover {
@@ -184,6 +185,9 @@ button.btn {
 
 .btn:focus {
     outline: none;
+}
+
+.btn:focus-visible {
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--muted);
 }
 
@@ -204,7 +208,7 @@ button.btn {
     color: var(--bg);
 }
 
-.btn-primary:focus {
+.btn-primary:focus-visible {
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg);
 }
 
@@ -221,14 +225,52 @@ button.btn {
 .btn-danger:hover {
     background: var(--error-hover);
     border-color: var(--error-hover);
+    color: #ffffff;
 }
 
-.btn-danger:focus {
+.btn-danger:focus-visible {
     box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--error);
 }
 
 .btn-danger:active {
     background: var(--error-hover);
+    color: #ffffff;
+}
+
+/* File action bar (fixed bottom overlay when files are selected) */
+.file-action-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+}
+
+/* File selection label in expanded rows */
+.file-select-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.125rem 0.25rem;
+    margin: -0.125rem -0.25rem;
+    border-radius: 0.25rem;
+}
+
+.file-select-label:hover {
+    background: var(--bg-secondary);
+}
+
+.file-select-label .file-path {
+    word-break: break-all;
 }
 
 .btn-sm, a.btn-sm, button.btn-sm {
@@ -1383,6 +1425,7 @@ th.sorted {
     padding: 1rem;
     border-top: 1px solid var(--border);
     display: flex;
+    align-items: center;
     justify-content: flex-end;
     gap: 0.5rem;
 }
@@ -1672,6 +1715,10 @@ body.modal-open {
 
     .card-header .action-buttons {
         width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .btn-group {
         flex-wrap: wrap;
     }
 }

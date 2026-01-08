@@ -224,7 +224,7 @@ func (s *Scheduler) waitAndExecuteAction(ctx context.Context, runID int64, job *
 			}
 
 			// Execute action (not dry run for scheduled jobs)
-			_, err = s.scanner.ExecuteAction(ctx, runID, groupIDs, actionType, false)
+			_, err = s.scanner.ExecuteAction(ctx, runID, groupIDs, actionType, false, "")
 			if err != nil {
 				log.Printf("scheduler: failed to execute action: %v", err)
 			} else {

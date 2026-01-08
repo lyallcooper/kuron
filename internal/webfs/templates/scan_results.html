@@ -260,29 +260,31 @@
         <div class="action-buttons">
             <span id="selection-count" class="muted">0 selected</span>
             <span class="separator"></span>
-            <label class="form-checkbox">
-                <input type="checkbox" name="dry_run" value="1" checked id="dry-run-checkbox">
-                Dry run
-            </label>
             <span class="btn-group">
                 <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                    <button type="button" name="action" value="hardlink" class="btn btn-primary" id="btn-hardlink" disabled
-                            hx-post="/scans/runs/{{.Run.ID}}/action"
-                            hx-include="#action-form, #dry-run-checkbox"
+                    <button type="button" class="btn btn-primary" id="btn-hardlink" disabled
+                            hx-post="/scans/runs/{{.Run.ID}}/action?action=hardlink"
+                            hx-include="#action-form"
                             hx-target="body"
                             hx-swap="beforeend">
-                        <span class="btn-text">Hardlink</span>
+                        <span class="btn-text">Hardlink…</span>
                         <span class="btn-spinner"><span class="spinner"></span></span>
                     </button>
                 </span>
                 <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
-                    <button type="button" name="action" value="reflink" class="btn btn-primary" id="btn-reflink" disabled
-                            hx-post="/scans/runs/{{.Run.ID}}/action"
-                            hx-include="#action-form, #dry-run-checkbox"
+                    <button type="button" class="btn btn-primary" id="btn-reflink" disabled
+                            hx-post="/scans/runs/{{.Run.ID}}/action?action=reflink"
+                            hx-include="#action-form"
                             hx-target="body"
                             hx-swap="beforeend">
-                        <span class="btn-text">Reflink</span>
+                        <span class="btn-text">Reflink…</span>
                         <span class="btn-spinner"><span class="spinner"></span></span>
+                    </button>
+                </span>
+                <span class="btn-wrapper" data-disabled-hint="Select one or more groups first">
+                    <button type="button" class="btn btn-danger" id="btn-remove" disabled
+                            onclick="openRemoveModal()">
+                        <span class="btn-text">Remove…</span>
                     </button>
                 </span>
                 <button type="button" class="help-icon" onclick="toggleLinkHelp(this)">?</button>
@@ -296,6 +298,26 @@
             <input type="hidden" name="group_ids" id="selected-groups" value="">
             <input type="hidden" name="select_all" id="select-all-flag" value="">
             <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
+        </form>
+
+        <!-- File action bar (shown when individual files are selected) -->
+        <div id="file-action-bar" class="file-action-bar" style="display:none">
+            <span id="file-selection-count" class="muted">0 files selected</span>
+            <button type="button" class="btn btn-danger btn-sm" id="btn-delete-files"
+                    hx-post="/scans/runs/{{.Run.ID}}/delete-files"
+                    hx-include="#file-delete-form"
+                    hx-target="body"
+                    hx-swap="beforeend">
+                <span class="btn-text">Delete…</span>
+                <span class="btn-spinner"><span class="spinner"></span></span>
+            </button>
+            <button type="button" class="btn btn-sm" onclick="clearFileSelection()">Clear</button>
+        </div>
+
+        <!-- Hidden form for file deletion -->
+        <form id="file-delete-form" style="display:none">
+            {{csrfField .CSRFToken}}
+            <input type="hidden" name="file_paths" id="selected-file-paths" value="">
         </form>
 
         <!-- Groups Table -->
@@ -323,6 +345,7 @@
                 </thead>
                 <tbody>
                     {{range .Groups}}
+                    {{$groupID := .ID}}
                     <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})"
                         tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-{{.ID}}"
                         onkeydown="handleRowKeydown(event, {{.ID}})">
@@ -341,7 +364,15 @@
                             <strong>Files:</strong>
                             <ul class="file-list">
                                 {{range .Files}}
-                                <li>{{.}}</li>
+                                <li>
+                                    <label class="file-select-label">
+                                        <input type="checkbox" class="file-checkbox"
+                                               data-group-id="{{$groupID}}"
+                                               data-file-path="{{.}}"
+                                               onchange="updateFileSelection()">
+                                        <span class="file-path">{{.}}</span>
+                                    </label>
+                                </li>
                                 {{end}}
                             </ul>
                         </td>
@@ -466,6 +497,7 @@ function updateSelectionDisplay() {
     var selectAllFlagEl = document.getElementById('select-all-flag');
     var btnHardlink = document.getElementById('btn-hardlink');
     var btnReflink = document.getElementById('btn-reflink');
+    var btnRemove = document.getElementById('btn-remove');
 
     var hasSelection = false;
 
@@ -484,6 +516,7 @@ function updateSelectionDisplay() {
 
     btnHardlink.disabled = !hasSelection;
     btnReflink.disabled = !hasSelection;
+    btnRemove.disabled = !hasSelection;
 }
 
 function sortBy(field) {
@@ -511,9 +544,105 @@ document.querySelectorAll('.btn-wrapper').forEach(function(wrapper) {
     });
 });
 
-// Initialize on page load
-updateSelectionDisplay();
+// Remove modal functions
+function openRemoveModal() {
+    document.getElementById('remove-modal-backdrop').style.display = 'flex';
+    document.body.classList.add('modal-open');
+    updateRemoveHint();
+}
+
+function closeRemoveModal() {
+    document.getElementById('remove-modal-backdrop').style.display = 'none';
+    document.body.classList.remove('modal-open');
+}
+
+function updateRemoveHint() {
+    var hints = {
+        'least-recently-modified': 'Keep: most recently modified file from each group.',
+        'most-recently-modified': 'Keep: least recently modified file from each group.',
+        'oldest': 'Keep: most recently created file from each group.',
+        'newest': 'Keep: least recently created file from each group.',
+        'least-nested': 'Keep: most deeply nested file from each group.',
+        'most-nested': 'Keep: least nested file from each group.',
+        'top': 'Keep: bottom listed file from each group.',
+        'bottom': 'Keep: top listed file from each group.'
+    };
+    var select = document.getElementById('remove-priority');
+    var hint = document.getElementById('remove-hint');
+    hint.textContent = hints[select.value] || '';
+}
+
+// File selection for manual deletion
+var selectedFiles = new Set();
+
+function updateFileSelection() {
+    selectedFiles.clear();
+    document.querySelectorAll('.file-checkbox:checked').forEach(function(cb) {
+        selectedFiles.add(cb.dataset.filePath);
+    });
+
+    var bar = document.getElementById('file-action-bar');
+    var countEl = document.getElementById('file-selection-count');
+    var pathsEl = document.getElementById('selected-file-paths');
+
+    if (selectedFiles.size > 0) {
+        bar.style.display = 'flex';
+        countEl.textContent = selectedFiles.size + ' file' + (selectedFiles.size === 1 ? '' : 's') + ' selected';
+        pathsEl.value = Array.from(selectedFiles).join('\n');
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function clearFileSelection() {
+    document.querySelectorAll('.file-checkbox:checked').forEach(function(cb) {
+        cb.checked = false;
+    });
+    updateFileSelection();
+}
+
+// Initialize on page load (handles browser-restored checkbox state)
+updateSelection();
+updateFileSelection();
 </script>
+
+<!-- Remove Options Modal -->
+<div id="remove-modal-backdrop" class="modal-backdrop" style="display:none" onclick="closeRemoveModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <h3>Remove Duplicates</h3>
+            <button class="modal-close" onclick="closeRemoveModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>Choose which files to prioritize for removal. One file per group will be kept.</p>
+            <div class="form-field" style="display:flex; align-items:center; gap:0.5rem;">
+                <label for="remove-priority">Remove:</label>
+                <select id="remove-priority" name="remove-priority" class="form-select" onchange="updateRemoveHint()">
+                    <option value="least-recently-modified">Oldest modified</option>
+                    <option value="most-recently-modified">Newest modified</option>
+                    <option value="oldest">Oldest created</option>
+                    <option value="newest">Newest created</option>
+                    <option value="least-nested">Least nested</option>
+                    <option value="most-nested">Most nested</option>
+                    <option value="top">Top listed</option>
+                    <option value="bottom">Bottom listed</option>
+                </select>
+            </div>
+            <p id="remove-hint" class="muted" style="margin:0.5rem 0 0; font-size:0.85rem;">Keep: most recently modified file from each group.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="closeRemoveModal()">Cancel</button>
+            <button class="btn btn-danger" id="btn-remove-preview"
+                    hx-post="/scans/runs/{{.Run.ID}}/action?action=remove"
+                    hx-include="#action-form, #remove-priority"
+                    hx-target="#remove-modal-backdrop"
+                    hx-swap="outerHTML">
+                <span class="btn-text">Preview…</span>
+                <span class="btn-spinner"><span class="spinner"></span></span>
+            </button>
+        </div>
+    </div>
+</div>
 {{else}}
 <div class="empty-state">
     <h3>No duplicates found</h3>
