@@ -22,12 +22,12 @@ Download the latest release for your platform:
 
 | Platform | File |
 |----------|------|
-| macOS (Apple Silicon) | [`Kuron-macos-arm64.dmg`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-macos-arm64.dmg)\* |
+| macOS | [`Kuron-macos-arm64.dmg`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-macos-arm64.dmg)<sup>ⓘ Note</sup> |
 | Linux | [`Kuron-linux-amd64.tar.gz`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-linux-amd64.tar.gz) |
 | Windows | [`Kuron-windows-amd64.zip`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-windows-amd64.zip) |
 
 > [!Note]
-> \*macOS only: the app is not notarized by Apple, so after attempting to open you need to go into **System Settings** > **Privacy & Security**, then scroll down and click **Open Anyway** to open the app.
+> To open on macOS: attempt to open normally, then open **System Settings** > **Privacy & Security**, scroll down and click **Open Anyway**.
 
 ### Server
 
@@ -98,5 +98,6 @@ go build -o kuron ./cmd/server
 ### Action Types
 
 - **Hardlink**: Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
-- **Reflink**: Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.). NB: Files previously deduplicated via reflink will show up again on subsequent scans due to how fclones works.
+- **Reflink**: Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.).
+  - NB: Files previously deduplicated via reflink will show up again on subsequent scans due to how fclones detects duplicates.
 - **Remove**: Delete duplicate files, keeping one per group based on priority (newest, oldest, most/least nested, etc.).
