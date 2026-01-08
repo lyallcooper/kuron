@@ -722,7 +722,7 @@ button.btn {
 
 .cron-invalid {
     background: rgba(248, 81, 73, 0.15);
-    color: var(--danger);
+    color: var(--error);
 }
 
 /* Cards */
@@ -1557,10 +1557,6 @@ body.modal-open {
 .btn .spinner {
     width: 0.875em;
     height: 0.875em;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
 }
 
 /* Hide button text during loading, show spinner */
