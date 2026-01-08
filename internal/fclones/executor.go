@@ -132,12 +132,13 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 	// Read stderr (progress) in a goroutine
 	var progress Progress
 	var lastSendTime time.Time
+	var errorLines []string
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		e.readProgress(stderr, &progress, progressChan, &lastSendTime)
+		errorLines = e.readProgress(stderr, &progress, progressChan, &lastSendTime)
 	}()
 
 	// Read stdout (JSON output)
@@ -154,6 +155,10 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 
 	// Wait for command to finish
 	if err := cmd.Wait(); err != nil {
+		// Include any error messages from stderr
+		if len(errorLines) > 0 {
+			return nil, fmt.Errorf("fclones failed: %s", strings.Join(errorLines, "\n"))
+		}
 		return nil, fmt.Errorf("fclones exited with error: %w", err)
 	}
 
@@ -166,8 +171,9 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 	return &result, nil
 }
 
-// readProgress reads progress output from fclones stderr and sends updates
-func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) {
+// readProgress reads progress output from fclones stderr and sends updates.
+// Returns any non-progress lines (error messages) that were encountered.
+func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) []string {
 	const maxLineLen = 64 * 1024 // 64KB max line length for safety
 
 	scanner := bufio.NewScanner(r)
@@ -196,13 +202,18 @@ func (e *Executor) readProgress(r io.Reader, progress *Progress, progressChan ch
 		return 0, nil, nil
 	})
 
+	var errorLines []string
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" {
 			continue
 		}
-		e.parseProgressLine(line, progress, progressChan, lastSendTime)
+		if !e.parseProgressLine(line, progress, progressChan, lastSendTime) {
+			// Line wasn't a progress line - could be an error message
+			errorLines = append(errorLines, line)
+		}
 	}
+	return errorLines
 }
 
 // Link runs fclones link to hardlink duplicate files
@@ -481,9 +492,18 @@ func phaseNameToPhase(name string) string {
 
 // parseProgressLine parses a single line of fclones output and updates progress.
 // If lastSendTime is provided, progress updates are throttled to 50ms minimum between sends.
-func (e *Executor) parseProgressLine(line string, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) {
+// Returns true if the line was recognized as a progress/info line, false if it might be an error.
+func (e *Executor) parseProgressLine(line string, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) bool {
+	// Check for known progress/info patterns
+	isProgressLine := strings.Contains(line, "Scanned") ||
+		strings.Contains(line, "files matching selection criteria") ||
+		strings.Contains(line, "candidates after") ||
+		(strings.Contains(line, "/") && strings.Contains(line, ":") && strings.Contains(line, "[")) ||
+		strings.Contains(line, "fclones:") ||
+		strings.Contains(line, "Finished in")
+
 	if progressChan == nil {
-		return
+		return isProgressLine
 	}
 
 	// Parse fclones output formats:
@@ -556,7 +576,7 @@ func (e *Executor) parseProgressLine(line string, progress *Progress, progressCh
 		if lastSendTime != nil {
 			now := time.Now()
 			if now.Sub(*lastSendTime) < 50*time.Millisecond {
-				return // Skip this update, too soon
+				return isProgressLine // Skip this update, too soon
 			}
 			*lastSendTime = now
 		}
@@ -567,4 +587,5 @@ func (e *Executor) parseProgressLine(line string, progress *Progress, progressCh
 			// Don't block if channel is full
 		}
 	}
+	return isProgressLine
 }
