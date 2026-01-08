@@ -1584,17 +1584,6 @@ body.modal-open {
     margin-top: 1rem;
 }
 
-/* Dry run toggle */
-.dry-run-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background: var(--bg-secondary);
-    border-radius: 4px;
-    margin-bottom: 1rem;
-}
-
 /* Pagination */
 .pagination {
     display: flex;

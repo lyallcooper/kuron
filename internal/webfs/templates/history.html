@@ -72,7 +72,6 @@
                     <th>Groups</th>
                     <th>Files</th>
                     <th>Saved</th>
-                    <th>Dry Run</th>
                 </tr>
             </thead>
             <tbody>
@@ -84,7 +83,6 @@
                     <td>{{.GroupsProcessed}}</td>
                     <td>{{.FilesProcessed}}</td>
                     <td class="size">{{.BytesSaved | formatBytes}}</td>
-                    <td>{{if .DryRun}}Yes{{else}}No{{end}}</td>
                 </tr>
                 {{end}}
             </tbody>

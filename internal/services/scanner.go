@@ -319,15 +319,19 @@ type ActionResult struct {
 
 // ExecuteAction executes a dedupe action on selected groups
 func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int64, actionType db.ActionType, dryRun bool, priority string) (*ActionResult, error) {
-	// Create action record
-	action := &db.Action{
-		ScanRunID:  runID,
-		ActionType: actionType,
-		DryRun:     dryRun,
-	}
-	action, err := s.db.CreateAction(action)
-	if err != nil {
-		return nil, err
+	// Only create action record for real executions (not previews)
+	var action *db.Action
+	var err error
+	if !dryRun {
+		action = &db.Action{
+			ScanRunID:  runID,
+			ActionType: actionType,
+			DryRun:     false,
+		}
+		action, err = s.db.CreateAction(action)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Get groups
@@ -359,8 +363,10 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 	}
 
 	if err != nil {
-		errMsg := err.Error() + "\n" + output
-		s.db.CompleteAction(action.ID, len(groupIDs), 0, 0, db.ActionStatusFailed, &errMsg)
+		if action != nil {
+			errMsg := err.Error() + "\n" + output
+			s.db.CompleteAction(action.ID, len(groupIDs), 0, 0, db.ActionStatusFailed, &errMsg)
+		}
 		return &ActionResult{Action: action, Output: output}, err
 	}
 
@@ -376,12 +382,11 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 		filesProcessed += g.FileCount - 1
 	}
 
-	// Mark groups as processed (unless dry run)
-	if !dryRun {
+	// Mark groups as processed and record completion (only for real executions)
+	if action != nil {
 		s.db.UpdateDuplicateGroupStatus(groupIDs, db.DuplicateGroupStatusProcessed)
+		s.db.CompleteAction(action.ID, len(groupIDs), filesProcessed, bytesSaved, db.ActionStatusCompleted, nil)
 	}
-
-	s.db.CompleteAction(action.ID, len(groupIDs), filesProcessed, bytesSaved, db.ActionStatusCompleted, nil)
 
 	return &ActionResult{Action: action, Output: output}, nil
 }
