@@ -408,21 +408,27 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 	}
 
 	result, err := h.scanner.ExecuteAction(r.Context(), runID, groupIDs, actionType, dryRun, priority)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
-	// For HTMX requests, show modal with results
+	// For HTMX requests, show modal with results (or error)
 	if r.Header.Get("HX-Request") == "true" {
 		// Get CSRF token from cookie for the confirm form
 		var csrfToken string
 		if cookie, err := r.Cookie(csrfCookieName); err == nil {
 			csrfToken = cookie.Value
 		}
+
+		var errorMsg string
+		var output string
+		if err != nil {
+			errorMsg = err.Error()
+			output = result.Output
+		} else {
+			output = result.Output
+		}
+
 		h.renderActionResultModal(w, renderActionModalParams{
 			Action:       action,
-			Output:       result.Output,
+			Output:       output,
 			DryRun:       dryRun,
 			RedirectURL:  "/scans/runs/" + runIDStr,
 			RunID:        runIDStr,
@@ -431,7 +437,13 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 			StatusFilter: statusFilter,
 			CSRFToken:    csrfToken,
 			Priority:     priority,
+			Error:        errorMsg,
 		})
+		return
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -450,6 +462,7 @@ type renderActionModalParams struct {
 	StatusFilter string
 	CSRFToken    string
 	Priority     string // For remove action
+	Error        string // Error message if action failed
 }
 
 // renderActionResultModal renders the action results modal
@@ -475,7 +488,10 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	}
 
 	var title, description string
-	if p.DryRun {
+	if p.Error != "" {
+		title = actionName + " Failed"
+		description = "The operation failed with the following error:"
+	} else if p.DryRun {
 		title = actionName + " Preview"
 		description = "The following operations would be performed:"
 	} else {
@@ -486,9 +502,9 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	// Escape output to prevent XSS
 	escapedOutput := html.EscapeString(p.Output)
 
-	// Build the confirm form for previews
+	// Build the confirm form for previews (not shown on error)
 	var confirmForm string
-	if p.DryRun {
+	if p.DryRun && p.Error == "" {
 		selectAllValue := ""
 		if p.SelectAll {
 			selectAllValue = "1"
@@ -513,7 +529,9 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 
 	// Build footer buttons and warning
 	var footerButtons, warningHTML string
-	if p.DryRun {
+	if p.Error != "" {
+		footerButtons = `<button class="btn" onclick="closeModal()">Close</button>`
+	} else if p.DryRun {
 		footerButtons = `<button class="btn" onclick="closeModal()">Cancel</button>` + confirmForm
 		if p.Action == "remove" {
 			warningHTML = `<p class="muted" style="margin:0.75rem 0 0;">Warning: this cannot be undone</p>`
