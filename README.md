@@ -91,10 +91,11 @@ go build -o kuron ./cmd/server
 1. **Quick Scan**: Run an ad-hoc scan from the dashboard by specifying paths and filters
 2. **Create Jobs**: Set up scheduled scans with cron expressions for automated scanning
 3. **Review Results**: View duplicate groups, expand to see file paths
-4. **Take Action**: Select groups and choose Hardlink or Reflink (use dry run first to preview)
+4. **Take Action**: Select groups and choose an action (all actions preview first)
 5. **View History**: Track all past scans and actions from the History page
 
-### Hardlink vs Reflink
+### Action Types
 
 - **Hardlink**: Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
 - **Reflink**: Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.). NB: Files previously deduplicated via reflink will show up again on subsequent scans due to how fclones works.
+- **Remove**: Delete duplicate files, keeping one per group based on priority (newest, oldest, most/least nested, etc.).
