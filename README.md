@@ -1,4 +1,4 @@
-# kuron
+# kurōn
 
 Fast, easy to use file deduplication. Available as desktop or server app. Powered by [fclones](https://github.com/pkolaczk/fclones).
 
@@ -9,8 +9,8 @@ Fast, easy to use file deduplication. Available as desktop or server app. Powere
 
 ## Features
 
-- **Detect duplicates**: Scan directories to find duplicate files
-- **Dedupe**: Hardlink or reflink duplicates to reclaim disk space
+- **Find duplicates**: Scan directories to find duplicate files
+- **Dedupe**: Hardlink, reflink or remove duplicates to reclaim disk space
 - **Schedule Jobs**: Run scans automatically on a cron schedule
 - **View History**: View past scans, results, and actions taken
 
@@ -26,7 +26,8 @@ Download the latest release for your platform:
 | Linux | [`Kuron-linux-amd64.tar.gz`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-linux-amd64.tar.gz) |
 | Windows | [`Kuron-windows-amd64.zip`](https://github.com/lyallcooper/kuron/releases/latest/download/Kuron-windows-amd64.zip) |
 
-\*Note for macOS: the app is not notarized by Apple, so after attempting to open you need to go into **System Settings** > **Privacy & Security**, then scroll down and click **Open Anyway** to open the app.
+> [!Note]
+> \*macOS only: the app is not notarized by Apple, so after attempting to open you need to go into **System Settings** > **Privacy & Security**, then scroll down and click **Open Anyway** to open the app.
 
 ### Server
 
