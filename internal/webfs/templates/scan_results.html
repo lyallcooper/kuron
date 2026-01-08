@@ -644,10 +644,22 @@ updateFileSelection();
     </div>
 </div>
 {{else}}
+{{if eq .Run.Status "completed"}}
 <div class="empty-state">
     <h3>No duplicates found</h3>
     <p>The scan completed without finding any duplicate files.</p>
 </div>
+{{else if eq .Run.Status "cancelled"}}
+<div class="empty-state">
+    <h3>Scan cancelled</h3>
+    <p>The scan was cancelled before completion.</p>
+</div>
+{{else if eq .Run.Status "failed"}}
+<div class="empty-state">
+    <h3>Scan failed</h3>
+    <p>The scan encountered an error and did not complete.</p>
+</div>
+{{end}}
 {{end}}
 {{end}}
 {{end}}
