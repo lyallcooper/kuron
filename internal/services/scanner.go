@@ -237,10 +237,9 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 	progressMu.Unlock()
 
 	if err != nil {
-		// Check if cancelled
+		// Check if cancelled (not an error, just user-initiated stop)
 		if ctx.Err() != nil {
-			errMsg := "Scan cancelled"
-			s.db.CompleteScanRun(runID, db.ScanRunStatusCancelled, &errMsg)
+			s.db.CompleteScanRun(runID, db.ScanRunStatusCancelled, nil)
 			s.broadcast(runID, &types.ScanProgress{Status: "cancelled"})
 			log.Printf("scan %d: cancelled after %s", runID, time.Since(startTime).Round(time.Second))
 			return
