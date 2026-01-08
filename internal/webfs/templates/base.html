@@ -240,26 +240,32 @@
         });
     }
 
-    // Auto-add pending list inputs on form submit
+    // Auto-add pending list inputs on form submit (silently, without visual update)
+    function addHiddenInput(form, name, value) {
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = name;
+        hidden.value = value;
+        form.appendChild(hidden);
+    }
+
     function initFormSubmitHandlers() {
         document.querySelectorAll('form').forEach(function(form) {
             if (form.dataset.submitInit) return;
             form.dataset.submitInit = 'true';
             form.addEventListener('submit', function() {
-                // Add any pending path
+                // Add any pending values as hidden inputs (no visual change to avoid flash)
                 var pathInput = document.getElementById('new-path');
                 if (pathInput && pathInput.value.trim()) {
-                    addPath();
+                    addHiddenInput(form, 'paths', pathInput.value.trim());
                 }
-                // Add any pending include pattern
                 var includeInput = document.getElementById('new-include');
                 if (includeInput && includeInput.value.trim()) {
-                    addPattern('include');
+                    addHiddenInput(form, 'include_patterns', includeInput.value.trim());
                 }
-                // Add any pending exclude pattern
                 var excludeInput = document.getElementById('new-exclude');
                 if (excludeInput && excludeInput.value.trim()) {
-                    addPattern('exclude');
+                    addHiddenInput(form, 'exclude_patterns', excludeInput.value.trim());
                 }
             });
         });
