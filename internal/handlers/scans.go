@@ -557,6 +557,9 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	</div>
 </div>
 <script>
+// Hide remove options modal if it was open
+var removeModal = document.getElementById('remove-modal-backdrop');
+if (removeModal) removeModal.style.display = 'none';
 document.body.classList.add('modal-open');
 function closeModal() {
 	document.getElementById('modal-backdrop').remove();

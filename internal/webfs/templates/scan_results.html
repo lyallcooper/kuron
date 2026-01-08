@@ -635,8 +635,8 @@ updateFileSelection();
             <button class="btn btn-danger" id="btn-remove-preview"
                     hx-post="/scans/runs/{{.Run.ID}}/action?action=remove"
                     hx-include="#action-form, #remove-priority"
-                    hx-target="#remove-modal-backdrop"
-                    hx-swap="outerHTML">
+                    hx-target="body"
+                    hx-swap="beforeend">
                 <span class="btn-text">Preview…</span>
                 <span class="btn-spinner"><span class="spinner"></span></span>
             </button>
