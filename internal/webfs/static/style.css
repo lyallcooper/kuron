@@ -754,6 +754,10 @@ tr:hover td {
     color: var(--muted);
 }
 
+.actions-cell {
+    white-space: nowrap;
+}
+
 /* Stats grid */
 .stats-grid {
     display: grid;
