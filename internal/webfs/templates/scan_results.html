@@ -602,7 +602,13 @@ function clearFileSelection() {
 }
 
 // Initialize on page load (handles browser-restored checkbox state)
-updateSelection();
+// If browser restored the "select page" checkbox, restore selectAllMode
+if (document.getElementById('select-page').checked) {
+    selectAllMode = true;
+    updateSelectionDisplay();
+} else {
+    updateSelection();
+}
 updateFileSelection();
 </script>
 
