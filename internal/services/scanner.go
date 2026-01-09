@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strings"
 	"sync"
@@ -332,8 +333,9 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 		}
 	}
 
-	// Get groups
+	// Get groups and collect all file paths
 	var groups []fclones.Group
+	var allFiles []string
 	for _, gid := range groupIDs {
 		g, err := s.db.GetDuplicateGroup(gid)
 		if err != nil {
@@ -345,10 +347,31 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 			FileHash: g.FileHash,
 			Files:    g.Files,
 		})
+		allFiles = append(allFiles, g.Files...)
 	}
 
 	// Convert to fclones input format
 	input := s.executor.GroupToInput(groups)
+
+	// Build command string (base command for DB storage, display command includes --dry-run)
+	var command string
+	switch actionType {
+	case db.ActionTypeHardlink:
+		command = "fclones link"
+	case db.ActionTypeReflink:
+		command = "fclones dedupe"
+	case db.ActionTypeRemove:
+		command = "fclones remove"
+		if priority != "" {
+			command += " --priority " + priority
+		}
+	}
+
+	// Display command includes --dry-run flag when applicable
+	displayCommand := command
+	if dryRun {
+		displayCommand += " --dry-run"
+	}
 
 	var output string
 	switch actionType {
@@ -360,10 +383,27 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 		output, err = s.executor.Remove(ctx, input, fclones.RemoveOptions{DryRun: dryRun, Priority: priority})
 	}
 
+	// Prepend command and input summary to output for display
+	// Show what was piped to stdin (the group data)
+	var totalInputBytes int64
+	for _, g := range groups {
+		totalInputBytes += g.FileLen * int64(len(g.Files))
+	}
+	inputSummary := fmt.Sprintf("# Input: %d groups, %d files (%s)\n", len(groups), len(allFiles), formatBytes(totalInputBytes))
+	output = "$ " + displayCommand + "\n" + inputSummary + output
+
 	if err != nil {
 		if action != nil {
 			errMsg := err.Error() + "\n" + output
-			s.db.CompleteAction(action.ID, len(groupIDs), 0, 0, db.ActionStatusFailed, &errMsg)
+			s.db.CompleteAction(action.ID, &db.ActionCompletion{
+				GroupsProcessed: len(groupIDs),
+				Status:          db.ActionStatusFailed,
+				ErrorMessage:    &errMsg,
+				Output:          &output,
+				Files:           allFiles,
+				Command:         &command,
+				GroupIDs:        groupIDs,
+			})
 		}
 		return &ActionResult{Action: action, Output: output}, err
 	}
@@ -383,7 +423,16 @@ func (s *Scanner) ExecuteAction(ctx context.Context, runID int64, groupIDs []int
 	// Mark groups as processed and record completion (only for real executions)
 	if action != nil {
 		s.db.UpdateDuplicateGroupStatus(groupIDs, db.DuplicateGroupStatusProcessed)
-		s.db.CompleteAction(action.ID, len(groupIDs), filesProcessed, bytesSaved, db.ActionStatusCompleted, nil)
+		s.db.CompleteAction(action.ID, &db.ActionCompletion{
+			GroupsProcessed: len(groupIDs),
+			FilesProcessed:  filesProcessed,
+			BytesSaved:      bytesSaved,
+			Status:          db.ActionStatusCompleted,
+			Output:          &output,
+			Files:           allFiles,
+			Command:         &command,
+			GroupIDs:        groupIDs,
+		})
 	}
 
 	return &ActionResult{Action: action, Output: output}, nil
@@ -410,4 +459,18 @@ type ScanConfig struct {
 func GroupOutputToJSON(output *fclones.GroupOutput) string {
 	data, _ := json.MarshalIndent(output, "", "  ")
 	return string(data)
+}
+
+// formatBytes formats bytes as human-readable string
+func formatBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }

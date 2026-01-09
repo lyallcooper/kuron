@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -460,8 +461,12 @@ func TestExecuteAction(t *testing.T) {
 	if result.Action == nil {
 		t.Fatal("result.Action is nil")
 	}
-	if result.Output != "Linked 2 files" {
-		t.Errorf("result.Output = %q, want %q", result.Output, "Linked 2 files")
+	// Output should contain command, input summary, and result
+	if !strings.HasPrefix(result.Output, "$ fclones link\n# Input:") {
+		t.Errorf("result.Output should start with command and input summary, got %q", result.Output)
+	}
+	if !strings.HasSuffix(result.Output, "Linked 2 files") {
+		t.Errorf("result.Output should end with fclones output, got %q", result.Output)
 	}
 
 	// Verify executor was called
@@ -503,8 +508,12 @@ func TestExecuteActionDedupe(t *testing.T) {
 		t.Fatalf("ExecuteAction failed: %v", err)
 	}
 
-	if result.Output != "Deduped 1 file" {
-		t.Errorf("result.Output = %q, want %q", result.Output, "Deduped 1 file")
+	// Output should contain command, input summary, and result
+	if !strings.HasPrefix(result.Output, "$ fclones dedupe\n# Input:") {
+		t.Errorf("result.Output should start with command and input summary, got %q", result.Output)
+	}
+	if !strings.HasSuffix(result.Output, "Deduped 1 file") {
+		t.Errorf("result.Output should end with fclones output, got %q", result.Output)
 	}
 
 	executor.mu.Lock()
