@@ -1,9 +1,6 @@
 package db
 
-import (
-	"database/sql"
-	"time"
-)
+import "time"
 
 // ScheduledJob represents a scheduled scan job with all configuration
 type ScheduledJob struct {
@@ -148,19 +145,4 @@ type DailyStats struct {
 	FilesFound  int
 	BytesWasted int64
 	BytesSaved  int64
-}
-
-// NullInt64 is a helper for nullable int64 fields
-type NullInt64 struct {
-	sql.NullInt64
-}
-
-// NullString is a helper for nullable string fields
-type NullString struct {
-	sql.NullString
-}
-
-// NullTime is a helper for nullable time fields
-type NullTime struct {
-	sql.NullTime
 }
