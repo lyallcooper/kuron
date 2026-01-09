@@ -93,11 +93,13 @@ func CreateServer(cfg ServerConfig) (*Server, error) {
 		executor.SetBinaryPath(cfg.FclonesBinary)
 	}
 
-	// Check fclones is installed
+	// Check fclones is installed and log version
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := executor.CheckInstalled(ctx); err != nil {
 		log.Printf("Warning: fclones not found: %v", err)
 		log.Printf("  Install fclones to enable scanning: https://github.com/pkolaczk/fclones")
+	} else if ver, err := executor.Version(ctx); err == nil {
+		log.Printf("  fclones: %s", ver)
 	}
 	cancel()
 

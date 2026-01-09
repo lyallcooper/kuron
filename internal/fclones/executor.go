@@ -503,12 +503,25 @@ func phaseNameToPhase(name string) string {
 // If lastSendTime is provided, progress updates are throttled to 50ms minimum between sends.
 // Returns true if the line was recognized as a progress/info line, false if it might be an error.
 func (e *Executor) parseProgressLine(line string, progress *Progress, progressChan chan<- Progress, lastSendTime *time.Time) bool {
+	// Check for error patterns FIRST - these should always be captured as errors
+	// fclones error format: "fclones: error: ..." or "error: ..."
+	lowerLine := strings.ToLower(line)
+	if strings.Contains(lowerLine, "error:") ||
+		strings.Contains(lowerLine, "error[") ||
+		strings.Contains(lowerLine, "permission denied") ||
+		strings.Contains(lowerLine, "no such file") ||
+		strings.Contains(lowerLine, "does not exist") {
+		return false // This is an error line, capture it
+	}
+
 	// Check for known progress/info patterns
+	// Note: "fclones:  info:" has double space in log format
 	isProgressLine := strings.Contains(line, "Scanned") ||
 		strings.Contains(line, "files matching selection criteria") ||
 		strings.Contains(line, "candidates after") ||
 		(strings.Contains(line, "/") && strings.Contains(line, ":") && strings.Contains(line, "[")) ||
-		strings.Contains(line, "fclones:") ||
+		strings.Contains(line, "fclones:  info:") || // double space for info logs
+		strings.Contains(line, "fclones:  warn:") || // warnings are progress-like
 		strings.Contains(line, "Finished in")
 
 	if progressChan == nil {
