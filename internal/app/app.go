@@ -102,7 +102,7 @@ func CreateServer(cfg ServerConfig) (*Server, error) {
 	cancel()
 
 	// Initialize scanner service
-	scanner := services.NewScanner(database, executor, appCfg.ScanTimeout)
+	scanner := services.NewScanner(database, executor, appCfg.ScanTimeout, appCfg.FclonesCacheEnabled, appCfg.FclonesCachePath)
 
 	// Initialize scheduler
 	sched := scheduler.New(database, scanner)

@@ -86,6 +86,8 @@ go build -o kuron ./cmd/server
 | `KURON_RETENTION_DAYS` | `30` | Days to keep scan history (1-9999) |
 | `KURON_SCAN_TIMEOUT` | `30m` | Maximum duration for a scan |
 | `KURON_ALLOWED_PATHS` | *(unrestricted)* | Comma-separated paths to restrict scanning |
+| `KURON_FCLONES_CACHE_ENABLED` | `true` | Enable fclones hash caching for faster repeat scans |
+| `KURON_FCLONES_CACHE_PATH` | *(fclones default)*, or `/data/fclones-cache` on docker | Custom path for hash cache |
 
 ## Usage
 

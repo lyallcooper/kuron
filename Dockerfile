@@ -36,6 +36,7 @@ COPY --from=builder /app/kuron .
 RUN mkdir -p /data
 
 ENV KURON_DB_PATH=/data/kuron.db
+ENV KURON_FCLONES_CACHE_PATH=/data/fclones-cache
 
 EXPOSE 8080
 

@@ -108,6 +108,15 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 		args = append(args, "--depth", strconv.Itoa(*opts.MaxDepth))
 	}
 
+	// Hash caching
+	if opts.UseCache {
+		if opts.CachePath != "" {
+			args = append(args, "--cache", opts.CachePath)
+		} else {
+			args = append(args, "--cache")
+		}
+	}
+
 	// Add paths
 	args = append(args, opts.Paths...)
 

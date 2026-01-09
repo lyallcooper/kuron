@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 
 	s := New(database, scanner)
 
@@ -87,7 +87,7 @@ func TestStartStop(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 	s := New(database, scanner)
 
 	// Start scheduler
@@ -124,7 +124,7 @@ func TestUpdateNextRun(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 	s := New(database, scanner)
 
 	// Create a job
@@ -165,7 +165,7 @@ func TestUpdateNextRunInvalidCron(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 	s := New(database, scanner)
 
 	job := &db.ScheduledJob{
@@ -188,7 +188,7 @@ func TestCronExpressionParsing(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 	s := New(database, scanner)
 
 	tests := []struct {
@@ -230,7 +230,7 @@ func TestCheckJobsFiltersCorrectly(t *testing.T) {
 	executor := &mockExecutor{
 		groupOutput: &fclones.GroupOutput{Header: fclones.Header{Stats: fclones.Stats{}}},
 	}
-	scanner := services.NewScanner(database, executor, 5*time.Minute)
+	scanner := services.NewScanner(database, executor, 5*time.Minute, false, "")
 	_ = New(database, scanner) // Scheduler not directly used, just testing DB filtering
 
 	// Create enabled job with past next run time (should trigger)
@@ -296,7 +296,7 @@ func TestGracefulShutdown(t *testing.T) {
 		done:    make(chan struct{}),
 	}
 
-	scanner := services.NewScanner(database, blockingExecutor, 5*time.Minute)
+	scanner := services.NewScanner(database, blockingExecutor, 5*time.Minute, false, "")
 	s := New(database, scanner)
 
 	// Create job that will trigger immediately

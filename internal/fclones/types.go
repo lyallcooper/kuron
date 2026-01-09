@@ -79,6 +79,10 @@ type ScanOptions struct {
 	NoIgnore      bool // Don't respect .gitignore/.fdignore (--no-ignore)
 	IgnoreCase    bool // Case-insensitive pattern matching (--ignore-case)
 	MaxDepth      *int // Recursion depth limit (nil = unlimited)
+
+	// Caching
+	UseCache  bool   // Enable hash caching (--cache)
+	CachePath string // Custom cache path (optional, empty = fclones default)
 }
 
 // LinkOptions configures a link operation

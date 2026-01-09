@@ -46,6 +46,10 @@ type Scanner struct {
 	executor    fclones.ExecutorInterface
 	scanTimeout time.Duration
 
+	// Caching config
+	cacheEnabled bool
+	cachePath    string
+
 	// Active scans and their cancellation functions
 	mu          sync.RWMutex
 	activeScans map[int64]context.CancelFunc
@@ -56,13 +60,15 @@ type Scanner struct {
 }
 
 // NewScanner creates a new scanner service
-func NewScanner(database *db.DB, executor fclones.ExecutorInterface, scanTimeout time.Duration) *Scanner {
+func NewScanner(database *db.DB, executor fclones.ExecutorInterface, scanTimeout time.Duration, cacheEnabled bool, cachePath string) *Scanner {
 	return &Scanner{
-		db:          database,
-		executor:    executor,
-		scanTimeout: scanTimeout,
-		activeScans: make(map[int64]context.CancelFunc),
-		subscribers: make(map[int64][]*subscriber),
+		db:           database,
+		executor:     executor,
+		scanTimeout:  scanTimeout,
+		cacheEnabled: cacheEnabled,
+		cachePath:    cachePath,
+		activeScans:  make(map[int64]context.CancelFunc),
+		subscribers:  make(map[int64][]*subscriber),
 	}
 }
 
@@ -223,6 +229,8 @@ func (s *Scanner) runScan(ctx context.Context, runID int64, cfg *ScanConfig) {
 		NoIgnore:        cfg.NoIgnore,
 		IgnoreCase:      cfg.IgnoreCase,
 		MaxDepth:        cfg.MaxDepth,
+		UseCache:        s.cacheEnabled,
+		CachePath:       s.cachePath,
 	}
 
 	result, err := s.executor.Group(ctx, opts, progressChan)
