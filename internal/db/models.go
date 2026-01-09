@@ -106,6 +106,7 @@ const (
 	ActionTypeHardlink ActionType = "hardlink"
 	ActionTypeReflink  ActionType = "reflink"
 	ActionTypeRemove   ActionType = "remove"
+	ActionTypeDelete   ActionType = "delete" // Manual file deletion
 )
 
 // Action represents a deduplication action taken
@@ -120,6 +121,23 @@ type Action struct {
 	CompletedAt     *time.Time
 	Status          ActionStatus
 	ErrorMessage    *string
+	Output          *string  // Command output or deletion results
+	Files           []string // File paths that were processed
+	Command         *string  // The fclones command that was run (if applicable)
+	GroupIDs        []int64  // IDs of groups that were processed
+}
+
+// ActionCompletion contains the data needed to complete an action
+type ActionCompletion struct {
+	GroupsProcessed int
+	FilesProcessed  int
+	BytesSaved      int64
+	Status          ActionStatus
+	ErrorMessage    *string
+	Output          *string
+	Files           []string
+	Command         *string
+	GroupIDs        []int64
 }
 
 // DailyStats represents aggregated daily statistics
