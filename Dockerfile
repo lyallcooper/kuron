@@ -32,8 +32,8 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/kuron .
 
-# Create data directory
-RUN mkdir -p /data
+# Create data and cache directories
+RUN mkdir -p /data /data/fclones-cache
 
 ENV KURON_DB_PATH=/data/kuron.db
 ENV KURON_FCLONES_CACHE_PATH=/data/fclones-cache

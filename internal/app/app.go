@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -102,6 +103,13 @@ func CreateServer(cfg ServerConfig) (*Server, error) {
 		log.Printf("  fclones: %s", ver)
 	}
 	cancel()
+
+	// Ensure fclones cache directory exists if caching is enabled
+	if appCfg.FclonesCacheEnabled && appCfg.FclonesCachePath != "" {
+		if err := os.MkdirAll(appCfg.FclonesCachePath, 0755); err != nil {
+			log.Printf("Warning: failed to create fclones cache directory: %v", err)
+		}
+	}
 
 	// Initialize scanner service
 	scanner := services.NewScanner(database, executor, appCfg.ScanTimeout, appCfg.FclonesCacheEnabled, appCfg.FclonesCachePath)
