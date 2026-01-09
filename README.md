@@ -11,7 +11,7 @@ Fast, easy to use file deduplication. Available as desktop or server app. Powere
 
 - **Find duplicates**: Scan directories to find duplicate files
 - **Dedupe**: Hardlink, reflink or remove duplicates to reclaim disk space
-- **Schedule Jobs**: Run scans automatically on a cron schedule
+- **Schedule Jobs**: Run scans, dedupe automatically on a cron schedule
 - **View History**: View past scans, results, and actions taken
 
 ## Quick Start
@@ -47,7 +47,7 @@ services:
       - /path/to/media:/mnt/media          # A directory containing files to dedupe
       - /path/to/downloads:/mnt/downloads  # Another directory to dedupe
     environment:
-      - KURON_ALLOWED_PATHS=/mnt/media,/mnt/downloads # Optional
+      - KURON_ALLOWED_PATHS=/mnt/media,/mnt/downloads # Optional directory allowlist
     restart: unless-stopped
 ```
 
@@ -82,12 +82,12 @@ go build -o kuron ./cmd/server
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `KURON_PORT` | `8080` | HTTP server port |
-| `KURON_DB_PATH` | `./data/kuron.db`, or `/data/kuron.db` on docker | SQLite database path |
+| `KURON_DB_PATH` | `./data/kuron.db` or <br>`/data/kuron.db` on docker | SQLite database path |
 | `KURON_RETENTION_DAYS` | `30` | Days to keep scan history (1-9999) |
 | `KURON_SCAN_TIMEOUT` | `30m` | Maximum duration for a scan |
 | `KURON_ALLOWED_PATHS` | *(unrestricted)* | Comma-separated paths to restrict scanning |
-| `KURON_FCLONES_CACHE_ENABLED` | `true` | Enable fclones hash caching for faster repeat scans |
-| `KURON_FCLONES_CACHE_PATH` | *(fclones default)*, or `/data/fclones-cache` on docker | Custom path for hash cache |
+| `KURON_FCLONES_CACHE_ENABLED` | `true` | Enable fclones caching for faster repeat scans |
+| `KURON_FCLONES_CACHE_PATH` | *(fclones default)* or<br>`/data/fclones-cache` on docker | Custom path for fclones cache |
 
 ## Usage
 
@@ -97,9 +97,10 @@ go build -o kuron ./cmd/server
 4. **Take Action**: Select groups and choose an action (all actions preview first)
 5. **View History**: Track all past scans and actions from the History page
 
-### Action Types
+### Actions
 
-- **Hardlink**: Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
-- **Reflink**: Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.).
+- **Hardlink** (`fclones link`): Multiple filenames point to the same data on disk. Editing one file changes all. Works on any filesystem.
+- **Reflink** (`fclones dedupe`): Copy-on-write clone. Files share data until modified, then diverge. Requires filesystem support (APFS, Btrfs, XFS, ZFS, etc.).
   - NB: Files previously deduplicated via reflink will show up again on subsequent scans due to how fclones detects duplicates.
-- **Remove**: Delete duplicate files, keeping one per group based on priority (newest, oldest, most/least nested, etc.).
+- **Remove** (`fclones remove`): Delete duplicate files, keeping one per group based on priority (newest, oldest, most/least nested, etc.).
+- **Delete** (`rm`): Manually delete individual files found in scans
