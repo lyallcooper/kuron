@@ -58,6 +58,9 @@ html {
     html {
         font-size: 16px;
     }
+    a.btn.back-btn {
+        display: none;
+    }
 }
 
 body {
@@ -779,6 +782,7 @@ th, td {
     padding: 0.5rem 0.75rem;
     text-align: left;
     border-bottom: 1px solid var(--border);
+    white-space: nowrap;
 }
 
 th {
@@ -788,6 +792,10 @@ th {
 
 tr:hover td {
     background: var(--bg-secondary);
+}
+
+tr.clickable-row {
+    cursor: pointer;
 }
 
 .table-empty {
@@ -819,6 +827,7 @@ tr:hover td {
     font-size: 1.5rem;
     font-weight: 600;
     margin-bottom: 0.25rem;
+    word-break: break-word;
 }
 
 .stat-label {
@@ -826,6 +835,87 @@ tr:hover td {
     color: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+}
+
+.status-icon {
+    display: inline-block;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    border-radius: 3px;
+    text-transform: none;
+    letter-spacing: 0;
+    cursor: default;
+}
+
+.status-icon.status-completed {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.status-icon.status-failed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-icon.status-running {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+@media (prefers-color-scheme: dark) {
+    .status-icon.status-completed {
+        background: #14532d;
+        color: #86efac;
+    }
+    .status-icon.status-failed {
+        background: #450a0a;
+        color: #fca5a5;
+    }
+    .status-icon.status-running {
+        background: #1e3a5f;
+        color: #93c5fd;
+    }
+}
+
+/* Detail grid (for action details, etc.) */
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.detail-value {
+    font-size: 1rem;
+}
+
+/* Action output */
+.action-output {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 400px;
+    overflow-y: auto;
 }
 
 /* Status badges */
@@ -1022,6 +1112,7 @@ tr:hover td {
     padding: 1rem;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
+    white-space: normal;
 }
 
 /* Checkbox column */

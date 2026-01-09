@@ -33,8 +33,8 @@
             </thead>
             <tbody>
                 {{range .Runs}}
-                <tr>
-                    <td><a href="/scans/runs/{{.ID}}">{{.StartedAt | formatTime}}</a></td>
+                <tr class="clickable-row" onclick="window.location='/scans/runs/{{.ID}}'">
+                    <td>{{.StartedAt | formatTime}}</td>
                     <td class="timestamp">{{.Duration}}</td>
                     <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
                     <td>{{.FilesScanned}}</td>

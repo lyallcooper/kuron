@@ -22,12 +22,12 @@
             </thead>
             <tbody>
                 {{range .Jobs}}
-                <tr>
-                    <td><a href="/jobs/{{.ID}}/edit">{{.Name}}</a></td>
+                <tr class="clickable-row" onclick="window.location='/jobs/{{.ID}}/edit'">
+                    <td>{{.Name}}</td>
                     <td>{{.PathCount}} {{plural .PathCount "path" "paths"}}</td>
                     <td class="cron">{{.CronExpression}}</td>
                     <td>{{.Action}}</td>
-                    <td class="timestamp">{{if .LastRunID}}<a href="/scans/runs/{{.LastRunID}}">{{.LastRunAt}}</a>{{else}}-{{end}}</td>
+                    <td class="timestamp">{{if .LastRunID}}<a href="/scans/runs/{{.LastRunID}}" onclick="event.stopPropagation()">{{.LastRunAt}}</a>{{else}}-{{end}}</td>
                     <td class="timestamp">{{if and .Enabled .NextRunAt}}{{.NextRunAt}}{{else}}-{{end}}</td>
                     <td>
                         {{if .Enabled}}
@@ -36,7 +36,7 @@
                         <span class="badge badge-cancelled">Disabled</span>
                         {{end}}
                     </td>
-                    <td class="actions-cell">
+                    <td class="actions-cell" onclick="event.stopPropagation()">
                         <form action="/jobs/{{.ID}}/toggle" method="POST" style="display: inline;">
                             {{csrfField $.CSRFToken}}
                             <button type="submit" class="btn btn-sm">
