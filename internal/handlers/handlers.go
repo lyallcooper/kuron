@@ -134,6 +134,9 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// History
 	mux.HandleFunc("/history", h.History)
 
+	// Action details
+	mux.HandleFunc("/actions/", h.ActionDetail)
+
 	// Settings
 	mux.HandleFunc("/settings", h.Settings)
 

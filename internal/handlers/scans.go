@@ -420,7 +420,9 @@ func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr 
 		var output string
 		if err != nil {
 			errorMsg = err.Error()
-			output = result.Output
+			if result != nil {
+				output = result.Output
+			}
 		} else {
 			output = result.Output
 		}
@@ -489,7 +491,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	var title, description string
 	if p.Error != "" {
 		title = actionName + " Failed"
-		description = "The operation failed with the following error:"
+		description = "The operation failed:"
 	} else if p.DryRun {
 		title = actionName + " Preview"
 		description = "The following operations would be performed:"
@@ -539,6 +541,12 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 		footerButtons = `<button class="btn" onclick="window.location.href='` + p.RedirectURL + `'">Done</button>`
 	}
 
+	// Build error banner if there's an error
+	var errorBanner string
+	if p.Error != "" {
+		errorBanner = `<div class="error-banner" style="margin-bottom:1rem;">` + html.EscapeString(p.Error) + `</div>`
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
 	<div class="modal" onclick="event.stopPropagation()">
@@ -547,7 +555,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 			<button class="modal-close" onclick="closeModal()">&times;</button>
 		</div>
 		<div class="modal-body">
-			<p>` + description + `</p>
+			<p>` + description + `</p>` + errorBanner + `
 			<pre class="output">` + escapedOutput + `</pre>` + warningHTML + `
 		</div>
 		<div class="modal-footer">

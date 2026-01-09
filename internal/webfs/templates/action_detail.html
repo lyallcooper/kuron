@@ -1,0 +1,112 @@
+{{define "content"}}
+<div class="page-header">
+    <h1>Action Details</h1>
+    <a href="/history" class="btn back-btn">Back to History</a>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-value">{{if eq .Action.ActionType "hardlink"}}Hardlink{{else if eq .Action.ActionType "reflink"}}Reflink{{else if eq .Action.ActionType "remove"}}Remove{{else if eq .Action.ActionType "delete"}}Delete{{else}}{{.Action.ActionType}}{{end}}</div>
+        <div class="stat-label">Action <span class="status-icon status-{{.Action.Status}}" title="{{.Action.Status}}">{{if eq .Action.Status "completed"}}OK{{else if eq .Action.Status "failed"}}ERR{{else}}...{{end}}</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value" title="{{.Action.StartedAt | formatTime}}">{{.Action.StartedAt | timeAgo}}</div>
+        <div class="stat-label">Ran</div>
+    </div>
+    {{if .Run}}
+    <div class="stat-card">
+        <div class="stat-value"><a href="/scans/runs/{{.Run.ID}}" title="{{.Run.CompletedAt | formatTime}}">{{.Run.CompletedAt | timeAgo}}</a></div>
+        <div class="stat-label">Scan</div>
+    </div>
+    {{end}}
+    {{if or (eq .Action.ActionType "hardlink") (eq .Action.ActionType "reflink") (eq .Action.ActionType "remove")}}
+    <div class="stat-card">
+        <div class="stat-value">{{.Action.GroupsProcessed}}</div>
+        <div class="stat-label">Groups Processed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Action.FilesProcessed}}</div>
+        <div class="stat-label">Files Processed</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Action.BytesSaved | formatBytes}}</div>
+        <div class="stat-label">Space Saved</div>
+    </div>
+    {{else if eq .Action.ActionType "delete"}}
+    <div class="stat-card">
+        <div class="stat-value">{{.Action.GroupsProcessed}}</div>
+        <div class="stat-label">Groups Affected</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-value">{{.Action.FilesProcessed}}</div>
+        <div class="stat-label">Files Deleted</div>
+    </div>
+    {{end}}
+</div>
+
+{{if .Action.ErrorMessage}}
+<div class="error-banner">
+    {{.Action.ErrorMessage}}
+</div>
+{{end}}
+
+{{if .GroupsTable.Groups}}
+<div class="card">
+    <div class="card-header">Groups Processed ({{.GroupsTable.TotalCount}})</div>
+    <div class="card-body">
+        {{template "groups-table" .GroupsTable}}
+    </div>
+</div>
+{{else if .Action.Files}}
+<div class="card">
+    <div class="card-header">Files ({{len .Action.Files}})</div>
+    <div class="card-body">
+        <ul class="file-list">
+            {{range .Action.Files}}
+            <li>{{.}}</li>
+            {{end}}
+        </ul>
+    </div>
+</div>
+{{end}}
+
+{{if .Action.Output}}
+<div class="card">
+    <div class="card-header">Output</div>
+    <div class="card-body">
+        <pre class="action-output">{{.Action.Output}}</pre>
+    </div>
+</div>
+{{end}}
+
+{{if .GroupsTable.Groups}}
+<script>
+function toggleRow(event, id) {
+    if (event.target.type === 'checkbox') return;
+    var row = document.getElementById('expanded-' + id);
+    var isExpanded = row.classList.toggle('show');
+    var parentRow = row.previousElementSibling;
+    if (parentRow) {
+        parentRow.setAttribute('aria-expanded', isExpanded);
+    }
+}
+
+function handleRowKeydown(event, id) {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleRow(event, id);
+    }
+}
+
+function sortBy(field) {
+    var currentSort = '{{.GroupsTable.SortBy}}';
+    var currentOrder = '{{.GroupsTable.SortOrder}}';
+    var newOrder = 'desc';
+    if (field === currentSort) {
+        newOrder = currentOrder === 'desc' ? 'asc' : 'desc';
+    }
+    window.location.href = '?sort=' + field + '&order=' + newOrder;
+}
+</script>
+{{end}}
+{{end}}
