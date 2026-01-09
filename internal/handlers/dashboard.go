@@ -11,35 +11,41 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	data := DashboardData{
+		Title:     "",
+		ActiveNav: "dashboard",
+	}
+
+	// Helper to render with error
+	renderError := func(msg string) {
+		data.Error = msg
+		h.render(w, "dashboard.html", data)
+	}
+
 	// Get stats
 	totalSaved, pendingGroups, recentScans, err := h.db.GetDashboardStats()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to load statistics")
 		return
+	}
+	data.Stats = DashboardStats{
+		TotalSaved:    totalSaved,
+		PendingGroups: pendingGroups,
+		RecentScans:   recentScans,
 	}
 
 	// Get recent scan runs
 	runs, err := h.db.GetRecentScanRuns(5)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to load recent scans")
 		return
 	}
 
 	// Get scheduled jobs
 	jobs, err := h.db.ListScheduledJobs()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		renderError("Failed to load jobs")
 		return
-	}
-
-	data := DashboardData{
-		Title:     "",
-		ActiveNav: "dashboard",
-		Stats: DashboardStats{
-			TotalSaved:    totalSaved,
-			PendingGroups: pendingGroups,
-			RecentScans:   recentScans,
-		},
 	}
 
 	// Convert to view models

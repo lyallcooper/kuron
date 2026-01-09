@@ -4,6 +4,10 @@
     <a href="/scans/quick" class="btn btn-primary">Quick Scan</a>
 </div>
 
+{{if .Error}}
+<div class="alert alert-error">{{.Error}}</div>
+{{end}}
+
 <div class="stats-grid">
     <div class="stat-card">
         <div class="stat-value">{{.Stats.TotalSaved | formatBytes}}</div>
