@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"html"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -610,31 +611,98 @@ func (h *Handler) HandleDeleteFiles(w http.ResponseWriter, r *http.Request, runI
 	filePathsStr := r.FormValue("file_paths")
 	filePaths := strings.Split(filePathsStr, "\n")
 
+	// Parse group IDs for marking as processed
+	groupIDsStr := r.FormValue("group_ids")
+	var groupIDs []int64
+	for _, idStr := range strings.Split(groupIDsStr, ",") {
+		if id, err := strconv.ParseInt(strings.TrimSpace(idStr), 10, 64); err == nil {
+			groupIDs = append(groupIDs, id)
+		}
+	}
+
 	var results []string
+	var processedFiles []string
 	var deletedCount, errorCount int
 
+	// Count valid files first for summary
+	var validPaths []string
 	for _, path := range filePaths {
 		path = strings.TrimSpace(path)
-		if path == "" {
-			continue
+		if path != "" {
+			validPaths = append(validPaths, path)
 		}
+	}
 
+	// Add input summary (consistent with fclones actions)
+	results = append(results, fmt.Sprintf("# Input: %d files from %d groups", len(validPaths), len(groupIDs)))
+
+	for _, path := range validPaths {
 		// Validate path is within allowed directories
 		if len(h.cfg.AllowedPaths) > 0 && !h.cfg.IsPathAllowed(path) {
-			results = append(results, fmt.Sprintf("Not allowed: %s", path))
+			results = append(results, fmt.Sprintf("# Not allowed: %s", path))
 			errorCount++
 			continue
 		}
 
+		processedFiles = append(processedFiles, path)
+
+		// Show the rm command
+		rmCmd := fmt.Sprintf("$ rm %q", path)
+
 		if dryRun {
-			results = append(results, path)
+			results = append(results, rmCmd)
 		} else {
 			if err := os.Remove(path); err != nil {
-				results = append(results, fmt.Sprintf("Error: %s - %v", path, err))
+				results = append(results, rmCmd)
+				results = append(results, fmt.Sprintf("error: %v", err))
 				errorCount++
 			} else {
-				results = append(results, fmt.Sprintf("Deleted: %s", path))
+				results = append(results, rmCmd)
 				deletedCount++
+			}
+		}
+	}
+
+	output := strings.Join(results, "\n")
+
+	// Record action when files are actually deleted (not dry-run)
+	if !dryRun && (deletedCount > 0 || errorCount > 0) {
+		runID, err := strconv.ParseInt(runIDStr, 10, 64)
+		if err != nil {
+			log.Printf("handlers: failed to parse run ID %q for action recording: %v", runIDStr, err)
+		} else {
+			action, err := h.db.CreateAction(&db.Action{
+				ScanRunID:  runID,
+				ActionType: db.ActionTypeDelete,
+			})
+			if err != nil {
+				log.Printf("handlers: failed to create delete action: %v", err)
+			} else {
+				status := db.ActionStatusCompleted
+				var errMsg *string
+				if errorCount > 0 && deletedCount == 0 {
+					status = db.ActionStatusFailed
+					msg := fmt.Sprintf("%d errors", errorCount)
+					errMsg = &msg
+				}
+				if err := h.db.CompleteAction(action.ID, &db.ActionCompletion{
+					GroupsProcessed: len(groupIDs),
+					FilesProcessed:  deletedCount,
+					Status:          status,
+					ErrorMessage:    errMsg,
+					Output:          &output,
+					Files:           processedFiles,
+					GroupIDs:        groupIDs,
+				}); err != nil {
+					log.Printf("handlers: failed to complete delete action: %v", err)
+				}
+			}
+
+			// Mark affected groups as processed (if any files were deleted)
+			if deletedCount > 0 && len(groupIDs) > 0 {
+				if err := h.db.UpdateDuplicateGroupStatus(groupIDs, db.DuplicateGroupStatusProcessed); err != nil {
+					log.Printf("handlers: failed to update group status: %v", err)
+				}
 			}
 		}
 	}
@@ -646,9 +714,10 @@ func (h *Handler) HandleDeleteFiles(w http.ResponseWriter, r *http.Request, runI
 	}
 
 	h.renderDeleteFilesModal(w, deleteFilesModalParams{
-		Output:      strings.Join(results, "\n"),
+		Output:      output,
 		DryRun:      dryRun,
 		FilePaths:   filePathsStr,
+		GroupIDs:    groupIDsStr,
 		RunID:       runIDStr,
 		CSRFToken:   csrfToken,
 		DeleteCount: deletedCount,
@@ -661,6 +730,7 @@ type deleteFilesModalParams struct {
 	Output      string
 	DryRun      bool
 	FilePaths   string
+	GroupIDs    string
 	RunID       string
 	CSRFToken   string
 	DeleteCount int
@@ -692,6 +762,7 @@ func (h *Handler) renderDeleteFilesModal(w http.ResponseWriter, p deleteFilesMod
 			hx-swap="outerHTML">
 			<input type="hidden" name="` + csrfFormField + `" value="` + p.CSRFToken + `">
 			<input type="hidden" name="file_paths" value="` + html.EscapeString(p.FilePaths) + `">
+			<input type="hidden" name="group_ids" value="` + html.EscapeString(p.GroupIDs) + `">
 			<input type="hidden" name="confirm" value="1">
 			<button type="submit" class="btn btn-danger">
 				<span class="btn-text">Delete Files</span>
