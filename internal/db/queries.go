@@ -438,6 +438,36 @@ func (db *DB) UpdateDuplicateGroupStatus(ids []int64, status DuplicateGroupStatu
 	return err
 }
 
+// GetDuplicateGroupsByIDs returns groups by their IDs
+func (db *DB) GetDuplicateGroupsByIDs(ids []int64) ([]*DuplicateGroup, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `SELECT id, scan_run_id, file_hash, file_size, file_count, wasted_bytes, status, files
+		FROM duplicate_groups WHERE id IN (?` + strings.Repeat(",?", len(ids)-1) + `) ORDER BY wasted_bytes DESC`
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var groups []*DuplicateGroup
+	for rows.Next() {
+		g, err := scanDuplicateGroupRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		groups = append(groups, g)
+	}
+	return groups, rows.Err()
+}
+
 // scanDuplicateGroupFrom scans a DuplicateGroup from any Scanner (sql.Row or sql.Rows)
 func scanDuplicateGroupFrom(s Scanner) (*DuplicateGroup, error) {
 	var g DuplicateGroup
@@ -679,7 +709,7 @@ func (db *DB) CreateAction(a *Action) (*Action, error) {
 func (db *DB) GetAction(id int64) (*Action, error) {
 	row := db.QueryRow(`
 		SELECT id, scan_run_id, action_type, groups_processed, files_processed, bytes_saved,
-			started_at, completed_at, status, error_message
+			started_at, completed_at, status, error_message, output, files, command, group_ids
 		FROM actions WHERE id = ?`, id)
 	return scanAction(row)
 }
@@ -688,7 +718,7 @@ func (db *DB) GetAction(id int64) (*Action, error) {
 func (db *DB) ListActions(limit, offset int) ([]*Action, error) {
 	rows, err := db.Query(`
 		SELECT id, scan_run_id, action_type, groups_processed, files_processed, bytes_saved,
-			started_at, completed_at, status, error_message
+			started_at, completed_at, status, error_message, output, files, command, group_ids
 		FROM actions ORDER BY started_at DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
@@ -706,25 +736,68 @@ func (db *DB) ListActions(limit, offset int) ([]*Action, error) {
 	return actions, rows.Err()
 }
 
-// CompleteAction marks an action as completed
-func (db *DB) CompleteAction(id int64, groups, files int, bytesSaved int64, status ActionStatus, errorMsg *string) error {
+// ListActionsByScanRun returns actions for a specific scan run
+func (db *DB) ListActionsByScanRun(scanRunID int64) ([]*Action, error) {
+	rows, err := db.Query(`
+		SELECT id, scan_run_id, action_type, groups_processed, files_processed, bytes_saved,
+			started_at, completed_at, status, error_message, output, files, command, group_ids
+		FROM actions WHERE scan_run_id = ? ORDER BY started_at DESC`, scanRunID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var actions []*Action
+	for rows.Next() {
+		a, err := scanActionRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		actions = append(actions, a)
+	}
+	return actions, rows.Err()
+}
+
+// CompleteAction marks an action as completed with the given results
+func (db *DB) CompleteAction(id int64, c *ActionCompletion) error {
+	var filesJSON *string
+	if len(c.Files) > 0 {
+		b, err := json.Marshal(c.Files)
+		if err == nil {
+			s := string(b)
+			filesJSON = &s
+		}
+	}
+
+	var groupIDsJSON *string
+	if len(c.GroupIDs) > 0 {
+		b, err := json.Marshal(c.GroupIDs)
+		if err == nil {
+			s := string(b)
+			groupIDsJSON = &s
+		}
+	}
+
 	_, err := db.Exec(`
 		UPDATE actions SET
 			groups_processed = ?, files_processed = ?, bytes_saved = ?,
-			completed_at = ?, status = ?, error_message = ?
+			completed_at = ?, status = ?, error_message = ?, output = ?,
+			files = ?, command = ?, group_ids = ?
 		WHERE id = ?`,
-		groups, files, bytesSaved, time.Now(), status, errorMsg, id,
+		c.GroupsProcessed, c.FilesProcessed, c.BytesSaved, time.Now(), c.Status,
+		c.ErrorMessage, c.Output, filesJSON, c.Command, groupIDsJSON, id,
 	)
 	return err
 }
 
-func scanAction(row *sql.Row) (*Action, error) {
+// scanActionFrom scans an Action from any Scanner (sql.Row or sql.Rows)
+func scanActionFrom(s Scanner) (*Action, error) {
 	var a Action
 	var completedAt sql.NullTime
-	var errorMsg sql.NullString
+	var errorMsg, output, filesJSON, command, groupIDsJSON sql.NullString
 
-	err := row.Scan(&a.ID, &a.ScanRunID, &a.ActionType, &a.GroupsProcessed, &a.FilesProcessed,
-		&a.BytesSaved, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
+	err := s.Scan(&a.ID, &a.ScanRunID, &a.ActionType, &a.GroupsProcessed, &a.FilesProcessed,
+		&a.BytesSaved, &a.StartedAt, &completedAt, &a.Status, &errorMsg, &output, &filesJSON, &command, &groupIDsJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -734,30 +807,33 @@ func scanAction(row *sql.Row) (*Action, error) {
 	}
 	if errorMsg.Valid {
 		a.ErrorMessage = &errorMsg.String
+	}
+	if output.Valid {
+		a.Output = &output.String
+	}
+	if filesJSON.Valid {
+		if err := json.Unmarshal([]byte(filesJSON.String), &a.Files); err != nil {
+			log.Printf("db: failed to unmarshal files JSON for action %d: %v", a.ID, err)
+		}
+	}
+	if command.Valid {
+		a.Command = &command.String
+	}
+	if groupIDsJSON.Valid {
+		if err := json.Unmarshal([]byte(groupIDsJSON.String), &a.GroupIDs); err != nil {
+			log.Printf("db: failed to unmarshal group_ids JSON for action %d: %v", a.ID, err)
+		}
 	}
 
 	return &a, nil
 }
 
+func scanAction(row *sql.Row) (*Action, error) {
+	return scanActionFrom(row)
+}
+
 func scanActionRow(rows *sql.Rows) (*Action, error) {
-	var a Action
-	var completedAt sql.NullTime
-	var errorMsg sql.NullString
-
-	err := rows.Scan(&a.ID, &a.ScanRunID, &a.ActionType, &a.GroupsProcessed, &a.FilesProcessed,
-		&a.BytesSaved, &a.StartedAt, &completedAt, &a.Status, &errorMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	if completedAt.Valid {
-		a.CompletedAt = &completedAt.Time
-	}
-	if errorMsg.Valid {
-		a.ErrorMessage = &errorMsg.String
-	}
-
-	return &a, nil
+	return scanActionFrom(rows)
 }
 
 // Stats queries

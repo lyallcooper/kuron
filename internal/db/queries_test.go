@@ -1264,7 +1264,12 @@ func TestGetDashboardStats(t *testing.T) {
 
 	// Create action to record saved bytes
 	action, _ := db.CreateAction(&Action{ScanRunID: run1.ID, ActionType: ActionTypeHardlink})
-	db.CompleteAction(action.ID, 1, 2, 4000, ActionStatusCompleted, nil)
+	db.CompleteAction(action.ID, &ActionCompletion{
+		GroupsProcessed: 1,
+		FilesProcessed:  2,
+		BytesSaved:      4000,
+		Status:          ActionStatusCompleted,
+	})
 
 	totalSaved, pendingGroups, recentScans, err := db.GetDashboardStats()
 	if err != nil {
