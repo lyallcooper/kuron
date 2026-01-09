@@ -108,13 +108,9 @@ func (e *Executor) Group(ctx context.Context, opts ScanOptions, progressChan cha
 		args = append(args, "--depth", strconv.Itoa(*opts.MaxDepth))
 	}
 
-	// Hash caching
+	// Hash caching (fclones uses $HOME/.cache/fclones on Linux)
 	if opts.UseCache {
-		if opts.CachePath != "" {
-			args = append(args, "--cache", opts.CachePath)
-		} else {
-			args = append(args, "--cache")
-		}
+		args = append(args, "--cache")
 	}
 
 	// Add paths

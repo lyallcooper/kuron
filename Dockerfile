@@ -32,12 +32,11 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/kuron .
 
-# Create data and cache directories (including .cache for fclones hash database)
-RUN mkdir -p /data /data/fclones-cache /data/.cache
+# Create data directory (fclones stores cache in $HOME/.cache/fclones)
+RUN mkdir -p /data /data/.cache
 
 ENV KURON_DB_PATH=/data/kuron.db
-ENV KURON_FCLONES_CACHE_PATH=/data/fclones-cache
-# Set HOME so fclones can write to ~/.cache (needed for hash database)
+# Set HOME so fclones can write to ~/.cache/fclones
 ENV HOME=/data
 
 EXPOSE 8080

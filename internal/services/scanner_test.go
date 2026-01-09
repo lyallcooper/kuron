@@ -108,7 +108,7 @@ func TestNewScanner(t *testing.T) {
 	executor := &mockExecutor{}
 	timeout := 5 * time.Minute
 
-	scanner := NewScanner(database, executor, timeout, false, "")
+	scanner := NewScanner(database, executor, timeout, false)
 
 	if scanner == nil {
 		t.Fatal("NewScanner returned nil")
@@ -133,7 +133,7 @@ func TestNewScanner(t *testing.T) {
 func TestSubscribeUnsubscribe(t *testing.T) {
 	database := testDB(t)
 	executor := &mockExecutor{}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	runID := int64(123)
 
@@ -168,7 +168,7 @@ func TestSubscribeUnsubscribe(t *testing.T) {
 func TestMultipleSubscribers(t *testing.T) {
 	database := testDB(t)
 	executor := &mockExecutor{}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	runID := int64(456)
 
@@ -228,7 +228,7 @@ func TestStartScan(t *testing.T) {
 			},
 		},
 	}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	cfg := &ScanConfig{
 		Paths:   []string{"/tmp"},
@@ -288,7 +288,7 @@ func TestStartScanWithJobID(t *testing.T) {
 			Header: fclones.Header{Stats: fclones.Stats{}},
 		},
 	}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	// Create a job first
 	job := &db.ScheduledJob{
@@ -331,7 +331,7 @@ func TestCancelScan(t *testing.T) {
 	}
 
 	// Override Group to take longer
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	// Create a custom executor that blocks
 	blockingExecutor := &blockingMockExecutor{
@@ -429,7 +429,7 @@ func TestExecuteAction(t *testing.T) {
 		},
 		linkOutput: "Linked 2 files",
 	}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	// Create a scan run with duplicate groups
 	cfg := &ScanConfig{Paths: []string{"/tmp"}}
@@ -490,7 +490,7 @@ func TestExecuteActionDedupe(t *testing.T) {
 		},
 		dedupeOut: "Deduped 1 file",
 	}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	// Create a scan run
 	cfg := &ScanConfig{Paths: []string{"/tmp"}}
@@ -536,7 +536,7 @@ func TestExecuteActionDryRun(t *testing.T) {
 		},
 		linkOutput: "Would link 1 file",
 	}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	cfg := &ScanConfig{Paths: []string{"/tmp"}}
 	run, _ := scanner.StartScan(context.Background(), cfg, nil)
@@ -564,7 +564,7 @@ func TestExecuteActionDryRun(t *testing.T) {
 func TestBroadcast(t *testing.T) {
 	database := testDB(t)
 	executor := &mockExecutor{}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	runID := int64(999)
 
@@ -604,7 +604,7 @@ func TestBroadcast(t *testing.T) {
 func TestCloseSubscribers(t *testing.T) {
 	database := testDB(t)
 	executor := &mockExecutor{}
-	scanner := NewScanner(database, executor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, executor, 5*time.Minute, false)
 
 	runID := int64(888)
 
@@ -650,7 +650,7 @@ func TestScanConfigOptions(t *testing.T) {
 		captured:     make(chan fclones.ScanOptions, 1),
 	}
 
-	scanner := NewScanner(database, capturingExecutor, 5*time.Minute, false, "")
+	scanner := NewScanner(database, capturingExecutor, 5*time.Minute, false)
 
 	maxSize := int64(10000)
 	maxDepth := 5
@@ -710,12 +710,9 @@ func TestScanConfigOptions(t *testing.T) {
 	if capturedOpts.MaxDepth == nil || *capturedOpts.MaxDepth != 5 {
 		t.Errorf("MaxDepth = %v, want 5", capturedOpts.MaxDepth)
 	}
-	// Cache options come from Scanner, not ScanConfig
+	// Cache option comes from Scanner, not ScanConfig
 	if capturedOpts.UseCache {
 		t.Error("UseCache should be false (set on Scanner)")
-	}
-	if capturedOpts.CachePath != "" {
-		t.Errorf("CachePath = %q, want empty (set on Scanner)", capturedOpts.CachePath)
 	}
 }
 
@@ -732,8 +729,8 @@ func TestScanPassesThroughCacheOptions(t *testing.T) {
 		captured:     make(chan fclones.ScanOptions, 1),
 	}
 
-	// Create scanner with caching enabled and custom path
-	scanner := NewScanner(database, capturingExecutor, 5*time.Minute, true, "/custom/cache/path")
+	// Create scanner with caching enabled
+	scanner := NewScanner(database, capturingExecutor, 5*time.Minute, true)
 
 	cfg := &ScanConfig{
 		Paths: []string{"/tmp"},
@@ -753,9 +750,6 @@ func TestScanPassesThroughCacheOptions(t *testing.T) {
 
 	if !capturedOpts.UseCache {
 		t.Error("UseCache should be true")
-	}
-	if capturedOpts.CachePath != "/custom/cache/path" {
-		t.Errorf("CachePath = %q, want /custom/cache/path", capturedOpts.CachePath)
 	}
 }
 

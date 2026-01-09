@@ -80,9 +80,8 @@ type ScanOptions struct {
 	IgnoreCase    bool // Case-insensitive pattern matching (--ignore-case)
 	MaxDepth      *int // Recursion depth limit (nil = unlimited)
 
-	// Caching
-	UseCache  bool   // Enable hash caching (--cache)
-	CachePath string // Custom cache path (optional, empty = fclones default)
+	// Caching (fclones stores cache in $HOME/.cache/fclones on Linux)
+	UseCache bool // Enable hash caching (--cache)
 }
 
 // LinkOptions configures a link operation
