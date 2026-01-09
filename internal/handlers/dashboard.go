@@ -4,44 +4,6 @@ import (
 	"net/http"
 )
 
-// DashboardData holds data for the dashboard template
-type DashboardData struct {
-	Title       string
-	ActiveNav   string
-	Stats       DashboardStats
-	RecentScans []*ScanRunView
-	Jobs        []*JobView
-}
-
-// DashboardStats holds dashboard statistics
-type DashboardStats struct {
-	TotalSaved    int64
-	PendingGroups int
-	RecentScans   int
-}
-
-// ScanRunView is a view model for scan runs
-type ScanRunView struct {
-	ID              int64
-	Status          string
-	StartedAt       string
-	DuplicateGroups int64
-	WastedBytes     int64
-}
-
-// JobView is a view model for scheduled jobs
-type JobView struct {
-	ID             int64
-	Name           string
-	PathCount      int
-	CronExpression string
-	Action         string
-	NextRunAt      string
-	LastRunAt      string
-	LastRunID      int64
-	Enabled        bool
-}
-
 // Dashboard handles GET /
 func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
@@ -92,21 +54,7 @@ func (h *Handler) Dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, job := range jobs {
-		jv := &JobView{
-			ID:             job.ID,
-			Name:           job.Name,
-			PathCount:      len(job.Paths),
-			CronExpression: job.CronExpression,
-			Action:         job.Action,
-			Enabled:        job.Enabled,
-		}
-		if job.NextRunAt != nil {
-			jv.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")
-		}
-		if job.LastRunAt != nil {
-			jv.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
-		}
-		data.Jobs = append(data.Jobs, jv)
+		data.Jobs = append(data.Jobs, toJobView(job))
 	}
 
 	h.render(w, "dashboard.html", data)

@@ -14,39 +14,6 @@ import (
 	"github.com/lyallcooper/kuron/internal/services"
 )
 
-// ScanResultsData holds data for the scan results template
-type ScanResultsData struct {
-	Title       string
-	ActiveNav   string
-	CSRFToken   string
-	Run         *db.ScanRun
-	Job         *db.ScheduledJob // The job this scan was from, if any
-	GroupsTable GroupsTableData
-	Actions     []*db.Action // Actions taken from this scan
-}
-
-// QuickScanData holds data for the quick scan template
-type QuickScanData struct {
-	Title           string
-	ActiveNav       string
-	CSRFToken       string
-	Paths           []string
-	MinSize         string
-	MaxSize         string
-	IncludePatterns []string
-	ExcludePatterns []string
-	Error           string
-	AllowedPaths    []string
-
-	// Advanced options
-	IncludeHidden bool
-	FollowLinks   bool
-	OneFileSystem bool
-	NoIgnore      bool
-	IgnoreCase    bool
-	MaxDepth      string
-}
-
 // QuickScan handles GET/POST /scans/quick
 func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 	// GET - show form

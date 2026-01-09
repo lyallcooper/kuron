@@ -13,24 +13,6 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-// JobsData holds data for the jobs list template
-type JobsData struct {
-	Title     string
-	ActiveNav string
-	CSRFToken string
-	Jobs      []*JobView
-}
-
-// JobFormData holds data for the job form template
-type JobFormData struct {
-	Title        string
-	ActiveNav    string
-	CSRFToken    string
-	Job          *db.ScheduledJob
-	Error        string
-	AllowedPaths []string
-}
-
 // Jobs handles GET /jobs
 func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
@@ -56,20 +38,7 @@ func (h *Handler) Jobs(w http.ResponseWriter, r *http.Request) {
 	// Build view models
 	var views []*JobView
 	for _, job := range jobs {
-		view := &JobView{
-			ID:             job.ID,
-			Name:           job.Name,
-			PathCount:      len(job.Paths),
-			CronExpression: job.CronExpression,
-			Action:         job.Action,
-			Enabled:        job.Enabled,
-		}
-		if job.NextRunAt != nil {
-			view.NextRunAt = job.NextRunAt.Format("2006-01-02 15:04")
-		}
-		if job.LastRunAt != nil {
-			view.LastRunAt = job.LastRunAt.Format("2006-01-02 15:04")
-		}
+		view := toJobView(job)
 		if runID, ok := lastRunIDs[job.ID]; ok {
 			view.LastRunID = runID
 		}

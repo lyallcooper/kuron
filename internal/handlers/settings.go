@@ -11,22 +11,6 @@ import (
 	"time"
 )
 
-// SettingsData holds data for the settings template
-type SettingsData struct {
-	Title             string
-	ActiveNav         string
-	CSRFToken         string
-	RetentionDays     int
-	RetentionEditable bool
-	Version           string
-	FclonesVersion    string
-	DBPath            string
-	Port              int
-	AllowedPaths      []string
-	Error             string
-	Success           string
-}
-
 // Settings handles GET/POST /settings
 func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {

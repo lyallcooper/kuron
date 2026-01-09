@@ -8,24 +8,6 @@ import (
 	"github.com/lyallcooper/kuron/internal/db"
 )
 
-// HistoryData holds data for the history template
-type HistoryData struct {
-	Title        string
-	ActiveNav    string
-	Runs         []*ScanRunHistoryView
-	Actions      []*db.Action
-	StatusFilter string
-	Page         int
-	HasMore      bool
-	NextPage     int
-}
-
-// ScanRunHistoryView extends ScanRun with duration
-type ScanRunHistoryView struct {
-	*db.ScanRun
-	Duration string
-}
-
 // History handles GET /history
 func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	page := 1

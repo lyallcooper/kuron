@@ -11,19 +11,6 @@ import (
 	"github.com/lyallcooper/kuron/internal/types"
 )
 
-// ScanProgressData is sent via SSE during scans
-type ScanProgressData struct {
-	FilesScanned int64   `json:"files_scanned"`
-	BytesScanned string  `json:"bytes_scanned"`
-	GroupsFound  int64   `json:"groups_found"`
-	WastedBytes  string  `json:"wasted_bytes"`
-	Status       string  `json:"status"`
-	PhaseNum     int     `json:"phase_num,omitempty"`
-	PhaseTotal   int     `json:"phase_total,omitempty"`
-	PhaseName    string  `json:"phase_name,omitempty"`
-	PhasePercent float64 `json:"phase_percent,omitempty"`
-}
-
 // ScanProgressSSE handles SSE connections for scan progress
 func (h *Handler) ScanProgressSSE(w http.ResponseWriter, r *http.Request) {
 	// Parse scan run ID from path

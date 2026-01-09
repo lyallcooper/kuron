@@ -12,15 +12,6 @@ import (
 
 const actionGroupsPageSize = 50
 
-// ActionDetailData holds data for the action detail template
-type ActionDetailData struct {
-	Title       string
-	ActiveNav   string
-	Action      *db.Action
-	Run         *db.ScanRun // The scan run this action was from
-	GroupsTable GroupsTableData
-}
-
 // ActionDetail handles GET /actions/{id}
 func (h *Handler) ActionDetail(w http.ResponseWriter, r *http.Request) {
 	// Parse action ID from URL: /actions/{id}
