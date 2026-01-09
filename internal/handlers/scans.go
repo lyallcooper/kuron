@@ -15,22 +15,13 @@ import (
 
 // ScanResultsData holds data for the scan results template
 type ScanResultsData struct {
-	Title     string
-	ActiveNav string
-	CSRFToken string
-	Run       *db.ScanRun
-	Job       *db.ScheduledJob // The job this scan was from, if any
-	Groups    []*db.DuplicateGroup
-	// Pagination
-	Page       int
-	PageSize   int
-	TotalCount int
-	TotalPages int
-	// Sorting
-	SortBy    string
-	SortOrder string
-	// Filter
-	Status string
+	Title       string
+	ActiveNav   string
+	CSRFToken   string
+	Run         *db.ScanRun
+	Job         *db.ScheduledJob // The job this scan was from, if any
+	GroupsTable GroupsTableData
+	Actions     []*db.Action // Actions taken from this scan
 }
 
 // QuickScanData holds data for the quick scan template
@@ -316,20 +307,28 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 		job, _ = h.db.GetScheduledJob(*run.ScheduledJobID)
 	}
 
+	// Fetch actions taken from this scan
+	actions, _ := h.db.ListActionsByScanRun(id)
+
 	data := ScanResultsData{
-		Title:      "Scan Results",
-		ActiveNav:  "history",
-		CSRFToken:  h.getOrCreateCSRFToken(w, r),
-		Run:        run,
-		Job:        job,
-		Groups:     groups,
-		Page:       page,
-		PageSize:   pageSize,
-		TotalCount: totalCount,
-		TotalPages: totalPages,
-		SortBy:     sortBy,
-		SortOrder:  sortOrder,
-		Status:     status,
+		Title:     "Scan Results",
+		ActiveNav: "history",
+		CSRFToken: h.getOrCreateCSRFToken(w, r),
+		Run:       run,
+		Job:       job,
+		GroupsTable: GroupsTableData{
+			Groups:       groups,
+			Interactive:  true,
+			Page:         page,
+			PageSize:     pageSize,
+			TotalCount:   totalCount,
+			TotalPages:   totalPages,
+			SortBy:       sortBy,
+			SortOrder:    sortOrder,
+			BaseURL:      fmt.Sprintf("/scans/runs/%d", id),
+			StatusFilter: status,
+		},
+		Actions: actions,
 	}
 
 	h.render(w, "scan_results.html", data)

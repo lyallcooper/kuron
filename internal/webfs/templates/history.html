@@ -61,37 +61,6 @@
 
 <div class="card">
     <div class="card-header">Actions</div>
-    {{if .Actions}}
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                    <th>Duplicate Files</th>
-                    <th>Duplicate Groups</th>
-                    <th>Saved</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{range .Actions}}
-                <tr>
-                    <td class="timestamp">{{.StartedAt | formatTime}}</td>
-                    <td>{{.ActionType}}</td>
-                    <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
-                    <td>{{.FilesProcessed}}</td>
-                    <td>{{.GroupsProcessed}}</td>
-                    <td class="size">{{.BytesSaved | formatBytes}}</td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
-    </div>
-    {{else}}
-    <div class="card-body">
-        <div class="table-empty">No actions taken yet</div>
-    </div>
-    {{end}}
+    {{template "actions-table" .Actions}}
 </div>
 {{end}}

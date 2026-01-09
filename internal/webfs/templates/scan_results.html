@@ -43,7 +43,7 @@
             <button type="submit" class="btn btn-danger">Cancel Scan</button>
         </form>
         {{end}}
-        <a href="/history" class="btn">Back to History</a>
+        <a href="/history" class="btn back-btn">Back to History</a>
     </div>
 </div>
 
@@ -212,7 +212,7 @@
         <div class="stat-label">Job</div>
     </div>
     <div class="stat-card">
-        <div class="stat-value">{{.Run.CompletedAt | timeAgo}}</div>
+        <div class="stat-value" title="{{.Run.CompletedAt | formatTime}}">{{.Run.CompletedAt | timeAgo}}</div>
         <div class="stat-label">Scanned</div>
     </div>
     <div class="stat-card">
@@ -250,7 +250,7 @@
 </div>
 {{end}}
 
-{{if .Groups}}
+{{if .GroupsTable.Groups}}
 <div class="card">
     <div class="card-header">
         <div class="header-left">
@@ -297,7 +297,7 @@
             {{csrfField .CSRFToken}}
             <input type="hidden" name="group_ids" id="selected-groups" value="">
             <input type="hidden" name="select_all" id="select-all-flag" value="">
-            <input type="hidden" name="status_filter" id="status-filter" value="{{.Status}}">
+            <input type="hidden" name="status_filter" id="status-filter" value="{{.GroupsTable.StatusFilter}}">
         </form>
 
         <!-- File action bar (shown when individual files are selected) -->
@@ -318,97 +318,17 @@
         <form id="file-delete-form" style="display:none">
             {{csrfField .CSRFToken}}
             <input type="hidden" name="file_paths" id="selected-file-paths" value="">
+            <input type="hidden" name="group_ids" id="selected-file-group-ids" value="">
         </form>
 
-        <!-- Groups Table -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th class="col-checkbox">
-                            <input type="checkbox" id="select-page" onclick="togglePage(this)" title="Select all on this page">
-                        </th>
-                        <th>Hash Prefix</th>
-                        <th class="sortable{{if eq .SortBy "size"}} sorted{{end}}" onclick="sortBy('size')">
-                            Size {{if eq .SortBy "size"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
-                        </th>
-                        <th class="sortable{{if eq .SortBy "count"}} sorted{{end}}" onclick="sortBy('count')">
-                            Count {{if eq .SortBy "count"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
-                        </th>
-                        <th class="sortable{{if eq .SortBy "wasted"}} sorted{{end}}" onclick="sortBy('wasted')">
-                            Redundant {{if eq .SortBy "wasted"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
-                        </th>
-                        <th class="sortable{{if eq .SortBy "status"}} sorted{{end}}" onclick="sortBy('status')">
-                            Status {{if eq .SortBy "status"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {{range .Groups}}
-                    {{$groupID := .ID}}
-                    <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})"
-                        tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-{{.ID}}"
-                        onkeydown="handleRowKeydown(event, {{.ID}})">
-                        <td class="col-checkbox" onclick="event.stopPropagation()">
-                            <input type="checkbox" class="group-checkbox" value="{{.ID}}"
-                                   onchange="updateSelection()">
-                        </td>
-                        <td class="hash" title="{{.FileHash}}">{{.FileHash | truncateHash}}</td>
-                        <td class="size">{{.FileSize | formatBytes}}</td>
-                        <td>{{.FileCount}}</td>
-                        <td class="size">{{.WastedBytes | formatBytes}}</td>
-                        <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
-                    </tr>
-                    <tr id="expanded-{{.ID}}" class="expanded-content">
-                        <td colspan="6">
-                            <strong>Files:</strong>
-                            <ul class="file-list">
-                                {{range .Files}}
-                                <li>
-                                    <label class="file-select-label">
-                                        <input type="checkbox" class="file-checkbox"
-                                               data-group-id="{{$groupID}}"
-                                               data-file-path="{{.}}"
-                                               onchange="updateFileSelection()">
-                                        <span class="file-path">{{.}}</span>
-                                    </label>
-                                </li>
-                                {{end}}
-                            </ul>
-                        </td>
-                    </tr>
-                    {{end}}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Pagination -->
-        {{if gt .TotalPages 1}}
-        <div class="pagination">
-            {{if gt .Page 1}}
-            <a href="?page={{subtract .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}" class="btn btn-sm">Previous</a>
-            {{else}}
-            <span class="btn btn-sm" style="opacity: 0.5;">Previous</span>
-            {{end}}
-
-            <span class="pagination-info">
-                Page {{.Page}} of {{.TotalPages}}
-            </span>
-
-            {{if lt .Page .TotalPages}}
-            <a href="?page={{add .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}" class="btn btn-sm">Next</a>
-            {{else}}
-            <span class="btn btn-sm" style="opacity: 0.5;">Next</span>
-            {{end}}
-        </div>
-        {{end}}
+        {{template "groups-table" .GroupsTable}}
     </div>
 </div>
 
 <script>
 var selectAllMode = false;
 var manualSelections = new Set();
-var totalCount = {{.TotalCount}};
+var totalCount = {{.GroupsTable.TotalCount}};
 
 function toggleRow(event, id) {
     if (event.target.type === 'checkbox') return;
@@ -520,8 +440,8 @@ function updateSelectionDisplay() {
 }
 
 function sortBy(field) {
-    var currentSort = '{{.SortBy}}';
-    var currentOrder = '{{.SortOrder}}';
+    var currentSort = '{{.GroupsTable.SortBy}}';
+    var currentOrder = '{{.GroupsTable.SortOrder}}';
 
     var newOrder = 'desc';
     if (field === currentSort) {
@@ -577,18 +497,22 @@ var selectedFiles = new Set();
 
 function updateFileSelection() {
     selectedFiles.clear();
+    var groupIds = new Set();
     document.querySelectorAll('.file-checkbox:checked').forEach(function(cb) {
         selectedFiles.add(cb.dataset.filePath);
+        groupIds.add(cb.dataset.groupId);
     });
 
     var bar = document.getElementById('file-action-bar');
     var countEl = document.getElementById('file-selection-count');
     var pathsEl = document.getElementById('selected-file-paths');
+    var groupIdsEl = document.getElementById('selected-file-group-ids');
 
     if (selectedFiles.size > 0) {
         bar.style.display = 'flex';
         countEl.textContent = selectedFiles.size + ' file' + (selectedFiles.size === 1 ? '' : 's') + ' selected';
         pathsEl.value = Array.from(selectedFiles).join('\n');
+        groupIdsEl.value = Array.from(groupIds).join(',');
     } else {
         bar.style.display = 'none';
     }
@@ -666,6 +590,13 @@ updateFileSelection();
     <p>The scan encountered an error and did not complete.</p>
 </div>
 {{end}}
+{{end}}
+
+{{if .Actions}}
+<div class="card">
+    <div class="card-header">Actions</div>
+    {{template "actions-table" .Actions}}
+</div>
 {{end}}
 {{end}}
 {{end}}

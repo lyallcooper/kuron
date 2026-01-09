@@ -1,0 +1,103 @@
+{{define "groups-table"}}
+{{if .Groups}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                {{if .Interactive}}
+                <th class="col-checkbox">
+                    <input type="checkbox" id="select-page" onclick="togglePage(this)" title="Select all on this page">
+                </th>
+                {{end}}
+                <th>Hash</th>
+                <th class="sortable{{if eq .SortBy "size"}} sorted{{end}}" onclick="sortBy('size')">
+                    Size {{if eq .SortBy "size"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                </th>
+                <th class="sortable{{if eq .SortBy "count"}} sorted{{end}}" onclick="sortBy('count')">
+                    Count {{if eq .SortBy "count"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                </th>
+                <th class="sortable{{if eq .SortBy "wasted"}} sorted{{end}}" onclick="sortBy('wasted')">
+                    Redundant {{if eq .SortBy "wasted"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                </th>
+                {{if .Interactive}}
+                <th class="sortable{{if eq .SortBy "status"}} sorted{{end}}" onclick="sortBy('status')">
+                    Status {{if eq .SortBy "status"}}{{if eq .SortOrder "asc"}}▲{{else}}▼{{end}}{{end}}
+                </th>
+                {{end}}
+            </tr>
+        </thead>
+        <tbody>
+            {{$interactive := .Interactive}}
+            {{$colspan := 5}}{{if $interactive}}{{$colspan = 6}}{{end}}
+            {{range .Groups}}
+            {{$groupID := .ID}}
+            <tr class="expandable-row" onclick="toggleRow(event, {{.ID}})"
+                tabindex="0" role="button" aria-expanded="false" aria-controls="expanded-{{.ID}}"
+                onkeydown="handleRowKeydown(event, {{.ID}})">
+                {{if $interactive}}
+                <td class="col-checkbox" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="group-checkbox" value="{{.ID}}"
+                           onchange="updateSelection()">
+                </td>
+                {{end}}
+                <td class="hash" title="{{.FileHash}}">{{.FileHash | truncateHash}}</td>
+                <td class="size">{{.FileSize | formatBytes}}</td>
+                <td>{{.FileCount}}</td>
+                <td class="size">{{.WastedBytes | formatBytes}}</td>
+                {{if $interactive}}
+                <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                {{end}}
+            </tr>
+            <tr id="expanded-{{.ID}}" class="expanded-content">
+                <td colspan="{{$colspan}}">
+                    {{if $interactive}}
+                    <ul class="file-list">
+                        {{range .Files}}
+                        <li>
+                            <label class="file-select-label">
+                                <input type="checkbox" class="file-checkbox"
+                                       data-group-id="{{$groupID}}"
+                                       data-file-path="{{.}}"
+                                       onchange="updateFileSelection()">
+                                <span class="file-path">{{.}}</span>
+                            </label>
+                        </li>
+                        {{end}}
+                    </ul>
+                    {{else}}
+                    <ul class="file-list">
+                        {{range .Files}}
+                        <li>{{.}}</li>
+                        {{end}}
+                    </ul>
+                    {{end}}
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+{{if gt .TotalPages 1}}
+<div class="pagination">
+    {{if gt .Page 1}}
+    <a href="{{.BaseURL}}?page={{subtract .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}" class="btn btn-sm">Previous</a>
+    {{else}}
+    <span class="btn btn-sm" style="opacity:0.5">Previous</span>
+    {{end}}
+
+    <span class="pagination-info">
+        Page {{.Page}} of {{.TotalPages}}
+    </span>
+
+    {{if lt .Page .TotalPages}}
+    <a href="{{.BaseURL}}?page={{add .Page 1}}&sort={{.SortBy}}&order={{.SortOrder}}{{if .StatusFilter}}&status={{.StatusFilter}}{{end}}" class="btn btn-sm">Next</a>
+    {{else}}
+    <span class="btn btn-sm" style="opacity:0.5">Next</span>
+    {{end}}
+</div>
+{{end}}
+{{else}}
+<p class="muted">No groups to display.</p>
+{{end}}
+{{end}}

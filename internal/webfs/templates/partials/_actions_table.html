@@ -1,0 +1,34 @@
+{{define "actions-table"}}
+{{if .}}
+<div class="table-container">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Files</th>
+                <th>Groups</th>
+                <th>Saved</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .}}
+            <tr class="clickable-row" onclick="window.location='/actions/{{.ID}}'">
+                <td>{{.StartedAt | formatTime}}</td>
+                <td>{{if eq .ActionType "hardlink"}}Hardlink{{else if eq .ActionType "reflink"}}Reflink{{else if eq .ActionType "remove"}}Remove{{else if eq .ActionType "delete"}}Delete{{else}}{{.ActionType}}{{end}}</td>
+                <td><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+                <td>{{.FilesProcessed}}</td>
+                <td>{{.GroupsProcessed}}</td>
+                <td class="size">{{.BytesSaved | formatBytes}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="card-body">
+    <p class="muted">No actions taken yet.</p>
+</div>
+{{end}}
+{{end}}

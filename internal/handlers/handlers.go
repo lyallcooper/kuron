@@ -29,6 +29,20 @@ type Handler struct {
 	disableCSRF bool
 }
 
+// GroupsTableData holds data for the shared groups table partial
+type GroupsTableData struct {
+	Groups       []*db.DuplicateGroup
+	Interactive  bool // Show checkboxes, status column, file selection
+	Page         int
+	PageSize     int
+	TotalCount   int
+	TotalPages   int
+	SortBy       string
+	SortOrder    string
+	BaseURL      string // Base URL for pagination/sorting links
+	StatusFilter string // Optional status filter (only for interactive mode)
+}
+
 // New creates a new Handler
 func New(database *db.DB, cfg *config.Config, executor fclones.ExecutorInterface, scanner *services.Scanner, webFS embed.FS, version string, disableCSRF bool) (*Handler, error) {
 	// Template functions
@@ -132,8 +146,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 // render executes a page template with the base layout
 func (h *Handler) render(w http.ResponseWriter, pageName string, data any) {
-	// Clone and parse base + specific page template
-	tmpl, err := template.New("base.html").Funcs(h.funcMap).ParseFS(h.webFS, "templates/base.html", "templates/"+pageName)
+	// Clone and parse base + partials + specific page template
+	tmpl, err := template.New("base.html").Funcs(h.funcMap).ParseFS(h.webFS,
+		"templates/base.html",
+		"templates/partials/_groups_table.html",
+		"templates/partials/_actions_table.html",
+		"templates/"+pageName,
+	)
 	if err != nil {
 		http.Error(w, "Template error: "+err.Error(), http.StatusInternalServerError)
 		return
