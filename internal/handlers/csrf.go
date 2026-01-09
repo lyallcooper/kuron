@@ -98,6 +98,16 @@ func (h *Handler) getOrCreateCSRFToken(w http.ResponseWriter, r *http.Request) s
 	return token
 }
 
+// requireCSRF validates CSRF and writes error response if invalid.
+// Returns true if valid, false if invalid (response already written).
+func (h *Handler) requireCSRF(w http.ResponseWriter, r *http.Request) bool {
+	if h.validateCSRF(r) {
+		return true
+	}
+	http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	return false
+}
+
 // validateCSRF checks CSRF token on POST requests
 func (h *Handler) validateCSRF(r *http.Request) bool {
 	// Skip CSRF validation if disabled (desktop mode)

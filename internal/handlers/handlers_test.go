@@ -1,9 +1,226 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/lyallcooper/kuron/internal/config"
+	"github.com/lyallcooper/kuron/internal/webfs"
 )
+
+// testHandler creates a Handler for testing with minimal dependencies.
+// Only templates are initialized; other fields are nil/zero.
+func testHandler(t *testing.T) *Handler {
+	t.Helper()
+	cfg := &config.Config{}
+	h, err := New(nil, cfg, nil, nil, webfs.FS, "test", true)
+	if err != nil {
+		t.Fatalf("failed to create test handler: %v", err)
+	}
+	return h
+}
+
+func TestRender_CachedTemplate(t *testing.T) {
+	h := testHandler(t)
+
+	// Test data for dashboard template
+	data := DashboardData{
+		Title:     "Test Dashboard",
+		ActiveNav: "dashboard",
+	}
+
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", data)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("render() status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	body := w.Body.String()
+
+	// Verify it's HTML
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.Contains(contentType, "text/html") {
+		t.Errorf("Content-Type = %q, want text/html", contentType)
+	}
+
+	// Verify base template was used (contains DOCTYPE and html tags)
+	if !strings.Contains(body, "<!DOCTYPE html>") {
+		t.Error("response missing DOCTYPE - base template not applied")
+	}
+
+	// Verify title is rendered
+	if !strings.Contains(body, "Test Dashboard") {
+		t.Error("response missing title from data")
+	}
+}
+
+func TestRender_UnknownTemplate(t *testing.T) {
+	h := testHandler(t)
+
+	w := httptest.NewRecorder()
+	h.render(w, "nonexistent.html", nil)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusInternalServerError {
+		t.Errorf("render() status = %d, want %d", resp.StatusCode, http.StatusInternalServerError)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Template not found") {
+		t.Errorf("expected 'Template not found' error, got: %s", body)
+	}
+}
+
+func TestNew_TemplatesPrecompiled(t *testing.T) {
+	cfg := &config.Config{}
+	h, err := New(nil, cfg, nil, nil, webfs.FS, "test", true)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	// Verify all expected templates are cached
+	expectedTemplates := []string{
+		"dashboard.html",
+		"jobs.html",
+		"job_form.html",
+		"history.html",
+		"quick_scan.html",
+		"scan_results.html",
+		"settings.html",
+		"action_detail.html",
+	}
+
+	for _, name := range expectedTemplates {
+		if h.templates[name] == nil {
+			t.Errorf("template %q not found in cache", name)
+		}
+	}
+
+	// Verify template count matches
+	if len(h.templates) != len(expectedTemplates) {
+		t.Errorf("template count = %d, want %d", len(h.templates), len(expectedTemplates))
+	}
+}
+
+func TestRequireCSRF_Valid_DisabledMode(t *testing.T) {
+	// When CSRF is disabled (desktop mode), should always pass
+	h := testHandler(t) // disableCSRF = true
+
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w := httptest.NewRecorder()
+
+	result := h.requireCSRF(w, req)
+
+	if !result {
+		t.Error("requireCSRF() returned false, want true (CSRF disabled)")
+	}
+
+	// Should not write any response
+	if w.Code != http.StatusOK {
+		t.Errorf("status code = %d, want %d (no response written)", w.Code, http.StatusOK)
+	}
+}
+
+func TestRequireCSRF_Invalid_EnabledMode(t *testing.T) {
+	// When CSRF is enabled, missing token should fail
+	cfg := &config.Config{}
+	h, err := New(nil, cfg, nil, nil, webfs.FS, "test", false) // disableCSRF = false
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w := httptest.NewRecorder()
+
+	result := h.requireCSRF(w, req)
+
+	if result {
+		t.Error("requireCSRF() returned true, want false (no token)")
+	}
+
+	// Should write 403 Forbidden
+	if w.Code != http.StatusForbidden {
+		t.Errorf("status code = %d, want %d", w.Code, http.StatusForbidden)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Invalid CSRF token") {
+		t.Errorf("body = %q, want to contain 'Invalid CSRF token'", body)
+	}
+}
+
+func TestRequireCSRF_GetRequest_Passes(t *testing.T) {
+	// GET requests should always pass CSRF validation
+	cfg := &config.Config{}
+	h, err := New(nil, cfg, nil, nil, webfs.FS, "test", false) // disableCSRF = false
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+
+	result := h.requireCSRF(w, req)
+
+	if !result {
+		t.Error("requireCSRF() returned false for GET request, want true")
+	}
+}
+
+func TestDashboardTemplate_WithError(t *testing.T) {
+	h := testHandler(t)
+
+	// Test that dashboard template renders error banner when Error is set
+	data := DashboardData{
+		Title:     "",
+		ActiveNav: "dashboard",
+		Error:     "Test error message",
+	}
+
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", data)
+
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("render() status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	body := w.Body.String()
+
+	// Verify error banner is rendered
+	if !strings.Contains(body, "alert-error") {
+		t.Error("response missing error alert class")
+	}
+	if !strings.Contains(body, "Test error message") {
+		t.Error("response missing error message")
+	}
+}
+
+func TestDashboardTemplate_NoError(t *testing.T) {
+	h := testHandler(t)
+
+	// Test that dashboard template does not show error banner when Error is empty
+	data := DashboardData{
+		Title:     "",
+		ActiveNav: "dashboard",
+		Error:     "", // No error
+	}
+
+	w := httptest.NewRecorder()
+	h.render(w, "dashboard.html", data)
+
+	body := w.Body.String()
+
+	// Verify error banner is NOT rendered
+	if strings.Contains(body, "alert-error") {
+		t.Error("response should not contain error alert when Error is empty")
+	}
+}
 
 func TestFormatBytes(t *testing.T) {
 	tests := []struct {

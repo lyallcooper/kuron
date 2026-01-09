@@ -226,8 +226,7 @@ func (h *Handler) parseJobForm(r *http.Request) (*db.ScheduledJob, error) {
 
 // CreateJob handles POST /jobs
 func (h *Handler) CreateJob(w http.ResponseWriter, r *http.Request) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -320,8 +319,7 @@ func (h *Handler) EditJobForm(w http.ResponseWriter, r *http.Request, id int64) 
 
 // UpdateJob handles POST /jobs/{id}
 func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -395,8 +393,7 @@ func (h *Handler) UpdateJob(w http.ResponseWriter, r *http.Request, id int64) {
 
 // ToggleJob handles POST /jobs/{id}/toggle
 func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -416,8 +413,7 @@ func (h *Handler) ToggleJob(w http.ResponseWriter, r *http.Request, id int64) {
 
 // RunJob handles POST /jobs/{id}/run
 func (h *Handler) RunJob(w http.ResponseWriter, r *http.Request, id int64) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 	h.runJobByID(w, r, id)
@@ -470,8 +466,7 @@ func (h *Handler) runJobByID(w http.ResponseWriter, r *http.Request, id int64) {
 
 // DeleteJob handles DELETE /jobs/{id}
 func (h *Handler) DeleteJob(w http.ResponseWriter, r *http.Request, id int64) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 

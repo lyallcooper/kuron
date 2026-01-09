@@ -46,8 +46,7 @@ func (h *Handler) Settings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettings handles POST /settings
 func (h *Handler) UpdateSettings(w http.ResponseWriter, r *http.Request) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 

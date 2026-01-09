@@ -35,8 +35,7 @@ func (h *Handler) QuickScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -304,8 +303,7 @@ func (h *Handler) ScanResults(w http.ResponseWriter, r *http.Request) {
 
 // HandleAction handles POST /scans/runs/{id}/action
 func (h *Handler) HandleAction(w http.ResponseWriter, r *http.Request, runIDStr string) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -549,8 +547,7 @@ document.addEventListener('keydown', function(e) {
 
 // CancelScan handles POST /scans/runs/{id}/cancel
 func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr string) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
@@ -566,8 +563,7 @@ func (h *Handler) CancelScan(w http.ResponseWriter, r *http.Request, runIDStr st
 
 // HandleDeleteFiles handles POST /scans/runs/{id}/delete-files for manual file deletion
 func (h *Handler) HandleDeleteFiles(w http.ResponseWriter, r *http.Request, runIDStr string) {
-	if !h.validateCSRF(r) {
-		http.Error(w, "Invalid CSRF token", http.StatusForbidden)
+	if !h.requireCSRF(w, r) {
 		return
 	}
 
