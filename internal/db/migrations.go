@@ -36,6 +36,8 @@ func (db *DB) Migrate() error {
 		{5, migration005},
 		{6, migration006},
 		{7, migration007},
+		{8, migration008},
+		{9, migration009},
 	}
 
 	for _, m := range migrations {
@@ -237,4 +239,20 @@ ALTER TABLE scan_runs ADD COLUMN max_depth INTEGER;
 const migration007 = `
 -- Remove dry_run column from actions table (no longer used - all recorded actions are real executions)
 ALTER TABLE actions DROP COLUMN dry_run;
+`
+
+const migration008 = `
+-- Add columns to actions table for detail view
+-- output: command output or deletion results
+-- files: JSON array of file paths that were processed
+-- command: the fclones command that was run (if applicable)
+ALTER TABLE actions ADD COLUMN output TEXT;
+ALTER TABLE actions ADD COLUMN files TEXT;
+ALTER TABLE actions ADD COLUMN command TEXT;
+`
+
+const migration009 = `
+-- Add group_ids column to actions table
+-- group_ids: JSON array of group IDs that were processed
+ALTER TABLE actions ADD COLUMN group_ids TEXT;
 `
