@@ -16,8 +16,8 @@ type Config struct {
 	RetentionDays        int
 	RetentionDaysFromEnv bool // true if set via KURON_RETENTION_DAYS env var
 	ScanTimeout          time.Duration
-	AllowedPaths        []string // Restrict scanning/autocomplete to these paths (empty = unrestricted)
-	FclonesCacheEnabled bool     // Enable fclones hash caching (KURON_FCLONES_CACHE_ENABLED)
+	AllowedPaths         []string // Restrict scanning/autocomplete to these paths (empty = unrestricted)
+	FclonesCacheEnabled  bool     // Enable fclones hash caching (KURON_FCLONES_CACHE)
 }
 
 // Load reads configuration from environment variables
@@ -29,8 +29,8 @@ func Load() *Config {
 		RetentionDays:        getEnvInt("KURON_RETENTION_DAYS", 30),
 		RetentionDaysFromEnv: retentionFromEnv,
 		ScanTimeout:          getEnvDuration("KURON_SCAN_TIMEOUT", 30*time.Minute),
-		AllowedPaths:        getEnvPaths("KURON_ALLOWED_PATHS"),
-		FclonesCacheEnabled: getEnvBool("KURON_FCLONES_CACHE_ENABLED", true),
+		AllowedPaths:         getEnvPaths("KURON_ALLOWED_PATHS"),
+		FclonesCacheEnabled:  getEnvBool("KURON_FCLONES_CACHE", true),
 	}
 }
 
