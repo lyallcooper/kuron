@@ -79,14 +79,14 @@ go build -o kuron ./cmd/server
 
 #### Environment Variable Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `KURON_PORT` | `8080` | HTTP server port |
-| `KURON_DB_PATH` | `./data/kuron.db` or <br>`/data/kuron.db` on docker | SQLite database path |
-| `KURON_RETENTION_DAYS` | `30` | Days to keep scan history (1-9999) |
-| `KURON_SCAN_TIMEOUT` | `30m` | Maximum duration for a scan |
-| `KURON_ALLOWED_PATHS` | *(unrestricted)* | Comma-separated paths to restrict scanning |
-| `KURON_FCLONES_CACHE_ENABLED` | `true` | Enable fclones caching for faster repeat scans (stored in the platform-specific fclones default location) |
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KURON_PORT` | int | `8080` | HTTP server port |
+| `KURON_DB_PATH` | path | `./data/kuron.db` or<br>`/data/kuron.db` on docker | SQLite database path |
+| `KURON_RETENTION_DAYS` | int | `30` | Days to keep scan history (1-9999) |
+| `KURON_SCAN_TIMEOUT` | duration | `30m` | Maximum duration for a scan |
+| `KURON_ALLOWED_PATHS` | paths | *(unrestricted)* | Comma-separated paths to restrict scanning |
+| `KURON_FCLONES_CACHE` | bool | `true` | Enable fclones caching for faster repeat scans |
 
 ## Usage
 
