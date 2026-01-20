@@ -514,7 +514,7 @@ func (h *Handler) renderActionResultModal(w http.ResponseWriter, p renderActionM
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+	modalHTML := `<div id="modal-backdrop" class="kuron-overlay" onclick="closeModal()">
 	<div class="modal" onclick="event.stopPropagation()">
 		<div class="modal-header">
 			<h3>` + title + `</h3>
@@ -743,7 +743,7 @@ func (h *Handler) renderDeleteFilesModal(w http.ResponseWriter, p deleteFilesMod
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	modalHTML := `<div id="modal-backdrop" class="modal-backdrop" onclick="closeModal()">
+	modalHTML := `<div id="modal-backdrop" class="kuron-overlay" onclick="closeModal()">
 	<div class="modal" onclick="event.stopPropagation()">
 		<div class="modal-header">
 			<h3>` + title + `</h3>
